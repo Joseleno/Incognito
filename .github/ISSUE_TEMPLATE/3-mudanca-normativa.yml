@@ -1,0 +1,48 @@
+name: Informar uma mudança normativa
+description: Uma lei, norma da ANPD ou leiaute oficial mudou e pode afetar o Incognito.
+labels: [revisao-normativa]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Exemplos: alteração na LGPD, guia novo da ANPD, nota técnica que muda o leiaute da chave de acesso ou o cálculo do dígito verificador do CNPJ.
+
+        Cite apenas a fonte oficial. Não cole identificadores de exemplo de manuais ou notas técnicas.
+  - type: input
+    id: norma
+    attributes:
+      label: Norma ou leiaute
+      placeholder: Nota técnica, resolução ou artigo de lei
+    validations:
+      required: true
+  - type: input
+    id: fonte
+    attributes:
+      label: Link para a fonte oficial
+      placeholder: https://
+    validations:
+      required: true
+  - type: textarea
+    id: o-que-mudou
+    attributes:
+      label: O que mudou
+      description: O trecho relevante e, se souber, a data de vigência.
+    validations:
+      required: true
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: Impacto que você imagina
+      options:
+        - Muda a saída de um transformador
+        - Muda só a documentação
+        - Não sei
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmacao
+    attributes:
+      label: Confirmação
+      options:
+        - label: Este relato não contém dados pessoais reais (CPF, CNPJ, nomes, telefones, endereços, chaves de acesso de documentos fiscais), chaves do Incognito nem strings de conexão.
+          required: true
