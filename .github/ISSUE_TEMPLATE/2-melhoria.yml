@@ -1,0 +1,35 @@
+name: Sugerir uma melhoria
+description: Um comportamento novo ou uma mudança no que já existe.
+labels: [melhoria]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        O escopo da versão 1.0 está fechado; sugestões novas são avaliadas para depois dela. Para uma ideia ainda sem forma, prefira as Discussions.
+
+        Use apenas dados sintéticos nos exemplos.
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: O que você tenta fazer e por que o Incognito não atende hoje.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta
+      description: Como você imagina a solução, com exemplo de configuração ou de uso se ajudar.
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+  - type: checkboxes
+    id: confirmacao
+    attributes:
+      label: Confirmação
+      options:
+        - label: Este relato não contém dados pessoais reais (CPF, CNPJ, nomes, telefones, endereços, chaves de acesso de documentos fiscais), chaves do Incognito nem strings de conexão.
+          required: true

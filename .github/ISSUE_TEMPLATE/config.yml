@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Vulnerabilidade de segurança
+    url: https://github.com/Joseleno/Incognito/security/advisories/new
+    about: Relate em privado. Nunca abra issue pública para problema de segurança.
+  - name: Perguntas e ideias
+    url: https://github.com/Joseleno/Incognito/discussions
+    about: Dúvidas de uso, ideias ainda sem forma e relatos de uso ficam nas Discussions.
