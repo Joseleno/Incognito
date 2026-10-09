@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Classificação de dados pessoais no modelo do EF Core e verificação em teste para o Incognito.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+  </ItemGroup>
+
+</Project>

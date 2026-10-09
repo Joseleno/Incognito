@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Motor do Incognito: configuração YAML, plano, executor, contrato de dialeto, diário e relatório. Sem driver de banco.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
+  </ItemGroup>
+
+</Project>

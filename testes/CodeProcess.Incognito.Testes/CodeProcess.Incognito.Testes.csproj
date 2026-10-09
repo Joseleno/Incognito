@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
+  </ItemGroup>
+
+</Project>

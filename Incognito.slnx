@@ -1,2 +1,19 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CodeProcess.Incognito.Cli/CodeProcess.Incognito.Cli.csproj" />
+    <Project Path="src/CodeProcess.Incognito.EntityFrameworkCore/CodeProcess.Incognito.EntityFrameworkCore.csproj" />
+    <Project Path="src/CodeProcess.Incognito.Motor/CodeProcess.Incognito.Motor.csproj" />
+    <Project Path="src/CodeProcess.Incognito.PostgreSql/CodeProcess.Incognito.PostgreSql.csproj" />
+    <Project Path="src/CodeProcess.Incognito.SqlServer/CodeProcess.Incognito.SqlServer.csproj" />
+    <Project Path="src/CodeProcess.Incognito/CodeProcess.Incognito.csproj" />
+  </Folder>
+  <Folder Name="/testes/">
+    <Project Path="testes/CodeProcess.Incognito.Testes.Arquitetura/CodeProcess.Incognito.Testes.Arquitetura.csproj" />
+    <Project Path="testes/CodeProcess.Incognito.Testes.Cli/CodeProcess.Incognito.Testes.Cli.csproj" />
+    <Project Path="testes/CodeProcess.Incognito.Testes.Conformidade/CodeProcess.Incognito.Testes.Conformidade.csproj" />
+    <Project Path="testes/CodeProcess.Incognito.Testes.Motor/CodeProcess.Incognito.Testes.Motor.csproj" />
+    <Project Path="testes/CodeProcess.Incognito.Testes.PostgreSql/CodeProcess.Incognito.Testes.PostgreSql.csproj" />
+    <Project Path="testes/CodeProcess.Incognito.Testes.SqlServer/CodeProcess.Incognito.Testes.SqlServer.csproj" />
+    <Project Path="testes/CodeProcess.Incognito.Testes/CodeProcess.Incognito.Testes.csproj" />
+  </Folder>
 </Solution>

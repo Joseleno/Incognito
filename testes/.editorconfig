@@ -1,0 +1,9 @@
+# Projetos de teste. Herda o .editorconfig da raiz.
+
+[*.cs]
+# Nomes de teste em português com sublinhado: Todas_as_colunas_suspeitas_devem_estar_classificadas.
+dotnet_diagnostic.CA1707.severity = none
+
+# Testes não precisam de documentação XML. GenerateDocumentationFile continua ligado porque o IDE0005
+# (usings desnecessários) só é verificado no build quando ele está ativo.
+dotnet_diagnostic.CS1591.severity = none

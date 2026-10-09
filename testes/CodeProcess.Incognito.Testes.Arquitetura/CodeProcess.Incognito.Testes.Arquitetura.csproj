@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito.PostgreSql\CodeProcess.Incognito.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito.SqlServer\CodeProcess.Incognito.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito.EntityFrameworkCore\CodeProcess.Incognito.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito.Cli\CodeProcess.Incognito.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

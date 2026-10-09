@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Ferramenta de linha de comando do Incognito: copia bases PostgreSQL e SQL Server substituindo dados pessoais por dados brasileiros válidos.</Description>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>incognito</ToolCommandName>
+    <RootNamespace>CodeProcess.Incognito.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+    <ProjectReference Include="..\CodeProcess.Incognito.PostgreSql\CodeProcess.Incognito.PostgreSql.csproj" />
+    <ProjectReference Include="..\CodeProcess.Incognito.SqlServer\CodeProcess.Incognito.SqlServer.csproj" />
+  </ItemGroup>
+
+</Project>
