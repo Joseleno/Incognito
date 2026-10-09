@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Só PR cancela a execução anterior: em push na develop e na main, todo commit fica com resultado.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # Exigido pelo Ruleset. Build com avisos como erro, formatação, todos os testes sem banco e cobertura.
+  rapido:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      # Com GITHUB_ACTIONS, o Directory.Build.props liga RestoreLockedMode: lock file desatualizado quebra aqui.
+      - run: dotnet restore
+      - run: dotnet build -c Release --no-restore
+      - run: dotnet format --verify-no-changes --no-restore
+      - run: dotnet test -c Release --no-build --filter-not-trait "Categoria=Integracao" --coverlet --coverlet-output-format cobertura
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cobertura
+          path: TestResults/*.cobertura.*.xml
+          if-no-files-found: error
+          retention-days: 7
+
+  # Informativo. O núcleo não depende de banco nem de rede e precisa se comportar igual em todo sistema.
+  nucleo-so:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release
