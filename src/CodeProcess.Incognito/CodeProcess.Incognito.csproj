@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <Description>Núcleo do Incognito: dados brasileiros válidos (CPF, CNPJ alfanumérico, chaves de DF-e), chave, derivação, permutação determinística sem colisão e transformadores. Sem dependências de terceiros.</Description>
+    <!-- Só o núcleo, que não tem dependências de terceiros; liga os analisadores de trimming e AOT. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
 </Project>
