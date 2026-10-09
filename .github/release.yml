@@ -1,0 +1,15 @@
+# Notas geradas do GitHub Release, agrupadas pelos rótulos dos pull requests.
+changelog:
+  categories:
+    - title: Segurança
+      labels: [seguranca]
+    - title: Adicionado
+      labels: [melhoria]
+    - title: Corrigido
+      labels: [bug]
+    - title: Revisão normativa
+      labels: [revisao-normativa]
+    - title: Dialetos
+      labels: [dialeto]
+    - title: Outras mudanças
+      labels: ['*']

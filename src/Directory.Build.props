@@ -35,6 +35,29 @@
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
   </ItemGroup>
 
+  <!--
+    Versão pela tag: v1.2.3 gera 1.2.3 e v1.0.0-rc.1 gera 1.0.0-rc.1. Sem tag, 1.0.0-alpha.0.N (N commits desde a
+    raiz), porque o primeiro lançamento é a 1.0.0. O SBOM (SPDX 2.2) entra em _manifest/ dentro de cada .nupkg.
+  -->
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerMinimumMajorMinor>1.0</MinVerMinimumMajorMinor>
+    <GenerateSBOM>true</GenerateSBOM>
+    <SbomGenerationVerbosity>Warning</SbomGenerationVerbosity>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- O Microsoft.Sbom.Targets lê a versão na avaliação, antes de o MinVer calculá-la; aqui ela já é a do pacote. -->
+  <Target Name="VersaoDoSbom" BeforeTargets="GenerateSbomTarget">
+    <PropertyGroup>
+      <SbomGenerationPackageVersion>$(PackageVersion)</SbomGenerationPackageVersion>
+    </PropertyGroup>
+  </Target>
+
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="/" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)../docs/assets/icone.png" Pack="true" PackagePath="/" Visible="false" />
