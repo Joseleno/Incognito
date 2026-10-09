@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Central Package Management: toda versão de pacote é declarada aqui, nunca no .csproj. -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>
