@@ -14,6 +14,7 @@
   <!-- Itens são avaliados depois de todas as propriedades, então a condição enxerga o valor final do projeto. -->
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
     <PackageReference Include="xunit.v3" />
+    <PackageReference Include="coverlet.MTP" />
     <Using Include="Xunit" />
   </ItemGroup>
 
