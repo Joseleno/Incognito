@@ -1,0 +1,162 @@
+name: release
+
+# Toda tag precisa ser anotada e ter assinatura verificada pelo GitHub.
+# Tag vX.Y.Z-rc.N: ensaio geral. Testes, pacotes, validação, SBOM e attestation; os pacotes ficam como artefato
+# do workflow e nada é enviado ao nuget.org nem vira GitHub Release.
+# Tag vX.Y.Z: o mesmo e, com aprovação no environment nuget, envio ao nuget.org por Trusted Publishing e GitHub Release.
+# Disparo manual: só obtém a credencial temporária do nuget.org, para ativar e conferir a política de Trusted
+# Publishing deste arquivo (a política fica presa ao nome do workflow e ao environment).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  preparar:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      tipo: ${{ steps.classificar.outputs.tipo }}
+      versao: ${{ steps.classificar.outputs.versao }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Como no Waybill: tag anotada e assinada com a chave cadastrada no GitHub (git tag -s).
+      - name: Conferir a assinatura da tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: bash .github/scripts/conferir-assinatura-tag.sh "$GITHUB_REPOSITORY" "$TAG"
+      - id: classificar
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          tipo="$(bash .github/scripts/classificar-tag.sh "$TAG")"
+          echo "tipo=$tipo" >> "$GITHUB_OUTPUT"
+          echo "versao=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Tag $TAG: $tipo"
+
+  pacotes:
+    needs: preparar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # attestation
+      attestations: write
+    env:
+      VERSAO: ${{ needs.preparar.outputs.versao }}
+    steps:
+      # Histórico completo: num clone raso o MinVer não enxerga a tag e calcula outra versão sem avisar.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Sem cache de NuGet no release: o pacote publicado não depende de nada restaurado por outra execução.
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore
+      - run: dotnet build -c Release --no-restore
+      - run: dotnet test -c Release --no-build
+      - run: dotnet pack -c Release --no-build -o artifacts
+
+      - name: Conferir versão, quantidade e SBOM dos pacotes
+        run: |
+          projetos=(src/*/*.csproj)
+          esperados=${#projetos[@]}
+          for extensao in nupkg snupkg; do
+            encontrados=$(find artifacts -name "*.$VERSAO.$extensao" | wc -l)
+            total=$(find artifacts -name "*.$extensao" | wc -l)
+            if [[ "$encontrados" -ne "$esperados" || "$total" -ne "$esperados" ]]; then
+              echo "::error::Esperados $esperados .$extensao na versão $VERSAO; encontrados $encontrados de $total."
+              exit 1
+            fi
+          done
+          for pacote in artifacts/*.nupkg; do
+            if ! unzip -l "$pacote" | grep -q '_manifest/spdx_2.2/manifest.spdx.json'; then
+              echo "::error::Pacote sem SBOM: $pacote"
+              exit 1
+            fi
+          done
+
+      # Build determinístico, Source Link, símbolos e metadados, antes de qualquer envio.
+      - name: Validar pacotes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dotnet tool install --tool-path "$RUNNER_TEMP/ferramentas" Meziantou.Framework.NuGetPackageValidation.Tool --version 2.0.12
+          "$RUNNER_TEMP/ferramentas/meziantou.validate-nuget-package" --github-token "$GH_TOKEN" artifacts/*.nupkg
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: artifacts/*
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pacotes-${{ env.VERSAO }}
+          path: artifacts/
+          if-no-files-found: error
+
+  # Só tag de lançamento chega aqui (teste em .github/scripts/testar-release.sh).
+  publicar:
+    needs: [preparar, pacotes]
+    if: needs.preparar.outputs.tipo == 'lancamento'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: nuget
+    permissions:
+      contents: write # GitHub Release
+      id-token: write # Trusted Publishing
+    env:
+      VERSAO: ${{ needs.preparar.outputs.versao }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pacotes-${{ env.VERSAO }}
+          path: artifacts
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        id: nuget
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      # O .snupkg de cada pacote vai junto, a partir da mesma pasta.
+      - name: Enviar ao nuget.org
+        env:
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: Criar o GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --generate-notes artifacts/*
+
+  validar-publicacao:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: nuget
+    permissions:
+      id-token: write # Trusted Publishing
+    steps:
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - run: echo "Credencial temporária obtida do nuget.org. Nada foi enviado."
