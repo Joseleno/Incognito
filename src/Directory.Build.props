@@ -26,6 +26,15 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <!--
+    API pública rastreada em todos os pacotes: um símbolo público que não esteja em PublicAPI.Shipped.txt ou
+    PublicAPI.Unshipped.txt quebra o build (RS0016, avisos como erro). Até a 1.0 tudo fica em Unshipped.
+    O pacote do analisador já inclui os dois arquivos do diretório do projeto como AdditionalFiles.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="/" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)../docs/assets/icone.png" Pack="true" PackagePath="/" Visible="false" />

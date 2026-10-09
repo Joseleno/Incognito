@@ -7,6 +7,11 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
+  <!-- Analisadores -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+  </ItemGroup>
+
   <!-- Testes -->
   <ItemGroup>
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
