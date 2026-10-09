@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Dialeto SQL Server do Incognito.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+  </ItemGroup>
+
+</Project>

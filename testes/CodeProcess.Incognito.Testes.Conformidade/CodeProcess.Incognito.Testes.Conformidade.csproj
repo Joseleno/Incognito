@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Suíte base de conformidade de dialeto: biblioteca herdada pelos testes de cada dialeto, sem testes próprios. -->
+
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+  </ItemGroup>
+
+</Project>
