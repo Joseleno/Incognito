@@ -1,5 +1,6 @@
 name: release
 
+# Toda tag precisa ser anotada e ter assinatura verificada pelo GitHub.
 # Tag vX.Y.Z-rc.N: ensaio geral. Testes, pacotes, validação, SBOM e attestation; os pacotes ficam como artefato
 # do workflow e nada é enviado ao nuget.org nem vira GitHub Release.
 # Tag vX.Y.Z: o mesmo e, com aprovação no environment nuget, envio ao nuget.org por Trusted Publishing e GitHub Release.
@@ -35,6 +36,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Como no Waybill: tag anotada e assinada com a chave cadastrada no GitHub (git tag -s).
+      - name: Conferir a assinatura da tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: bash .github/scripts/conferir-assinatura-tag.sh "$GITHUB_REPOSITORY" "$TAG"
       - id: classificar
         env:
           TAG: ${{ github.ref_name }}

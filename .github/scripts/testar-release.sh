@@ -53,6 +53,8 @@ valor() { yq -r "$1" "$workflow"; }
   || falhar "o job validar-publicacao não usa o environment nuget"
 [[ "$(valor '.jobs.preparar.if')" == "github.event_name == 'push'" ]] \
   || falhar "o job preparar não é só do push de tag"
+[[ "$(valor '[.jobs.preparar.steps[] | select(.run // "" | test("conferir-assinatura-tag.sh"))] | length')" == "1" ]] \
+  || falhar "o job preparar não confere a assinatura da tag"
 [[ "$(valor '.permissions | length')" == "0" ]] \
   || falhar "o workflow tem permissões fora dos jobs"
 
