@@ -1,0 +1,9 @@
+# Finais de linha LF no repositório e na cópia de trabalho, em qualquer sistema,
+# para que dotnet format --verify-no-changes dê o mesmo resultado no Windows e no Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.snk binary
+*.pdf binary
