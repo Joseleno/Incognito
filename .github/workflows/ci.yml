@@ -29,6 +29,8 @@ jobs:
       # Só tag de lançamento chega ao envio para o nuget.org no release.yml.
       - run: bash .github/scripts/testar-release.sh
       - run: bash .github/scripts/conferir-actions-fixadas.sh
+      # Todo projeto com lock versionado e nada no MSBuild que escape dele; sem isso o --locked-mode abaixo não trava.
+      - run: bash .github/scripts/conferir-dependencias.sh
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json

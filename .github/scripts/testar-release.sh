@@ -2,12 +2,14 @@
 # Garante que só tag de lançamento (vX.Y.Z, X >= 1) chega ao envio para o nuget.org:
 # 1. a classificação das tags;
 # 2. a ligação no release.yml: só o job publicar envia e cria o GitHub Release, e só quando a tag é de lançamento.
+#    A lista de jobs é fechada: um job novo só entra junto com a mudança deste teste.
 # Requer o yq (mikefarah), que já vem no runner do Ubuntu.
+# Uso: testar-release.sh [release.yml]   (o argumento serve para testar variações do workflow)
 set -euo pipefail
 
 raiz="$(cd "$(dirname "$0")/../.." && pwd)"
 classificar="$raiz/.github/scripts/classificar-tag.sh"
-workflow="$raiz/.github/workflows/release.yml"
+workflow="${1:-$raiz/.github/workflows/release.yml}"
 falhas=0
 
 falhar() {
@@ -43,8 +45,18 @@ valor() { yq -r "$1" "$workflow"; }
 
 [[ "$(valor '.jobs.publicar.if')" == "needs.preparar.outputs.tipo == 'lancamento'" ]] \
   || falhar "o job publicar não está condicionado a tag de lançamento"
-[[ "$(valor '.jobs.publicar.needs | contains(["preparar", "pacotes"])')" == "true" ]] \
-  || falhar "o job publicar não depende de preparar e pacotes"
+[[ "$(valor '.jobs | keys | sort | join(" ")')" == "atestar pacotes preparar publicar validar-pacotes validar-publicacao" ]] \
+  || falhar "os jobs do release mudaram: $(valor '.jobs | keys | sort | join(" ")')"
+[[ "$(valor '.jobs.publicar.needs | contains(["preparar", "pacotes", "atestar", "validar-pacotes"])')" == "true" ]] \
+  || falhar "o job publicar não depende de preparar, pacotes, atestar e validar-pacotes"
+[[ "$(valor '[.jobs[] | select(has("environment"))] | length')" == "2" ]] \
+  || falhar "há job com environment além de publicar e validar-publicacao"
+[[ "$(valor '[.jobs | to_entries[] | select(.value.permissions."id-token" == "write") | .key] | sort | join(" ")')" == "atestar publicar validar-publicacao" ]] \
+  || falhar "id-token: write fora de atestar, publicar e validar-publicacao"
+[[ "$(valor '[.jobs | to_entries[] | select((.value.permissions // {}) | to_entries | .[] | select(.value == "write")) | .key] | unique | sort | join(" ")')" == "atestar publicar validar-publicacao" ]] \
+  || falhar "permissão de escrita fora de atestar, publicar e validar-publicacao"
+[[ "$(valor '[.jobs.preparar.steps[] | select(.if == "steps.classificar.outputs.tipo == '"'"'lancamento'"'"'" and (.run // "" | test("merge-base --is-ancestor \"\$GITHUB_SHA\" origin/main")))] | length')" == "1" ]] \
+  || falhar "o job preparar não confere que a tag de lançamento está na main"
 [[ "$(valor '.jobs.publicar.environment')" == "nuget" ]] \
   || falhar "o job publicar não usa o environment nuget"
 [[ "$(valor '.jobs.validar-publicacao.if')" == "github.event_name == 'workflow_dispatch'" ]] \
@@ -58,20 +70,24 @@ valor() { yq -r "$1" "$workflow"; }
 [[ "$(valor '.permissions | length')" == "0" ]] \
   || falhar "o workflow tem permissões fora dos jobs"
 
-# Envio, Release e login só onde devem estar.
+# Envio, Release e login só onde devem estar. Sem diferenciar maiúsculas (refs de action não diferenciam)
+# e aceitando qualquer espaço entre as palavras.
+envio='nuget[[:space:]]+push'
+release='gh[[:space:]]+release|softprops/action-gh-release'
+login='nuget/login'
 for job in $(valor '.jobs | keys | .[]'); do
   passos="$(yq -r ".jobs.\"$job\".steps[] | (.run // \"\") + \" \" + (.uses // \"\")" "$workflow")"
-  if grep -q 'nuget push' <<<"$passos" && [[ "$job" != publicar ]]; then
+  if grep -qiE "$envio" <<<"$passos" && [[ "$job" != publicar ]]; then
     falhar "o job $job envia pacotes"
   fi
-  if grep -q 'gh release' <<<"$passos" && [[ "$job" != publicar ]]; then
+  if grep -qiE "$release" <<<"$passos" && [[ "$job" != publicar ]]; then
     falhar "o job $job cria GitHub Release"
   fi
-  if grep -q 'NuGet/login' <<<"$passos" && [[ "$job" != publicar && "$job" != validar-publicacao ]]; then
+  if grep -qiE "$login" <<<"$passos" && [[ "$job" != publicar && "$job" != validar-publicacao ]]; then
     falhar "o job $job obtém credencial do nuget.org"
   fi
 done
-if [[ "$(yq -r '.jobs.validar-publicacao.steps[] | (.run // "") + " " + (.uses // "")' "$workflow" | grep -c -E 'nuget push|gh release')" != "0" ]]; then
+if [[ "$(yq -r '.jobs.validar-publicacao.steps[] | (.run // "") + " " + (.uses // "")' "$workflow" | grep -ciE "$envio|$release")" != "0" ]]; then
   falhar "o job validar-publicacao faz mais que o login"
 fi
 
