@@ -19,10 +19,13 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
-  <!-- No CI: caminhos normalizados para builds reproduzíveis e restauração presa ao packages.lock.json. -->
+  <!--
+    No CI: caminhos normalizados para builds reproduzíveis.
+    A restauração presa ao packages.lock.json fica nos workflows (opção locked-mode do dotnet restore), não aqui:
+    o Dependabot também roda com GITHUB_ACTIONS e precisa regenerar os lock files.
+  -->
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 
 </Project>
