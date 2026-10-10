@@ -11,3 +11,10 @@ override CodeProcess.Incognito.ChaveIncognito.ToString() -> string!
 static CodeProcess.Incognito.ChaveIncognito.Gerar() -> CodeProcess.Incognito.ChaveIncognito!
 static CodeProcess.Incognito.ChaveIncognito.Ler(System.ReadOnlySpan<byte> textoUtf8) -> CodeProcess.Incognito.ChaveIncognito!
 static CodeProcess.Incognito.ChaveIncognito.Ler(System.ReadOnlySpan<char> texto) -> CodeProcess.Incognito.ChaveIncognito!
+CodeProcess.Incognito.ValidadorBr
+static CodeProcess.Incognito.ValidadorBr.ChaveDfe(string? chave) -> bool
+static CodeProcess.Incognito.ValidadorBr.ChaveDfe(System.ReadOnlySpan<char> chave) -> bool
+static CodeProcess.Incognito.ValidadorBr.Cnpj(string? cnpj) -> bool
+static CodeProcess.Incognito.ValidadorBr.Cnpj(System.ReadOnlySpan<char> cnpj) -> bool
+static CodeProcess.Incognito.ValidadorBr.Cpf(string? cpf) -> bool
+static CodeProcess.Incognito.ValidadorBr.Cpf(System.ReadOnlySpan<char> cpf) -> bool
