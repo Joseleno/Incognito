@@ -24,6 +24,8 @@ dotnet test --filter-not-trait "Categoria=Integracao"    # sem Docker
 dotnet format --verify-no-changes
 ```
 
+Cada projeto tem um `packages.lock.json` versionado, e o CI restaura com `dotnet restore --locked-mode`: um lock desatualizado quebra o build. Ao adicionar, remover ou atualizar um pacote (sempre no `Directory.Packages.props`), rode `dotnet restore --force-evaluate` e inclua os `packages.lock.json` alterados no commit. Projetos não usam `VersionOverride`, `PackageDownload`, referência a DLL por caminho nem tarefas próprias do MSBuild; o CI recusa.
+
 ## Branches
 
 - `main` guarda apenas o código lançado; cada versão é uma tag na `main`.
@@ -34,7 +36,7 @@ dotnet format --verify-no-changes
 
 ## Commits e pull requests
 
-- Pull requests apontam para a `develop`, e o CI precisa estar verde antes do merge.
+- Pull requests apontam para a `develop` (só os de `release/<versao>` apontam para a `main`), e o CI precisa estar verde antes do merge.
 - Mensagens de commit em português, com a primeira linha no imperativo (por exemplo, "Adicionar o transformador de CEP").
 - Um assunto por pull request. Mudanças que afetam quem usa os pacotes entram no `CHANGELOG.md`, em "Não publicado".
 - Ao contribuir, você concorda que sua contribuição seja licenciada sob a [licença MIT](LICENSE).

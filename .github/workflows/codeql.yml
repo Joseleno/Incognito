@@ -38,7 +38,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # O SDK fixado no global.json, para o CodeQL restaurar os pacotes como no build.
+      # O SDK fixado no global.json, para o extrator usar o mesmo SDK do build. A restauração que o CodeQL faz
+      # por conta própria não é presa aos lock files; o que vai para os pacotes passa pelo --locked-mode do CI.
       - if: matrix.linguagem == 'csharp'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
