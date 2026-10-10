@@ -1,0 +1,965 @@
+{
+  "descricao": "Permutação Feistel modular sobre Z_a x Z_b, versão 1: 12 rodadas, função de rodada HMAC-SHA256 com radix, a, b e ajuste na entrada, cycle-walking sobre os excluídos. Chave de domínio pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um valor que mudar exige nova versão, nunca edição deste arquivo. Bytes em hexadecimal.",
+  "rodadas": 12,
+  "chaveDeDominio": "c320dc98784ed7e72d8cfdb2b55b83a1b7d341436324e59d60446cb4abfb0410",
+  "casos": [
+    {
+      "nome": "desbalanceado 10^4 x 10^5",
+      "radix": 10,
+      "a": 10000,
+      "b": 100000,
+      "ajuste": "",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 87728769
+        },
+        {
+          "entrada": 1,
+          "saida": 407174581
+        },
+        {
+          "entrada": 45290693,
+          "saida": 434314013
+        },
+        {
+          "entrada": 250351470,
+          "saida": 306759600
+        },
+        {
+          "entrada": 276079283,
+          "saida": 58120622
+        },
+        {
+          "entrada": 351097152,
+          "saida": 271827135
+        },
+        {
+          "entrada": 353676484,
+          "saida": 450584006
+        },
+        {
+          "entrada": 376015215,
+          "saida": 671248255
+        },
+        {
+          "entrada": 382979620,
+          "saida": 499038562
+        },
+        {
+          "entrada": 431001625,
+          "saida": 590086051
+        },
+        {
+          "entrada": 710916074,
+          "saida": 407517098
+        },
+        {
+          "entrada": 788173208,
+          "saida": 867143287
+        },
+        {
+          "entrada": 860234279,
+          "saida": 828717848
+        },
+        {
+          "entrada": 892893381,
+          "saida": 134342424
+        },
+        {
+          "entrada": 999999999,
+          "saida": 860196812
+        }
+      ]
+    },
+    {
+      "nome": "desbalanceado 4000 x 10^4 com ajuste",
+      "radix": 10,
+      "a": 4000,
+      "b": 10000,
+      "ajuste": "3131",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 28671436
+        },
+        {
+          "entrada": 1,
+          "saida": 20287386
+        },
+        {
+          "entrada": 172371,
+          "saida": 702164
+        },
+        {
+          "entrada": 11161437,
+          "saida": 4009162
+        },
+        {
+          "entrada": 11434903,
+          "saida": 18834678
+        },
+        {
+          "entrada": 11651846,
+          "saida": 1128620
+        },
+        {
+          "entrada": 17029351,
+          "saida": 28183796
+        },
+        {
+          "entrada": 19774119,
+          "saida": 12860991
+        },
+        {
+          "entrada": 21984109,
+          "saida": 15372864
+        },
+        {
+          "entrada": 26355177,
+          "saida": 3084325
+        },
+        {
+          "entrada": 29581495,
+          "saida": 21449263
+        },
+        {
+          "entrada": 30412351,
+          "saida": 29814135
+        },
+        {
+          "entrada": 34437970,
+          "saida": 12861638
+        },
+        {
+          "entrada": 37875013,
+          "saida": 38819238
+        },
+        {
+          "entrada": 39999999,
+          "saida": 16728178
+        }
+      ]
+    },
+    {
+      "nome": "base 36 36^4 x 36^4",
+      "radix": 36,
+      "a": 1679616,
+      "b": 1679616,
+      "ajuste": "",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 1533317462458
+        },
+        {
+          "entrada": 1,
+          "saida": 1546062934218
+        },
+        {
+          "entrada": 373914016931,
+          "saida": 836793363436
+        },
+        {
+          "entrada": 598661240936,
+          "saida": 2402634063612
+        },
+        {
+          "entrada": 792072839229,
+          "saida": 254344099248
+        },
+        {
+          "entrada": 1315508913494,
+          "saida": 807534333433
+        },
+        {
+          "entrada": 1401303044612,
+          "saida": 1063930872111
+        },
+        {
+          "entrada": 1475587069103,
+          "saida": 1209479596929
+        },
+        {
+          "entrada": 1516948752667,
+          "saida": 2011056013599
+        },
+        {
+          "entrada": 1734665308241,
+          "saida": 767951239561
+        },
+        {
+          "entrada": 1997408357380,
+          "saida": 2559303834553
+        },
+        {
+          "entrada": 2401054692663,
+          "saida": 2526076796175
+        },
+        {
+          "entrada": 2467006666016,
+          "saida": 496833425862
+        },
+        {
+          "entrada": 2649254627761,
+          "saida": 394041170944
+        },
+        {
+          "entrada": 2821109907455,
+          "saida": 1685555146603
+        }
+      ]
+    },
+    {
+      "nome": "desbalanceado 40 x 100 com ajuste binario",
+      "radix": 10,
+      "a": 40,
+      "b": 100,
+      "ajuste": "00ff00",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 1991
+        },
+        {
+          "entrada": 1,
+          "saida": 711
+        },
+        {
+          "entrada": 859,
+          "saida": 2630
+        },
+        {
+          "entrada": 1248,
+          "saida": 3582
+        },
+        {
+          "entrada": 1711,
+          "saida": 1015
+        },
+        {
+          "entrada": 2131,
+          "saida": 615
+        },
+        {
+          "entrada": 2422,
+          "saida": 115
+        },
+        {
+          "entrada": 2487,
+          "saida": 2940
+        },
+        {
+          "entrada": 2493,
+          "saida": 1640
+        },
+        {
+          "entrada": 2776,
+          "saida": 3982
+        },
+        {
+          "entrada": 3191,
+          "saida": 3577
+        },
+        {
+          "entrada": 3577,
+          "saida": 2803
+        },
+        {
+          "entrada": 3605,
+          "saida": 994
+        },
+        {
+          "entrada": 3891,
+          "saida": 2325
+        },
+        {
+          "entrada": 3999,
+          "saida": 782
+        }
+      ]
+    },
+    {
+      "nome": "a maior que b 100 x 40",
+      "radix": 10,
+      "a": 100,
+      "b": 40,
+      "ajuste": "",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 3207
+        },
+        {
+          "entrada": 1,
+          "saida": 2026
+        },
+        {
+          "entrada": 47,
+          "saida": 1433
+        },
+        {
+          "entrada": 410,
+          "saida": 3729
+        },
+        {
+          "entrada": 1290,
+          "saida": 1000
+        },
+        {
+          "entrada": 1648,
+          "saida": 3317
+        },
+        {
+          "entrada": 1760,
+          "saida": 1764
+        },
+        {
+          "entrada": 1987,
+          "saida": 3732
+        },
+        {
+          "entrada": 1998,
+          "saida": 280
+        },
+        {
+          "entrada": 2204,
+          "saida": 1305
+        },
+        {
+          "entrada": 2216,
+          "saida": 3314
+        },
+        {
+          "entrada": 2767,
+          "saida": 3853
+        },
+        {
+          "entrada": 2983,
+          "saida": 1293
+        },
+        {
+          "entrada": 3666,
+          "saida": 1178
+        },
+        {
+          "entrada": 3999,
+          "saida": 3981
+        }
+      ]
+    },
+    {
+      "nome": "a minimo 2 x 20",
+      "radix": 10,
+      "a": 2,
+      "b": 20,
+      "ajuste": "",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 35
+        },
+        {
+          "entrada": 1,
+          "saida": 13
+        },
+        {
+          "entrada": 2,
+          "saida": 7
+        },
+        {
+          "entrada": 3,
+          "saida": 17
+        },
+        {
+          "entrada": 4,
+          "saida": 30
+        },
+        {
+          "entrada": 5,
+          "saida": 37
+        },
+        {
+          "entrada": 6,
+          "saida": 36
+        },
+        {
+          "entrada": 7,
+          "saida": 33
+        },
+        {
+          "entrada": 8,
+          "saida": 23
+        },
+        {
+          "entrada": 9,
+          "saida": 39
+        },
+        {
+          "entrada": 10,
+          "saida": 24
+        },
+        {
+          "entrada": 11,
+          "saida": 5
+        },
+        {
+          "entrada": 12,
+          "saida": 9
+        },
+        {
+          "entrada": 13,
+          "saida": 0
+        },
+        {
+          "entrada": 14,
+          "saida": 18
+        },
+        {
+          "entrada": 15,
+          "saida": 4
+        },
+        {
+          "entrada": 16,
+          "saida": 3
+        },
+        {
+          "entrada": 17,
+          "saida": 20
+        },
+        {
+          "entrada": 18,
+          "saida": 22
+        },
+        {
+          "entrada": 19,
+          "saida": 14
+        },
+        {
+          "entrada": 20,
+          "saida": 25
+        },
+        {
+          "entrada": 21,
+          "saida": 16
+        },
+        {
+          "entrada": 22,
+          "saida": 34
+        },
+        {
+          "entrada": 23,
+          "saida": 28
+        },
+        {
+          "entrada": 24,
+          "saida": 31
+        },
+        {
+          "entrada": 25,
+          "saida": 29
+        },
+        {
+          "entrada": 26,
+          "saida": 32
+        },
+        {
+          "entrada": 27,
+          "saida": 2
+        },
+        {
+          "entrada": 28,
+          "saida": 10
+        },
+        {
+          "entrada": 29,
+          "saida": 1
+        },
+        {
+          "entrada": 30,
+          "saida": 27
+        },
+        {
+          "entrada": 31,
+          "saida": 15
+        },
+        {
+          "entrada": 32,
+          "saida": 19
+        },
+        {
+          "entrada": 33,
+          "saida": 8
+        },
+        {
+          "entrada": 34,
+          "saida": 38
+        },
+        {
+          "entrada": 35,
+          "saida": 12
+        },
+        {
+          "entrada": 36,
+          "saida": 26
+        },
+        {
+          "entrada": 37,
+          "saida": 21
+        },
+        {
+          "entrada": 38,
+          "saida": 11
+        },
+        {
+          "entrada": 39,
+          "saida": 6
+        }
+      ]
+    },
+    {
+      "nome": "extremos 2^32-1 x 2^32-1",
+      "radix": 10,
+      "a": 4294967295,
+      "b": 4294967295,
+      "ajuste": "",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 11538533966444313631
+        },
+        {
+          "entrada": 1,
+          "saida": 9595795250843697839
+        },
+        {
+          "entrada": 488775898972124981,
+          "saida": 3958357909565068287
+        },
+        {
+          "entrada": 1507627939437287446,
+          "saida": 14234684939569516362
+        },
+        {
+          "entrada": 2814201619383481568,
+          "saida": 1759048962703498536
+        },
+        {
+          "entrada": 5162499059419515988,
+          "saida": 1663637724507292028
+        },
+        {
+          "entrada": 5524654119658457524,
+          "saida": 1536293470373683625
+        },
+        {
+          "entrada": 7568074646591427934,
+          "saida": 18126574828663579436
+        },
+        {
+          "entrada": 9986224443197969949,
+          "saida": 4248174636179816841
+        },
+        {
+          "entrada": 10150744039434406714,
+          "saida": 9754601808854587236
+        },
+        {
+          "entrada": 10464252369258783612,
+          "saida": 201164167604116876
+        },
+        {
+          "entrada": 10872081640499805068,
+          "saida": 2325094153149705608
+        },
+        {
+          "entrada": 13308071429158051884,
+          "saida": 15622684981148528625
+        },
+        {
+          "entrada": 13479197858887289481,
+          "saida": 13513312610766825463
+        },
+        {
+          "entrada": 18446744065119617023,
+          "saida": 12947051978620833033
+        },
+        {
+          "entrada": 18446744065119617024,
+          "saida": 16096113389840697522
+        }
+      ]
+    },
+    {
+      "nome": "ajuste de 300 bytes",
+      "radix": 36,
+      "a": 100,
+      "b": 100,
+      "ajuste": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b",
+      "excluidos": [],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 1282
+        },
+        {
+          "entrada": 1,
+          "saida": 6248
+        },
+        {
+          "entrada": 502,
+          "saida": 2864
+        },
+        {
+          "entrada": 848,
+          "saida": 7348
+        },
+        {
+          "entrada": 1263,
+          "saida": 5920
+        },
+        {
+          "entrada": 2481,
+          "saida": 3192
+        },
+        {
+          "entrada": 3703,
+          "saida": 1426
+        },
+        {
+          "entrada": 3973,
+          "saida": 6291
+        },
+        {
+          "entrada": 4250,
+          "saida": 817
+        },
+        {
+          "entrada": 4303,
+          "saida": 5646
+        },
+        {
+          "entrada": 4399,
+          "saida": 183
+        },
+        {
+          "entrada": 4762,
+          "saida": 7550
+        },
+        {
+          "entrada": 5675,
+          "saida": 28
+        },
+        {
+          "entrada": 8635,
+          "saida": 2125
+        },
+        {
+          "entrada": 9999,
+          "saida": 9504
+        }
+      ]
+    },
+    {
+      "nome": "10^4 com exclusoes",
+      "radix": 10,
+      "a": 100,
+      "b": 100,
+      "ajuste": "",
+      "excluidos": [
+        0,
+        1111,
+        2222,
+        3333,
+        4444,
+        5555,
+        6666,
+        7777,
+        8888,
+        9999
+      ],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 0
+        },
+        {
+          "entrada": 1,
+          "saida": 974
+        },
+        {
+          "entrada": 24,
+          "saida": 5366
+        },
+        {
+          "entrada": 551,
+          "saida": 4078
+        },
+        {
+          "entrada": 600,
+          "saida": 5233
+        },
+        {
+          "entrada": 666,
+          "saida": 9534
+        },
+        {
+          "entrada": 1111,
+          "saida": 1111
+        },
+        {
+          "entrada": 1848,
+          "saida": 1240
+        },
+        {
+          "entrada": 2222,
+          "saida": 2222
+        },
+        {
+          "entrada": 2379,
+          "saida": 3185
+        },
+        {
+          "entrada": 2503,
+          "saida": 1895
+        },
+        {
+          "entrada": 2848,
+          "saida": 4069
+        },
+        {
+          "entrada": 3041,
+          "saida": 9386
+        },
+        {
+          "entrada": 3068,
+          "saida": 9744
+        },
+        {
+          "entrada": 3550,
+          "saida": 5492
+        },
+        {
+          "entrada": 3652,
+          "saida": 4012
+        },
+        {
+          "entrada": 3961,
+          "saida": 8305
+        },
+        {
+          "entrada": 5216,
+          "saida": 1046
+        },
+        {
+          "entrada": 6652,
+          "saida": 3513
+        },
+        {
+          "entrada": 6970,
+          "saida": 2809
+        },
+        {
+          "entrada": 8500,
+          "saida": 7874
+        },
+        {
+          "entrada": 8622,
+          "saida": 4184
+        },
+        {
+          "entrada": 8678,
+          "saida": 2485
+        },
+        {
+          "entrada": 9360,
+          "saida": 1281
+        },
+        {
+          "entrada": 9999,
+          "saida": 9999
+        }
+      ]
+    },
+    {
+      "nome": "6 x 6 com metade excluida",
+      "radix": 10,
+      "a": 6,
+      "b": 6,
+      "ajuste": "6162",
+      "excluidos": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35
+      ],
+      "pares": [
+        {
+          "entrada": 0,
+          "saida": 6
+        },
+        {
+          "entrada": 1,
+          "saida": 1
+        },
+        {
+          "entrada": 2,
+          "saida": 34
+        },
+        {
+          "entrada": 3,
+          "saida": 3
+        },
+        {
+          "entrada": 4,
+          "saida": 0
+        },
+        {
+          "entrada": 5,
+          "saida": 5
+        },
+        {
+          "entrada": 6,
+          "saida": 4
+        },
+        {
+          "entrada": 7,
+          "saida": 7
+        },
+        {
+          "entrada": 8,
+          "saida": 18
+        },
+        {
+          "entrada": 9,
+          "saida": 9
+        },
+        {
+          "entrada": 10,
+          "saida": 26
+        },
+        {
+          "entrada": 11,
+          "saida": 11
+        },
+        {
+          "entrada": 12,
+          "saida": 20
+        },
+        {
+          "entrada": 13,
+          "saida": 13
+        },
+        {
+          "entrada": 14,
+          "saida": 2
+        },
+        {
+          "entrada": 15,
+          "saida": 15
+        },
+        {
+          "entrada": 16,
+          "saida": 22
+        },
+        {
+          "entrada": 17,
+          "saida": 17
+        },
+        {
+          "entrada": 18,
+          "saida": 28
+        },
+        {
+          "entrada": 19,
+          "saida": 19
+        },
+        {
+          "entrada": 20,
+          "saida": 14
+        },
+        {
+          "entrada": 21,
+          "saida": 21
+        },
+        {
+          "entrada": 22,
+          "saida": 10
+        },
+        {
+          "entrada": 23,
+          "saida": 23
+        },
+        {
+          "entrada": 24,
+          "saida": 8
+        },
+        {
+          "entrada": 25,
+          "saida": 25
+        },
+        {
+          "entrada": 26,
+          "saida": 30
+        },
+        {
+          "entrada": 27,
+          "saida": 27
+        },
+        {
+          "entrada": 28,
+          "saida": 12
+        },
+        {
+          "entrada": 29,
+          "saida": 29
+        },
+        {
+          "entrada": 30,
+          "saida": 32
+        },
+        {
+          "entrada": 31,
+          "saida": 31
+        },
+        {
+          "entrada": 32,
+          "saida": 24
+        },
+        {
+          "entrada": 33,
+          "saida": 33
+        },
+        {
+          "entrada": 34,
+          "saida": 16
+        },
+        {
+          "entrada": 35,
+          "saida": 35
+        }
+      ]
+    }
+  ]
+}
