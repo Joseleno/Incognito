@@ -4,7 +4,7 @@ namespace CodeProcess.Incognito.Testes.Arquitetura;
 
 /// <summary>
 /// Regras de dependência entre os pacotes, verificadas sobre as referências
-/// que o compilador de fato gravou em cada assembly.
+/// que o compilador de fato gravou em cada assembly, e regras de nomes dos tipos.
 /// </summary>
 public sealed class RegrasDeArquiteturaTestes
 {
@@ -12,8 +12,14 @@ public sealed class RegrasDeArquiteturaTestes
     private const string Motor = "CodeProcess.Incognito.Motor";
     private const string PostgreSql = "CodeProcess.Incognito.PostgreSql";
     private const string SqlServer = "CodeProcess.Incognito.SqlServer";
+    private const string EntityFrameworkCore = "CodeProcess.Incognito.EntityFrameworkCore";
+    private const string Cli = "CodeProcess.Incognito.Cli";
 
     private static readonly string[] _driversEEfCore = ["Npgsql", "Microsoft.Data.SqlClient", "Microsoft.EntityFrameworkCore"];
+
+    // Cpf, Cnpj e Email colidem com tipos que já existem em muitos projetos brasileiros; Dominio, com o namespace de
+    // projetos DDD.
+    private static readonly string[] _nomesDeTipoProibidos = ["Cpf", "Cnpj", "Email", "Dominio"];
 
     [Fact]
     public void Nucleo_nao_referencia_pacotes_de_terceiros()
@@ -57,6 +63,44 @@ public sealed class RegrasDeArquiteturaTestes
         var nomes = ReferenciasTransitivasDoProjeto(assembly).Select(referencia => referencia.Name);
 
         Assert.DoesNotContain("System.Net.Http", nomes);
+    }
+
+    [Theory]
+    [InlineData(Nucleo)]
+    [InlineData(Motor)]
+    [InlineData(PostgreSql)]
+    [InlineData(SqlServer)]
+    [InlineData(EntityFrameworkCore)]
+    [InlineData(Cli)]
+    public void Nenhum_tipo_nem_namespace_se_chama_Cpf_Cnpj_Email_ou_Dominio(string assembly)
+    {
+        // Sem diferenciar maiúsculas: CPF, EMail ou DOMINIO colidiriam do mesmo jeito.
+        var proibidos = Tipos(assembly)
+            .Where(tipo => _nomesDeTipoProibidos.Contains(NomeSemAridade(tipo.Name), StringComparer.OrdinalIgnoreCase)
+                || (tipo.Namespace ?? "").Split('.').Intersect(_nomesDeTipoProibidos, StringComparer.OrdinalIgnoreCase).Any())
+            .Select(tipo => tipo.FullName)
+            .ToArray();
+
+        Assert.True(proibidos.Length == 0, $"Tipos com nome ou namespace proibido: {string.Join(", ", proibidos)}.");
+    }
+
+    // Um tipo que não carrega não pode esconder os outros da verificação.
+    private static IEnumerable<Type> Tipos(string assembly)
+    {
+        try
+        {
+            return Assembly.Load(new AssemblyName(assembly)).GetTypes();
+        }
+        catch (ReflectionTypeLoadException excecao)
+        {
+            return excecao.Types.OfType<Type>();
+        }
+    }
+
+    private static string NomeSemAridade(string nome)
+    {
+        var crase = nome.IndexOf('`', StringComparison.Ordinal);
+        return crase < 0 ? nome : nome[..crase];
     }
 
     private static AssemblyName[] Referencias(string assembly) =>

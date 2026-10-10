@@ -1,0 +1,18 @@
+{
+  "origem": "didatico-rfb",
+  "descricao": "Exemplos didáticos do cálculo do DV do CNPJ alfanumérico publicados pela Receita Federal em material de algoritmo (manual do DV, perguntas frequentes, códigos de referência). Servem só para conferir o cálculo do DV: não são CNPJs cadastrados e não podem ser usados em nenhum outro teste, exemplo ou documentação.",
+  "casos": [
+    { "nome": "12ABC34501DE com DV 35", "cnpj": "12ABC34501DE35", "valido": true },
+    { "nome": "1345C3A50001 com DV 06", "cnpj": "1345C3A5000106", "valido": true },
+    { "nome": "R55231B30007 com DV 57", "cnpj": "R55231B3000757", "valido": true },
+    { "nome": "R55231B30007 com DV 00", "cnpj": "R55231B3000700", "valido": false },
+    { "nome": "ABCDEFGHIJKL com DV 80", "cnpj": "ABCDEFGHIJKL80", "valido": true },
+    { "nome": "ABCDEFGHIJKL com DV 81", "cnpj": "ABCDEFGHIJKL81", "valido": false },
+    { "nome": "AA345678000A com DV 29", "cnpj": "AA345678000A29", "valido": true },
+    { "nome": "regressao do FAQ: AA3456780003 com DV 29", "cnpj": "AA345678000329", "valido": false },
+    { "nome": "regressao do FAQ: AA3456780003 com DV 86", "cnpj": "AA345678000386", "valido": true },
+    { "nome": "12ABC34501DE com DV 35 em minusculas", "cnpj": "12abc34501de35", "valido": false },
+    { "nome": "ABCDEFGHIJKL com DV 80 com uma minuscula", "cnpj": "ABCDEFGHIJKl80", "valido": false },
+    { "nome": "12ABC34501DE com DV 35 com mascara", "cnpj": "12.ABC.345/01DE-35", "valido": true }
+  ]
+}
