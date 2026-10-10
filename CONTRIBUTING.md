@@ -7,10 +7,10 @@ Obrigado pelo interesse. O Incognito está em desenvolvimento e ainda não tem v
 - **Nunca dados reais.** Testes, exemplos, issues, pull requests e documentação usam apenas dados sintéticos. Identificadores como CPF, CNPJ e chaves de acesso de documentos fiscais vêm do gerador do próprio projeto, com semente registrada. Um identificador que exista em algum cadastro não entra no repositório, nem mesmo um publicado como "de teste" ou "de homologação". A única exceção são os exemplos didáticos que a Receita Federal publica em material sobre o cálculo do dígito verificador, usados apenas como âncora em `testes/ancoras/`.
 - **Nenhuma saída revela dado tratado.** Mensagens, logs, exceções, relatórios e snapshots de teste identificam apenas tabela, coluna e número da linha, nunca o valor da coluna nem a chave.
 - **Vetores fixos são contrato.** Se uma mudança altera a saída de um transformador, ela cria uma nova versão dele (por exemplo, `br.cpf@2`) e mantém a anterior. Um vetor existente em `testes/vetores/` nunca é editado para fazer um teste passar.
-- **Tudo em português**: código, testes, mensagens, exceções, documentação XML e commits, com identificadores sem acento. Inglês apenas em palavras reservadas, tipos da biblioteca base, sufixo `Async`, padrão `Add*` de injeção de dependência e nomes de produtos.
+- **Tudo em português**: código, testes, mensagens, exceções, documentação XML e commits, com identificadores sem acento. Inglês apenas em palavras reservadas, tipos da biblioteca base, sufixo `Async`, padrão `Add*` no ponto de entrada da injeção de dependência e nomes de produtos, formatos e siglas. As regras completas, inclusive os nomes que a API evita, estão no [ADR 0001](docs/adr/0001-projeto-em-portugues.md).
 - **O núcleo não depende de pacotes de terceiros.** O motor não depende de driver de banco nem do EF Core, e os dialetos não se referenciam. Os testes de arquitetura garantem essas regras.
 - **A API pública é rastreada.** Membro público novo entra no `PublicAPI.Unshipped.txt` do projeto; sem isso, o build falha.
-- **Decisões de projeto viram ADR** em `docs/adr/`, no mesmo pull request que toma a decisão.
+- **Decisões de projeto viram ADR** em [`docs/adr/`](docs/adr/README.md), no mesmo pull request que toma a decisão.
 - **Sem promessa jurídica.** Nenhum texto do projeto promete conformidade com a LGPD nem anonimização garantida; o enquadramento jurídico usa os textos que já estão no README.
 
 ## Desenvolvimento
