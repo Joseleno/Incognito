@@ -28,13 +28,14 @@ jobs:
           persist-credentials: false
       # Só tag de lançamento chega ao envio para o nuget.org no release.yml.
       - run: bash .github/scripts/testar-release.sh
+      - run: bash .github/scripts/conferir-actions-fixadas.sh
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
-      # Com GITHUB_ACTIONS, o Directory.Build.props liga RestoreLockedMode: lock file desatualizado quebra aqui.
-      - run: dotnet restore
+      # Presa aos packages.lock.json: lock file desatualizado quebra aqui.
+      - run: dotnet restore --locked-mode
       - run: dotnet build -c Release --no-restore
       - run: dotnet format --verify-no-changes --no-restore
       - run: dotnet test -c Release --no-build --filter-not-trait "Categoria=Integracao" --coverlet --coverlet-output-format cobertura
@@ -63,4 +64,5 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
-      - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release
+      - run: dotnet restore testes/CodeProcess.Incognito.Testes --locked-mode
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-restore

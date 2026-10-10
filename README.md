@@ -1,5 +1,8 @@
 # CodeProcess.Incognito
 
+[![ci](https://github.com/Joseleno/Incognito/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Joseleno/Incognito/actions/workflows/ci.yml?query=branch%3Adevelop)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Joseleno/Incognito/badge)](https://scorecard.dev/viewer/?uri=github.com/Joseleno/Incognito)
+
 Biblioteca NuGet e ferramenta de linha de comando em .NET 10 que copia bases PostgreSQL e SQL Server de produção para homologação, desenvolvimento e CI substituindo dados pessoais por dados brasileiros válidos: CPF, CNPJ alfanumérico, telefone, chaves de acesso de NF-e e demais DF-e.
 
 Gratuita, open source (MIT) e inteiramente em português.

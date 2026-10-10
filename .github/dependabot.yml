@@ -1,0 +1,40 @@
+# Atualizações semanais dos pacotes NuGet e das actions: as de versão menor e de correção chegam juntas
+# num único pull request por ecossistema; as de versão maior chegam uma a uma. Uma versão nova só é
+# proposta depois de 7 dias publicada. Atualizações de segurança não esperam.
+#
+# O SDK do .NET fica de fora: subir o global.json exige regenerar os lock files
+# (dotnet restore --force-evaluate), porque o lock do núcleo guarda o Microsoft.NET.ILLink.Tasks na
+# versão do runtime do SDK. É um pull request próprio, feito à mão.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    cooldown:
+      default-days: 7
+    groups:
+      nuget:
+        patterns: ['*']
+        update-types: [minor, patch]
+    # Sem os rótulos padrão em inglês; os do repositório são só em português.
+    labels: []
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: []
