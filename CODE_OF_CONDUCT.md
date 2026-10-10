@@ -36,7 +36,9 @@ Este Código de Conduta se aplica dentro de todos os espaços da comunidade e ta
 
 ## Aplicação
 
-Ocorrências de comportamentos abusivos, de assédio ou que sejam inaceitáveis por qualquer outro motivo poderão ser reportadas para a liderança da comunidade, responsável pela aplicação, pelo recurso de denúncia de conteúdo do GitHub (no menu `...` do comentário, da issue ou da discussão, escolha "Report content" e depois "Report to repository admins"), que chega somente ao mantenedor. Todas as reclamações serão revisadas e investigadas imediatamente e de maneira justa.
+Ocorrências de comportamentos abusivos, de assédio ou que sejam inaceitáveis por qualquer outro motivo poderão ser reportadas para a liderança da comunidade, responsável pela aplicação, pelo e-mail contatojoseleno@gmail.com, que chega somente ao mantenedor. Todas as reclamações serão revisadas e investigadas imediatamente e de maneira justa.
+
+Também é possível denunciar diretamente ao GitHub: no menu `...` do comentário, da issue ou da discussão, escolha "Report content" e depois "Report to GitHub". Esse caminho é indicado quando a ocorrência envolve o próprio mantenedor ou quando a pessoa prefere não usar o e-mail.
 
 A liderança da comunidade tem a obrigação de respeitar a privacidade e a segurança de quem reportar qualquer incidente.
 
