@@ -4,4 +4,10 @@
     <ProjectReference Include="..\..\src\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
   </ItemGroup>
 
+  <!-- Âncoras independentes e vetores fixos, lidos da pasta de saída. -->
+  <ItemGroup>
+    <None Include="..\ancoras\**\*.json" LinkBase="ancoras" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\vetores\**\*.json" LinkBase="vetores" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
