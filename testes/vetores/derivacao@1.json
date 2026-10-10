@@ -1,0 +1,166 @@
+{
+  "descricao": "Subchaves derivadas por HKDF-SHA256 (versão 1 da derivação). Chaves públicas de teste: nunca use fora dos testes. Contrato de compatibilidade: um valor que mudar exige nova versão, nunca edição deste arquivo. Bytes em hexadecimal; nomes em ASCII.",
+  "sal": "CodeProcess.Incognito/v1",
+  "chaves": [
+    {
+      "nome": "aleatoria",
+      "texto": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+      "impressaoDigital": "ec7f02edbf4c60b3",
+      "prk": "208628cad892b6a5b7c474a6f07871f9433dfe126c3897f29e2c6877dba9c403",
+      "feistel": [
+        {
+          "dominio": "cpf",
+          "versao": 1,
+          "variante": "num",
+          "ambiente": "homologacao",
+          "subchave": "648443ad907a251c9136136100559714be9eccd89352cd07218e3a2c70eb2b62"
+        },
+        {
+          "dominio": "cpf",
+          "versao": 1,
+          "variante": "num",
+          "ambiente": "desenvolvimento",
+          "subchave": "6736d7d3a5d3601d2c7126cab94fbb97a45259d64ed5c76988c2606497f822aa"
+        },
+        {
+          "dominio": "cpf",
+          "versao": 2,
+          "variante": "num",
+          "ambiente": "homologacao",
+          "subchave": "f721a5a46dcc26786d6497a11840c1cc92a6526a129f1cbf4ba5240aae807363"
+        },
+        {
+          "dominio": "cpf",
+          "versao": 10,
+          "variante": "num",
+          "ambiente": "homologacao",
+          "subchave": "3c6897e42b6f92edc7d6e61017ad237d22558aaf2ad0f227adb5e758ba9d4bee"
+        },
+        {
+          "dominio": "cnpj",
+          "versao": 1,
+          "variante": "alfa",
+          "ambiente": "homologacao",
+          "subchave": "e2227bffad3cda6fd2225dcf5ca68305d688b88b3960c727ac679f4ee0f3d4bb"
+        },
+        {
+          "dominio": "dfe-numero",
+          "versao": 1,
+          "variante": "cnf8",
+          "ambiente": "producao",
+          "subchave": "ab010bfeabe4277c8fb48769a1c361008771d2f150f537a78779fc077ebe2c23"
+        }
+      ],
+      "semente": [
+        {
+          "transformador": "br.nome-completo",
+          "dominio": "cpf",
+          "versao": 1,
+          "ambiente": "homologacao",
+          "subchave": "a1e9e21d3ae6cc875191620c0bb4d2b58989a857bda86134bef46e3b13015827"
+        },
+        {
+          "transformador": "br.nome-completo",
+          "dominio": "cpf",
+          "versao": 1,
+          "ambiente": "desenvolvimento",
+          "subchave": "c368b23e5f52accaa2639624b26f8aba600ffe435b1e86654a88eec300e05af5"
+        },
+        {
+          "transformador": "br.cep",
+          "dominio": "cpf",
+          "versao": 1,
+          "ambiente": "homologacao",
+          "subchave": "081603e33ae864c7d733e5e1d9f52a4f03a418c6da3be8cba54c96dd70e3feb6"
+        },
+        {
+          "transformador": "data.deslocar",
+          "dominio": "pedido_id",
+          "versao": 1,
+          "ambiente": "producao",
+          "subchave": "12ae8263d24c4351ee5a4c10d15e365651f62383ca216a4d44e1460faf1db8aa"
+        }
+      ]
+    },
+    {
+      "nome": "bordas",
+      "texto": "inc1__IPFAh2CuX1F3f235EVjhrndlnjShhzaM_yXxuMma-s",
+      "impressaoDigital": "49340f6f7195b78c",
+      "prk": "72845346ef80d234f6f7c18af4cbed50724a15359a94682b2a89616e32f46f08",
+      "feistel": [
+        {
+          "dominio": "cpf",
+          "versao": 1,
+          "variante": "num",
+          "ambiente": "homologacao",
+          "subchave": "82822e0b40f861ca4a2181cec5538997e69d62c771f03b2c2eb56f9d66ba1841"
+        },
+        {
+          "dominio": "cpf",
+          "versao": 1,
+          "variante": "num",
+          "ambiente": "desenvolvimento",
+          "subchave": "e07c915eb833aaf837e4fc7a1ea301566a079bb97793c5f40dc2c70bfccc80c4"
+        },
+        {
+          "dominio": "cpf",
+          "versao": 2,
+          "variante": "num",
+          "ambiente": "homologacao",
+          "subchave": "c31e22c55c6f48fd60646ae21c2f1f7c2f147af96d89489e3cd2c7c0e55e55a6"
+        },
+        {
+          "dominio": "cpf",
+          "versao": 10,
+          "variante": "num",
+          "ambiente": "homologacao",
+          "subchave": "f8ccea1db3c19cbf77e0d7f95ad4938f6983ab2dccafa6ab7a848df1e2be718f"
+        },
+        {
+          "dominio": "cnpj",
+          "versao": 1,
+          "variante": "alfa",
+          "ambiente": "homologacao",
+          "subchave": "c80a5d8ee34d8f331d06feefbf8d17046b70d585c1cbbfde06140b0b27650cdf"
+        },
+        {
+          "dominio": "dfe-numero",
+          "versao": 1,
+          "variante": "cnf8",
+          "ambiente": "producao",
+          "subchave": "fdc107cabac1237eb8282fd49e464a993a147edcfeaf31a9860cd18e39fffdb9"
+        }
+      ],
+      "semente": [
+        {
+          "transformador": "br.nome-completo",
+          "dominio": "cpf",
+          "versao": 1,
+          "ambiente": "homologacao",
+          "subchave": "0c77798219144db6f9d550eb084b04b557fabee8bf3c09d2e569254bb583ea68"
+        },
+        {
+          "transformador": "br.nome-completo",
+          "dominio": "cpf",
+          "versao": 1,
+          "ambiente": "desenvolvimento",
+          "subchave": "c3a9fea1a4709a5af9e364a58aa38026208110dbea0ab8ab1e6d143909313ea8"
+        },
+        {
+          "transformador": "br.cep",
+          "dominio": "cpf",
+          "versao": 1,
+          "ambiente": "homologacao",
+          "subchave": "3bfb82276a507194b174c75279ff28ff777430f1e76b0289a4edefe6c9078ef4"
+        },
+        {
+          "transformador": "data.deslocar",
+          "dominio": "pedido_id",
+          "versao": 1,
+          "ambiente": "producao",
+          "subchave": "33d117505d61766b64d9ca3d468bb909e4e6ec43f65030c90c408169170071ed"
+        }
+      ]
+    }
+  ]
+}

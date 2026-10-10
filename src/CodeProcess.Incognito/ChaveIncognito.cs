@@ -177,7 +177,7 @@ public sealed class ChaveIncognito : IDisposable
         Debug.Assert(codificou && codificados == TamanhoBase64);
 
         // Um descarte no meio deixaria no destino uma chave total ou parcialmente zerada.
-        if (Volatile.Read(ref _descartada) != 0)
+        if (FoiDescartadaDuranteOUso())
         {
             destino[..TamanhoTexto].Clear();
             throw new ObjectDisposedException(nameof(ChaveIncognito));
@@ -211,7 +211,7 @@ public sealed class ChaveIncognito : IDisposable
     {
         LancarSeDescartada();
         HKDF.Extract(HashAlgorithmName.SHA256, _valor, SalDaDerivacao, prk);
-        if (Volatile.Read(ref _descartada) != 0)
+        if (FoiDescartadaDuranteOUso())
         {
             CryptographicOperations.ZeroMemory(prk);
             throw new ObjectDisposedException(nameof(ChaveIncognito));
@@ -270,6 +270,14 @@ public sealed class ChaveIncognito : IDisposable
     };
 
     private void LancarSeDescartada() => ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartada) != 0, this);
+
+    // A barreira completa impede que as leituras do valor feitas no uso se resolvam depois da leitura da marca: um
+    // Volatile.Read só ordena o que vem depois dele, e em ARM64 o uso poderia ler a chave já zerada com a marca em 0.
+    private bool FoiDescartadaDuranteOUso()
+    {
+        Interlocked.MemoryBarrier();
+        return Volatile.Read(ref _descartada) != 0;
+    }
 
     private static IncognitoException FormatoInvalido() => new(
         CodigoFormatoInvalido,
