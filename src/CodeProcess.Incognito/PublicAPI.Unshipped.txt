@@ -1,1 +1,13 @@
 #nullable enable
+CodeProcess.Incognito.ChaveIncognito
+CodeProcess.Incognito.ChaveIncognito.Dispose() -> void
+CodeProcess.Incognito.ChaveIncognito.ImpressaoDigital.get -> string!
+CodeProcess.Incognito.ChaveIncognito.TentarExportar(System.Span<char> destino, out int escritos) -> bool
+CodeProcess.Incognito.IncognitoException
+CodeProcess.Incognito.IncognitoException.Codigo.get -> string!
+CodeProcess.Incognito.IncognitoException.IncognitoException(string! codigo, string! mensagem) -> void
+CodeProcess.Incognito.IncognitoException.IncognitoException(string! codigo, string! mensagem, System.Exception? interna) -> void
+override CodeProcess.Incognito.ChaveIncognito.ToString() -> string!
+static CodeProcess.Incognito.ChaveIncognito.Gerar() -> CodeProcess.Incognito.ChaveIncognito!
+static CodeProcess.Incognito.ChaveIncognito.Ler(System.ReadOnlySpan<byte> textoUtf8) -> CodeProcess.Incognito.ChaveIncognito!
+static CodeProcess.Incognito.ChaveIncognito.Ler(System.ReadOnlySpan<char> texto) -> CodeProcess.Incognito.ChaveIncognito!
