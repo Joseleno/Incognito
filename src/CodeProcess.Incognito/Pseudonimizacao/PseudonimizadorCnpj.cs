@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Documentos;
@@ -42,8 +41,6 @@ internal sealed class PseudonimizadorCnpj : IDisposable
     private const int TamanhoDaRaiz = 8;
     private const int TamanhoDaBase = 12;
     private const long MaiorCnpj = 99_999_999_999_999;
-    private const string CodigoMalformado = "INC1003";
-    private const string CodigoDvInvalido = "INC1004";
     private const string MensagemTextoMalformado =
         "Valor fora da forma de CNPJ (14 caracteres, máscara 00.000.000/0000-00 ou 12 ou 13 dígitos sem os zeros à esquerda; raiz e ordem com dígitos ou letras maiúsculas, DV com dígitos); a política entradaMalformada é falhar. O valor não é exibido.";
     private const string MensagemNumeroMalformado =
@@ -74,15 +71,8 @@ internal sealed class PseudonimizadorCnpj : IDisposable
         PoliticaEntradaMalformada malformada)
     {
         // Antes de derivar: depois, a permutação criada ficaria sem descarte.
-        if (!Enum.IsDefined(invalida))
-        {
-            throw new ArgumentOutOfRangeException(nameof(invalida), "Política de entrada inválida desconhecida.");
-        }
-
-        if (!Enum.IsDefined(malformada))
-        {
-            throw new ArgumentOutOfRangeException(nameof(malformada), "Política de entrada malformada desconhecida.");
-        }
+        Politicas.Validar(invalida, nameof(invalida));
+        Politicas.Validar(malformada, nameof(malformada));
 
         Span<byte> chaves = stackalloc byte[2 * Subchaves.Tamanho];
         var numerica = chaves[..Subchaves.Tamanho];
@@ -155,12 +145,12 @@ internal sealed class PseudonimizadorCnpj : IDisposable
         }
         else
         {
-            return Malformado(entrada, out saida);
+            return Politicas.AplicarMalformado(_malformada, MensagemTextoMalformado, entrada, out saida);
         }
 
         if (!SoDigitosEMaiusculas(caracteres[..TamanhoDaBase]) || !SoDigitos(caracteres[TamanhoDaBase..]))
         {
-            return Malformado(entrada, out saida);
+            return Politicas.AplicarMalformado(_malformada, MensagemTextoMalformado, entrada, out saida);
         }
 
         var desfecho = Transformar(caracteres);
@@ -186,9 +176,7 @@ internal sealed class PseudonimizadorCnpj : IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
         if (entrada is < 0 or > MaiorCnpj)
         {
-            var malformado = AplicarPoliticaDeMalformado(MensagemNumeroMalformado);
-            saida = malformado == Desfecho.CopiadoEmClaro ? entrada : null;
-            return malformado;
+            return Politicas.AplicarMalformado(_malformada, MensagemNumeroMalformado, entrada, out saida);
         }
 
         Span<char> caracteres = stackalloc char[14];
@@ -216,21 +204,9 @@ internal sealed class PseudonimizadorCnpj : IDisposable
     {
         var dvEntrada = ((caracteres[12] - '0') * 10) + (caracteres[13] - '0');
         var deslocamento = (dvEntrada - DigitosVerificadores.Cnpj(caracteres[..TamanhoDaBase]) + 100) % 100;
-        if (deslocamento != 0)
+        if (deslocamento != 0 && !Politicas.SeguirComDvInvalido(_invalida, "CNPJ"))
         {
-            switch (_invalida)
-            {
-                case PoliticaEntradaInvalida.Preservar:
-                    break;
-                case PoliticaEntradaInvalida.Anular:
-                    return Desfecho.AnuladoDvInvalido;
-                case PoliticaEntradaInvalida.Falhar:
-                    throw new IncognitoException(
-                        CodigoDvInvalido,
-                        "CNPJ com dígito verificador inválido; a política entradaInvalida é falhar. O valor não é exibido.");
-                default:
-                    throw new UnreachableException("Política de entrada inválida desconhecida.");
-            }
+            return Desfecho.AnuladoDvInvalido;
         }
 
         var permutados = caracteres[.._permutados];
@@ -244,21 +220,6 @@ internal sealed class PseudonimizadorCnpj : IDisposable
         caracteres[13] = (char)('0' + (dvSaida % 10));
         return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
     }
-
-    private Desfecho Malformado(string entrada, out string? saida)
-    {
-        var desfecho = AplicarPoliticaDeMalformado(MensagemTextoMalformado);
-        saida = desfecho == Desfecho.CopiadoEmClaro ? entrada : null;
-        return desfecho;
-    }
-
-    private Desfecho AplicarPoliticaDeMalformado(string mensagem) => _malformada switch
-    {
-        PoliticaEntradaMalformada.Anular => Desfecho.AnuladoMalformado,
-        PoliticaEntradaMalformada.Preservar => Desfecho.CopiadoEmClaro,
-        PoliticaEntradaMalformada.Falhar => throw new IncognitoException(CodigoMalformado, mensagem),
-        _ => throw new UnreachableException("Política de entrada malformada desconhecida."),
-    };
 
     private static int Formatar(ReadOnlySpan<char> caracteres, bool comMascara, Span<char> destino)
     {
