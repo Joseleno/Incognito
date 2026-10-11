@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Documentos;
@@ -34,8 +33,6 @@ internal sealed class PseudonimizadorCpf : IDisposable
     private const ulong TamanhoA = 10_000;
     private const ulong TamanhoB = 100_000;
     private const long MaiorCpf = 99_999_999_999;
-    private const string CodigoMalformado = "INC1003";
-    private const string CodigoDvInvalido = "INC1004";
     private const string MensagemTextoMalformado =
         "Valor fora da forma de CPF (11 dígitos, máscara 000.000.000-00 ou 9 ou 10 dígitos sem os zeros à esquerda); a política entradaMalformada é falhar. O valor não é exibido.";
     private const string MensagemNumeroMalformado =
@@ -66,15 +63,8 @@ internal sealed class PseudonimizadorCpf : IDisposable
         PoliticaEntradaMalformada malformada)
     {
         // Antes de derivar: depois, a permutação criada ficaria sem descarte.
-        if (!Enum.IsDefined(invalida))
-        {
-            throw new ArgumentOutOfRangeException(nameof(invalida), "Política de entrada inválida desconhecida.");
-        }
-
-        if (!Enum.IsDefined(malformada))
-        {
-            throw new ArgumentOutOfRangeException(nameof(malformada), "Política de entrada malformada desconhecida.");
-        }
+        Politicas.Validar(invalida, nameof(invalida));
+        Politicas.Validar(malformada, nameof(malformada));
 
         Span<byte> chaveDeDominio = stackalloc byte[Subchaves.Tamanho];
         try
@@ -129,12 +119,12 @@ internal sealed class PseudonimizadorCpf : IDisposable
         }
         else
         {
-            return Malformado(entrada, out saida);
+            return Politicas.AplicarMalformado(_malformada, MensagemTextoMalformado, entrada, out saida);
         }
 
         if (!SoDigitos(digitos))
         {
-            return Malformado(entrada, out saida);
+            return Politicas.AplicarMalformado(_malformada, MensagemTextoMalformado, entrada, out saida);
         }
 
         var desfecho = Transformar(Numero(digitos[..9]), (int)Numero(digitos[9..]), out var baseSaida, out var dvSaida);
@@ -160,9 +150,7 @@ internal sealed class PseudonimizadorCpf : IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
         if (entrada is < 0 or > MaiorCpf)
         {
-            var malformado = AplicarPoliticaDeMalformado(MensagemNumeroMalformado);
-            saida = malformado == Desfecho.CopiadoEmClaro ? entrada : null;
-            return malformado;
+            return Politicas.AplicarMalformado(_malformada, MensagemNumeroMalformado, entrada, out saida);
         }
 
         var desfecho = Transformar((ulong)(entrada / 100), (int)(entrada % 100), out var baseSaida, out var dvSaida);
@@ -181,23 +169,11 @@ internal sealed class PseudonimizadorCpf : IDisposable
     {
         var dvCorreto = Dv(baseEntrada);
         var deslocamento = (dvEntrada - dvCorreto + 100) % 100;
-        if (deslocamento != 0)
+        if (deslocamento != 0 && !Politicas.SeguirComDvInvalido(_invalida, "CPF"))
         {
-            switch (_invalida)
-            {
-                case PoliticaEntradaInvalida.Preservar:
-                    break;
-                case PoliticaEntradaInvalida.Anular:
-                    baseSaida = 0;
-                    dvSaida = 0;
-                    return Desfecho.AnuladoDvInvalido;
-                case PoliticaEntradaInvalida.Falhar:
-                    throw new IncognitoException(
-                        CodigoDvInvalido,
-                        "CPF com dígito verificador inválido; a política entradaInvalida é falhar. O valor não é exibido.");
-                default:
-                    throw new UnreachableException("Política de entrada inválida desconhecida.");
-            }
+            baseSaida = 0;
+            dvSaida = 0;
+            return Desfecho.AnuladoDvInvalido;
         }
 
         if (_repdigitos.Contem(baseEntrada))
@@ -211,21 +187,6 @@ internal sealed class PseudonimizadorCpf : IDisposable
         dvSaida = (Dv(baseSaida) + deslocamento) % 100;
         return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
     }
-
-    private Desfecho Malformado(string entrada, out string? saida)
-    {
-        var desfecho = AplicarPoliticaDeMalformado(MensagemTextoMalformado);
-        saida = desfecho == Desfecho.CopiadoEmClaro ? entrada : null;
-        return desfecho;
-    }
-
-    private Desfecho AplicarPoliticaDeMalformado(string mensagem) => _malformada switch
-    {
-        PoliticaEntradaMalformada.Anular => Desfecho.AnuladoMalformado,
-        PoliticaEntradaMalformada.Preservar => Desfecho.CopiadoEmClaro,
-        PoliticaEntradaMalformada.Falhar => throw new IncognitoException(CodigoMalformado, mensagem),
-        _ => throw new UnreachableException("Política de entrada malformada desconhecida."),
-    };
 
     // Escreve da direita para a esquerda: DVs, hífen e a base, com os pontos da máscara a cada três dígitos.
     private static int Formatar(ulong baseCpf, int dv, bool comMascara, Span<char> destino)

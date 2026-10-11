@@ -24,6 +24,9 @@ internal enum Desfecho
     /// <summary>Malformado e copiado em claro pela política de entrada malformada.</summary>
     CopiadoEmClaro,
 
+    /// <summary>Número de serviço do telefone (0800 e afins, 3003, 4004): não é de pessoa e volta como veio.</summary>
+    ServicoPreservado,
+
     /// <summary>Texto vazio ou só com espaços (<c>char(n)</c> em branco): não há dado a tratar e ele volta como veio.</summary>
     Vazio,
 }
