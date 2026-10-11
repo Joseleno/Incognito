@@ -1,4 +1,5 @@
 using CodeProcess.Incognito.Documentos;
+using static CodeProcess.Incognito.Documentos.Caracteres;
 
 namespace CodeProcess.Incognito;
 
@@ -117,34 +118,6 @@ public static class ValidadorBr
         && SoDigitosEMaiusculas(chave[6..18])
         && SoDigitos(chave[18..])
         && DigitosVerificadores.ChaveDfe(chave[..43]) == chave[43] - '0';
-
-    // Laços próprios em vez dos métodos genéricos de MemoryExtensions: ContainsAnyExceptInRange alocava 96 bytes por
-    // chamada enquanto estava em tier-0 do JIT, o que o teste de alocação pega. Não trocar de volta.
-    private static bool SoDigitos(ReadOnlySpan<char> texto)
-    {
-        foreach (var caractere in texto)
-        {
-            if (!char.IsAsciiDigit(caractere))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool SoDigitosEMaiusculas(ReadOnlySpan<char> texto)
-    {
-        foreach (var caractere in texto)
-        {
-            if (!char.IsAsciiDigit(caractere) && !char.IsAsciiLetterUpper(caractere))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
 
     private static bool EhRepetido(ReadOnlySpan<char> texto)
     {

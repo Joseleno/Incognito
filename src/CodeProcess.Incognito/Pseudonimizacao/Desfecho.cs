@@ -10,8 +10,8 @@ internal enum Desfecho
     DvInvalidoPreservado,
 
     /// <summary>
-    /// Base excluída da permutação (repdígito): base e DV ficam como vieram, com os zeros à esquerda completados. A
-    /// regra vale com qualquer DV; um DV errado só chega aqui com a política de preservar.
+    /// Base excluída da permutação (repdígito do CPF, raiz zero do CNPJ): base e DV ficam como vieram, com os zeros à
+    /// esquerda completados. A regra vale com qualquer DV; um DV errado só chega aqui com a política de preservar.
     /// </summary>
     PontoFixo,
 

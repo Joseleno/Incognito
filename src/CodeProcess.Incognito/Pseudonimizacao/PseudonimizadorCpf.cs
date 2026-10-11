@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Documentos;
+using static CodeProcess.Incognito.Documentos.Caracteres;
 
 namespace CodeProcess.Incognito.Pseudonimizacao;
 
@@ -273,18 +274,5 @@ internal sealed class PseudonimizadorCpf : IDisposable
         }
 
         return numero;
-    }
-
-    private static bool SoDigitos(ReadOnlySpan<char> texto)
-    {
-        foreach (var caractere in texto)
-        {
-            if (!char.IsAsciiDigit(caractere))
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 }
