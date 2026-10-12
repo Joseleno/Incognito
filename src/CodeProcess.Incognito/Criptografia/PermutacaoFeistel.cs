@@ -132,7 +132,7 @@ internal sealed class PermutacaoFeistel : IDisposable
     /// <returns>O valor permutado, fora dos excluídos (ou o próprio valor, se ele estiver excluído).</returns>
     /// <exception cref="IncognitoException">Com o código <c>INC1002</c>, se o limite defensivo de passos estourar.</exception>
     internal ulong Permutar(ulong x, ReadOnlySpan<byte> ajuste, ConjuntoExcluido excluidos) =>
-        Caminhar(x, nameof(x), ajuste, excluidos, inversa: false);
+        Caminhar(x, nameof(x), ajuste, excluidos, adicional: null, inversa: false);
 
     /// <summary>Desfaz <see cref="Permutar(ulong, ReadOnlySpan{byte}, ConjuntoExcluido)"/>. Uso interno e de testes.</summary>
     /// <param name="y">Valor permutado em [0, N).</param>
@@ -141,7 +141,31 @@ internal sealed class PermutacaoFeistel : IDisposable
     /// <returns>O valor original.</returns>
     /// <exception cref="IncognitoException">Com o código <c>INC1002</c>, se o limite defensivo de passos estourar.</exception>
     internal ulong Inverter(ulong y, ReadOnlySpan<byte> ajuste, ConjuntoExcluido excluidos) =>
-        Caminhar(y, nameof(y), ajuste, excluidos, inversa: true);
+        Caminhar(y, nameof(y), ajuste, excluidos, adicional: null, inversa: true);
+
+    /// <summary>
+    /// Como <see cref="Permutar(ulong, ReadOnlySpan{byte}, ConjuntoExcluido)"/>, com mais um valor excluído só nesta
+    /// chamada (o número pseudonimizado no código numérico da chave de DF-e), sem montar outro conjunto. O valor
+    /// adicional precisa ser função do ajuste, para o conjunto ser o mesmo na inversa.
+    /// </summary>
+    /// <param name="x">Valor em [0, N).</param>
+    /// <param name="ajuste">Ajuste (tweak) da permutação, até 65.535 bytes.</param>
+    /// <param name="excluidos">Valores proibidos na saída.</param>
+    /// <param name="adicional">Mais um valor proibido na saída, ou nulo; pode repetir um dos excluídos.</param>
+    /// <returns>O valor permutado, fora dos excluídos e do adicional (ou o próprio valor, se ele estiver excluído).</returns>
+    /// <exception cref="IncognitoException">Com o código <c>INC1002</c>, se o limite defensivo de passos estourar.</exception>
+    internal ulong Permutar(ulong x, ReadOnlySpan<byte> ajuste, ConjuntoExcluido excluidos, ulong? adicional) =>
+        Caminhar(x, nameof(x), ajuste, excluidos, adicional, inversa: false);
+
+    /// <summary>Desfaz <see cref="Permutar(ulong, ReadOnlySpan{byte}, ConjuntoExcluido, ulong?)"/>. Uso interno e de testes.</summary>
+    /// <param name="y">Valor permutado em [0, N).</param>
+    /// <param name="ajuste">O mesmo ajuste usado ao permutar.</param>
+    /// <param name="excluidos">Os mesmos excluídos usados ao permutar.</param>
+    /// <param name="adicional">O mesmo valor adicional usado ao permutar.</param>
+    /// <returns>O valor original.</returns>
+    /// <exception cref="IncognitoException">Com o código <c>INC1002</c>, se o limite defensivo de passos estourar.</exception>
+    internal ulong Inverter(ulong y, ReadOnlySpan<byte> ajuste, ConjuntoExcluido excluidos, ulong? adicional) =>
+        Caminhar(y, nameof(y), ajuste, excluidos, adicional, inversa: true);
 
     /// <summary>Zera a cópia da chave e descarta as instâncias de HMAC.</summary>
     public void Dispose()
@@ -167,29 +191,34 @@ internal sealed class PermutacaoFeistel : IDisposable
         }
     }
 
-    // A órbita de x volta a x, que não está em E, então no máximo |E| passos seguidos caem em E: com E pequeno o
-    // limite de |E| + 1 nunca estoura. Com E grande o limite é 64, e estourar exige 64 saídas seguidas em E, chance
+    // E aqui é o conjunto excluído mais o adicional, contado em quantidade. A órbita de x volta a x, que não está em E,
+    // então no máximo |E| passos seguidos caem em E: com E pequeno o limite de |E| + 1 nunca estoura. Com E grande o limite é 64, e estourar exige 64 saídas seguidas em E, chance
     // da ordem de 2⁻⁶⁴ com metade do domínio excluída: a exceção é só defensiva.
-    private ulong Caminhar(ulong valor, string parametro, ReadOnlySpan<byte> ajuste, ConjuntoExcluido excluidos, bool inversa)
+    private ulong Caminhar(
+        ulong valor, string parametro, ReadOnlySpan<byte> ajuste, ConjuntoExcluido excluidos, ulong? adicional, bool inversa)
     {
         ArgumentNullException.ThrowIfNull(excluidos);
         Validar(valor, parametro, ajuste);
-        if (excluidos.Quantidade > Tamanho / 2)
+
+        // O adicional conta uma vez só, e só se cair no domínio e não estiver entre os excluídos.
+        var quantidade = excluidos.Quantidade
+            + (adicional is { } extra && extra < Tamanho && !excluidos.Contem(extra) ? 1UL : 0UL);
+        if (quantidade > Tamanho / 2)
         {
             throw new ArgumentException("Os valores excluídos passam de metade do domínio.", nameof(excluidos));
         }
 
-        if (excluidos.Contem(valor))
+        if (excluidos.Contem(valor) || valor == adicional)
         {
             return valor;
         }
 
-        var limite = Math.Min(excluidos.Quantidade + 1, LimiteDePassos);
+        var limite = Math.Min(quantidade + 1, LimiteDePassos);
         var atual = valor;
         for (ulong passo = 0; passo < limite; passo++)
         {
             atual = Aplicar(atual, ajuste, inversa);
-            if (!excluidos.Contem(atual))
+            if (!excluidos.Contem(atual) && atual != adicional)
             {
                 return atual;
             }

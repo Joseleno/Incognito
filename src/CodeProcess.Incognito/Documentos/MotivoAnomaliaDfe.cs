@@ -27,7 +27,9 @@ internal enum MotivoAnomaliaDfe : byte
     /// <summary>NFF da NF-e ou da NFC-e com a posição 30 diferente de 1 (CNPJ) e de 2 (CPF).</summary>
     NffSemTipoDeEmissor,
 
-    /// <summary>tpEmis 3 na NF-e ou na NFC-e com AAMM de 1808 a 2103, depois do SCAN e antes da NFF.</summary>
+    /// <summary>
+    /// tpEmis 3 na NF-e ou na NFC-e, fora das séries do PAA, com AAMM de 1808 a 2103: depois do SCAN e antes da NFF.
+    /// </summary>
     TipoEmissao3ForaDoPeriodo,
 
     /// <summary>Série que nenhum processo de emissão vigente usa (990 a 999 na NF-e, 970 a 999 na NFC-e).</summary>

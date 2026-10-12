@@ -11,21 +11,24 @@ namespace CodeProcess.Incognito.Documentos;
 /// <remarks>
 /// <para>
 /// NF-e e NFC-e, na ordem: letra nas posições 7 a 18 ou AAMM anterior a 1808 (o emitente CPF na chave começou em
-/// 08/2018) dá CNPJ; tpEmis 3 com AAMM a partir de 2104 é a Nota Fiscal Fácil, decidida pela posição 30 (1 CNPJ, 2 CPF,
-/// outro valor anomalia), e antes disso é anomalia; depois, a série: 000 a 909 CNPJ, 910 a 969 CPF e, só na NF-e, 970 a
-/// 979 CPF e 980 a 989 CNPJ (PAA); o resto é anomalia. CPF sem <c>000</c> nas posições 7 a 9 é anomalia.
+/// 08/2018) dá CNPJ; tpEmis 3 com série fora do PAA (970 a 989) e AAMM a partir de 2104 é a Nota Fiscal Fácil,
+/// decidida pela posição 30 (1 CNPJ, 2 CPF, outro valor anomalia), e antes disso é anomalia; depois, a série: 000 a 909
+/// CNPJ, 910 a 969 CPF e, só na NF-e, 970 a 979 CPF e 980 a 989 CNPJ (PAA); o resto é anomalia. CPF sem <c>000</c>
+/// nas posições 7 a 9 é anomalia.
 /// </para>
 /// <para>
 /// CT-e e MDF-e, pela regra dos zeros: nenhuma regra de série separa os dois documentos com segurança (o PAA usa tpEmis
 /// 3 também com CNPJ de MEI). Letra nas posições 7 a 18 dá CNPJ; senão, <c>000</c> nas posições 7 a 9 dá CPF; senão,
-/// CNPJ com <see cref="ClassificacaoEmitente.ExcluiRaizComZeros"/>, para a saída não ser lida como CPF. Os outros
-/// modelos só admitem CNPJ.
+/// CNPJ com <see cref="ClassificacaoEmitente.ExcluiRaizComZeros"/>, para a saída não ser lida como CPF. A Nota Fiscal
+/// Fácil é tpEmis 3 com série fora do PAA e AAMM a partir de 2006: o tpEmis 3 só passou a ser aceito com as NTs da NFF
+/// (NT MDF-e 2020.002, homologação em 06/2020; NT CT-e 2020.001). Os outros modelos só admitem CNPJ.
 /// </para>
 /// </remarks>
 internal static class ClassificadorEmitente
 {
     private const int PrimeiroAammComCpf = 1808;
     private const int PrimeiroAammDaNff = 2104;
+    private const int PrimeiroAammDaNffDeTransporte = 2006;
 
     /// <summary>Classifica o emitente.</summary>
     /// <param name="chave">
@@ -64,8 +67,7 @@ internal static class ClassificadorEmitente
 
     private static ClassificacaoEmitente PelosZeros(ReadOnlySpan<char> chave, LeiauteDfe leiaute, bool comLetra)
     {
-        // O PAA (séries 970 a 989) usa tpEmis 3 com numeração sequencial: o número não traz data.
-        var ehNff = TipoEmissao3(chave) && (Serie(chave) is < 970 or > 989);
+        var ehNff = TipoEmissao3(chave) && !EhSerieDoPaa(Serie(chave)) && Valor(chave[2..6]) >= PrimeiroAammDaNffDeTransporte;
         if (comLetra)
         {
             // A presença de letra é preservada (a raiz alfanumérica sai sempre com letra): as posições 7 a 9 não decidem.
@@ -80,20 +82,21 @@ internal static class ClassificadorEmitente
     private static ClassificacaoEmitente PelasSeries(ReadOnlySpan<char> chave, LeiauteDfe leiaute, bool comLetra)
     {
         var aamm = Valor(chave[2..6]);
-        var tipoEmissao3 = TipoEmissao3(chave);
-        var ehNff = tipoEmissao3 && aamm >= PrimeiroAammDaNff;
+        var serie = Serie(chave);
+        var nffPossivel = TipoEmissao3(chave) && !EhSerieDoPaa(serie);
+        var ehNff = nffPossivel && aamm >= PrimeiroAammDaNff;
         if (comLetra || aamm < PrimeiroAammComCpf)
         {
             return ClassificacaoEmitente.DeCnpj(leiaute, ehNff, excluiRaizComZeros: false);
         }
 
         // O tpEmis 3 do SCAN (desativado até 09/2014) já caiu no AAMM anterior a 1808.
-        if (tipoEmissao3 && !ehNff)
+        if (nffPossivel && !ehNff)
         {
             return ClassificacaoEmitente.DeAnomalia(MotivoAnomaliaDfe.TipoEmissao3ForaDoPeriodo, leiaute);
         }
 
-        var tipo = ehNff ? TipoPelaNff(chave) : TipoPelaSerie(Serie(chave), leiaute.Regra == RegraEmitente.SeriesComPaa);
+        var tipo = ehNff ? TipoPelaNff(chave) : TipoPelaSerie(serie, leiaute.Regra == RegraEmitente.SeriesComPaa);
         if (tipo is null)
         {
             var motivo = ehNff ? MotivoAnomaliaDfe.NffSemTipoDeEmissor : MotivoAnomaliaDfe.SerieSemEmissao;
@@ -126,6 +129,10 @@ internal static class ClassificadorEmitente
         <= 989 when comPaa => TipoEmitente.Cnpj,
         _ => null,
     };
+
+    // O PAA usa tpEmis 3 com numeração sequencial nessas séries: o número não traz data. A série da NFF é dispositivo ou
+    // indicador mais o ano, que não chega a 97x ou 98x.
+    private static bool EhSerieDoPaa(int serie) => serie is >= 970 and <= 989;
 
     private static bool TipoEmissao3(ReadOnlySpan<char> chave) => chave[34] == '3';
 
