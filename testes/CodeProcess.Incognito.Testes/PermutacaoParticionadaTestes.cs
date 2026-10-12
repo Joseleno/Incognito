@@ -96,6 +96,103 @@ public sealed class PermutacaoParticionadaTestes
         }
     }
 
+    [Theory]
+    [InlineData(3, 3, 1)]
+    [InlineData(3, 3, 2)]
+    [InlineData(3, 0, 1)]
+    public void Com_zeros_excluidos_e_bijecao_exaustiva_e_a_parte_numerica_nunca_sai_com_o_prefixo(int tamanho, int zerosFixos, int zerosExcluidos)
+    {
+        // A redução da raiz do CNPJ (8 caracteres, 8 fixos, 3 excluídos): as cadeias só com dígitos que começam com os
+        // zeros excluídos voltam como vieram e nunca são produzidas; fora delas, a saída só difere da permutação sem a
+        // exclusão quando esta cairia no prefixo; a inversa desfaz.
+        using var permutacao = Criar(tamanho, zerosFixos, zerosExcluidos);
+        var prefixo = new string('0', zerosExcluidos);
+        var saidas = new HashSet<string>();
+        var saida = new char[tamanho];
+        var semExclusao = new char[tamanho];
+        var volta = new char[tamanho];
+        var caminhadas = 0;
+
+        foreach (var entrada in Todas(tamanho))
+        {
+            var excluida = !TemLetra(entrada) && entrada.StartsWith(prefixo, StringComparison.Ordinal);
+            var pontoFixo = permutacao.Permutar(entrada, saida, excluirZeros: true);
+            var fixaSemExclusao = permutacao.Permutar(entrada, semExclusao);
+            var texto = new string(saida);
+
+            Assert.Equal(excluida || fixaSemExclusao, pontoFixo);
+            Assert.True(excluida || pontoFixo ? texto == entrada : !(!TemLetra(texto) && texto.StartsWith(prefixo, StringComparison.Ordinal)), "Cadeia excluída produzida ou fixa alterada.");
+            Assert.True(TemLetra(texto) == TemLetra(entrada), "A presença de letra mudou.");
+            var semExclusaoTexto = new string(semExclusao);
+            if (!excluida && !(!TemLetra(semExclusaoTexto) && semExclusaoTexto.StartsWith(prefixo, StringComparison.Ordinal)))
+            {
+                Assert.True(semExclusaoTexto == texto, "A exclusão mudou uma saída que já estava fora do prefixo.");
+            }
+            else if (!excluida)
+            {
+                caminhadas++;
+            }
+
+            Assert.Equal(pontoFixo, permutacao.Inverter(saida, volta, excluirZeros: true));
+            Assert.True(new string(volta) == entrada, "A inversa não desfez a permutação.");
+            saidas.Add(texto);
+        }
+
+        Assert.Equal((int)Math.Pow(36, tamanho), saidas.Count);
+        Assert.True(caminhadas > 0, "Nenhuma saída precisou do cycle-walking.");
+    }
+
+    [Fact]
+    public void Na_reducao_da_raiz_do_CNPJ_a_parte_numerica_com_zeros_excluidos_e_bijecao_exaustiva()
+    {
+        // 4 dígitos, os 4 fixos (só 0000) e 2 excluídos: as 100 cadeias 00dd ficam e nunca saem; as outras 9.900 vão
+        // para as mesmas 9.900, como as raízes de 10⁵ a 10⁸ na chave.
+        using var permutacao = Criar(4, zerosFixos: 4, zerosExcluidos: 2);
+        var saidas = new HashSet<string>();
+        var saida = new char[4];
+        var volta = new char[4];
+
+        for (var valor = 0; valor < 10_000; valor++)
+        {
+            var entrada = valor.ToString("0000", CultureInfo.InvariantCulture);
+            var pontoFixo = permutacao.Permutar(entrada, saida, excluirZeros: true);
+            var texto = new string(saida);
+
+            Assert.Equal(valor < 100, pontoFixo);
+            Assert.True(valor < 100 ? texto == entrada : !texto.StartsWith("00", StringComparison.Ordinal), "Raiz com o prefixo produzida.");
+            permutacao.Inverter(saida, volta, excluirZeros: true);
+            Assert.True(new string(volta) == entrada, "A inversa não desfez a permutação.");
+            saidas.Add(texto);
+        }
+
+        Assert.Equal(10_000, saidas.Count);
+    }
+
+    [Fact]
+    public void Inversa_sem_exclusao_desfaz_a_permutacao_nas_duas_partes()
+    {
+        using var permutacao = Criar(3, zerosFixos: 2);
+        var saida = new char[3];
+        var volta = new char[3];
+
+        foreach (var entrada in Todas(3))
+        {
+            var pontoFixo = permutacao.Permutar(entrada, saida);
+
+            Assert.Equal(pontoFixo, permutacao.Inverter(saida, volta, excluirZeros: false));
+            Assert.True(new string(volta) == entrada, "A inversa não desfez a permutação.");
+        }
+    }
+
+    [Fact]
+    public void Exclusao_pedida_a_permutacao_criada_sem_zeros_excluidos_e_recusada()
+    {
+        using var permutacao = Criar(8, zerosFixos: 8);
+
+        Assert.Throws<InvalidOperationException>(() => permutacao.Permutar("12345678", new char[8], excluirZeros: true));
+        Assert.Throws<InvalidOperationException>(() => permutacao.Inverter("12345678", new char[8], excluirZeros: true));
+    }
+
     [Fact]
     public void Entrada_e_saida_podem_ser_o_mesmo_trecho()
     {
@@ -165,8 +262,36 @@ public sealed class PermutacaoParticionadaTestes
         Assert.Throws<ArgumentOutOfRangeException>(parametro, () => Criar(tamanho, zerosFixos));
     }
 
-    private static PermutacaoParticionada Criar(int tamanho, int zerosFixos) =>
-        new(_chaveNumerica, _chaveAlfanumerica, tamanho, zerosFixos);
+    [Theory]
+    [InlineData(8, 8, -1)]
+    [InlineData(8, 2, 3)]
+    [InlineData(8, 0, 9)]
+    public void Zeros_excluidos_fora_da_faixa_sao_recusados(int tamanho, int zerosFixos, int excluidos)
+    {
+        // Com zeros fixos, o conjunto excluído precisa conter o dos fixos (menos zeros, mais cadeias).
+        Assert.Throws<ArgumentOutOfRangeException>("zerosExcluidos", () => Criar(tamanho, zerosFixos, excluidos));
+    }
+
+    [Theory]
+    [InlineData(8, 8, 8)]
+    [InlineData(8, 0, 8)]
+    [InlineData(8, 8, 1)]
+    public void Zeros_excluidos_nas_bordas_sao_aceitos(int tamanho, int zerosFixos, int zerosExcluidos)
+    {
+        using var permutacao = Criar(tamanho, zerosFixos, zerosExcluidos);
+        var saida = new char[8];
+        var semExclusao = new char[8];
+        var volta = new char[8];
+
+        Assert.False(permutacao.Permutar("12345678", saida, excluirZeros: true));
+        permutacao.Permutar("12345678", semExclusao);
+        permutacao.Inverter(saida, volta, excluirZeros: true);
+        Assert.Equal("12345678", new string(volta));
+        Assert.True(zerosExcluidos != tamanho || saida.SequenceEqual(semExclusao), "Excluir só a cadeia de zeros mudou a saída.");
+    }
+
+    private static PermutacaoParticionada Criar(int tamanho, int zerosFixos, int zerosExcluidos = 0) =>
+        new(_chaveNumerica, _chaveAlfanumerica, tamanho, zerosFixos, zerosExcluidos);
 
     private static IEnumerable<string> Todas(int tamanho) =>
         tamanho == 0

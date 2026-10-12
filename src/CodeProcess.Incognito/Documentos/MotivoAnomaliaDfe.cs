@@ -10,7 +10,7 @@ internal enum MotivoAnomaliaDfe : byte
     Nenhum,
 
     /// <summary>
-    /// As 44 posições em zero, placeholder de sistema: não segue a política de entrada malformada e volta como veio,
+    /// As 44 posições em zero, valor de preenchimento do sistema: não segue a política de entrada malformada e volta como veio,
     /// porque não tem dado pessoal.
     /// </summary>
     ChaveZerada,

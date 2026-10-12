@@ -17,6 +17,12 @@ namespace CodeProcess.Incognito.Criptografia;
 /// que entram na função de rodada, então podem usar a mesma chave de domínio. Thread-safe; o descarte é do dono,
 /// depois de todo uso.
 /// </para>
+/// <para>
+/// Sob pedido, a parte só com dígitos também evita as cadeias que começam com um prefixo menor de zeros (a raiz
+/// <c>000xxxxx</c> do CNPJ na chave de CT-e e MDF-e, que seria lida como CPF): o conjunto excluído cresce e contém o
+/// fixo, então a saída difere da permutação sem o pedido só quando ela cairia nesse prefixo. Uma entrada com o prefixo
+/// volta como veio. A parte com letra não muda.
+/// </para>
 /// </remarks>
 internal sealed class PermutacaoParticionada : IDisposable
 {
@@ -28,7 +34,9 @@ internal sealed class PermutacaoParticionada : IDisposable
     private readonly int _tamanho;
     private readonly ulong _limiteNumericoFixo;
     private readonly ulong _limiteAlfanumericoFixo;
+    private readonly ulong _limiteNumericoExcluido;
     private readonly ConjuntoExcluido _excluidosNumericos;
+    private readonly ConjuntoExcluido? _excluidosNumericosComZeros;
     private readonly ConjuntoExcluido _excluidosAlfanumericos;
     private readonly PermutacaoFeistel _numerica;
     private readonly PermutacaoFeistel _alfanumerica;
@@ -40,12 +48,19 @@ internal sealed class PermutacaoParticionada : IDisposable
     /// <param name="zerosFixos">
     /// Quantos zeros no início fazem a cadeia ficar fixa, de 0 (nenhuma) ao tamanho (só a cadeia toda de zeros).
     /// </param>
-    internal PermutacaoParticionada(ReadOnlySpan<byte> chaveNumerica, ReadOnlySpan<byte> chaveAlfanumerica, int tamanho, int zerosFixos)
+    /// <param name="zerosExcluidos">
+    /// Quantos zeros no início excluem a cadeia só com dígitos da saída quando pedido: 0 se a permutação nunca exclui;
+    /// senão, de 1 a <paramref name="zerosFixos"/> (ou ao tamanho, sem zeros fixos), para o conjunto conter o dos fixos.
+    /// </param>
+    internal PermutacaoParticionada(
+        ReadOnlySpan<byte> chaveNumerica, ReadOnlySpan<byte> chaveAlfanumerica, int tamanho, int zerosFixos, int zerosExcluidos = 0)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(tamanho, TamanhoMinimo);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tamanho, TamanhoMaximo);
         ArgumentOutOfRangeException.ThrowIfNegative(zerosFixos);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(zerosFixos, tamanho);
+        ArgumentOutOfRangeException.ThrowIfNegative(zerosExcluidos);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(zerosExcluidos, zerosFixos == 0 ? tamanho : zerosFixos);
 
         // Com o prefixo de zeros, o valor da cadeia é menor que radix^(tamanho − zeros); sem prefixo, nada é fixo.
         _tamanho = tamanho;
@@ -56,6 +71,13 @@ internal sealed class PermutacaoParticionada : IDisposable
         _excluidosNumericos = zerosFixos == 0
             ? ConjuntoExcluido.Vazio
             : ConjuntoExcluido.PorRegra(valor => valor < limiteNumerico, limiteNumerico);
+
+        // Com menos zeros, o conjunto contém o dos fixos; no máximo um décimo do domínio.
+        var limiteExcluido = zerosExcluidos == 0 ? 0 : Potencia(10, tamanho - zerosExcluidos);
+        _limiteNumericoExcluido = limiteExcluido;
+        _excluidosNumericosComZeros = zerosExcluidos == 0
+            ? null
+            : ConjuntoExcluido.PorRegra(valor => valor < limiteExcluido, limiteExcluido);
 
         // As cadeias fixas só com dígitos já estão entre as só com dígitos: somam-se só as que têm letra.
         _excluidosAlfanumericos = ConjuntoExcluido.PorRegra(
@@ -84,8 +106,53 @@ internal sealed class PermutacaoParticionada : IDisposable
     /// <see langword="false"/> se foi permutada.
     /// </returns>
     /// <exception cref="ArgumentException">Tamanho diferente ou caractere fora de <c>0-9</c> e <c>A-Z</c>; a mensagem não traz o valor.</exception>
-    internal bool Permutar(ReadOnlySpan<char> entrada, Span<char> saida)
+    internal bool Permutar(ReadOnlySpan<char> entrada, Span<char> saida) =>
+        Aplicar(entrada, saida, excluirZeros: false, inversa: false);
+
+    /// <summary>
+    /// Como <see cref="Permutar(ReadOnlySpan{char}, Span{char})"/>, evitando também, na parte só com dígitos, as
+    /// cadeias com o prefixo de zeros excluídos; uma entrada com o prefixo volta como veio.
+    /// </summary>
+    /// <param name="entrada">A cadeia, só com dígitos e letras maiúsculas ASCII, com o tamanho da permutação.</param>
+    /// <param name="saida">Onde escrever a cadeia permutada, com o mesmo tamanho.</param>
+    /// <param name="excluirZeros">Se a parte só com dígitos evita o prefixo de zeros excluídos.</param>
+    /// <returns><see langword="true"/> se a cadeia voltou como veio (ponto fixo).</returns>
+    /// <exception cref="ArgumentException">Tamanho diferente ou caractere fora de <c>0-9</c> e <c>A-Z</c>; a mensagem não traz o valor.</exception>
+    /// <exception cref="InvalidOperationException">Exclusão pedida a uma permutação criada sem zeros excluídos.</exception>
+    internal bool Permutar(ReadOnlySpan<char> entrada, Span<char> saida, bool excluirZeros) =>
+        Aplicar(entrada, saida, excluirZeros, inversa: false);
+
+    /// <summary>Desfaz <see cref="Permutar(ReadOnlySpan{char}, Span{char}, bool)"/>. Uso interno e de testes.</summary>
+    /// <param name="entrada">A cadeia permutada.</param>
+    /// <param name="saida">Onde escrever a cadeia original, com o mesmo tamanho.</param>
+    /// <param name="excluirZeros">O mesmo pedido usado ao permutar.</param>
+    /// <returns><see langword="true"/> se a cadeia era ponto fixo.</returns>
+    /// <exception cref="ArgumentException">Tamanho diferente ou caractere fora de <c>0-9</c> e <c>A-Z</c>; a mensagem não traz o valor.</exception>
+    /// <exception cref="InvalidOperationException">Exclusão pedida a uma permutação criada sem zeros excluídos.</exception>
+    internal bool Inverter(ReadOnlySpan<char> entrada, Span<char> saida, bool excluirZeros) =>
+        Aplicar(entrada, saida, excluirZeros, inversa: true);
+
+    /// <summary>Descarta as duas permutações e as cópias das chaves.</summary>
+    public void Dispose()
     {
+        try
+        {
+            _numerica.Dispose();
+        }
+        finally
+        {
+            _alfanumerica.Dispose();
+        }
+    }
+
+    // A saída de uma cadeia não fixa nunca cai abaixo do limite, então a mesma conferência vale nos dois sentidos.
+    private bool Aplicar(ReadOnlySpan<char> entrada, Span<char> saida, bool excluirZeros, bool inversa)
+    {
+        if (excluirZeros && _excluidosNumericosComZeros is null)
+        {
+            throw new InvalidOperationException("A permutação foi criada sem zeros excluídos.");
+        }
+
         if (entrada.Length != _tamanho)
         {
             throw new ArgumentException("A cadeia não tem o tamanho da permutação.", nameof(entrada));
@@ -99,30 +166,19 @@ internal sealed class PermutacaoParticionada : IDisposable
         var temLetra = TemLetra(entrada);
         var radix = temLetra ? 36u : 10u;
         var valor = Ler(entrada, radix);
-        if (valor < (temLetra ? _limiteAlfanumericoFixo : _limiteNumericoFixo))
+        var limite = temLetra ? _limiteAlfanumericoFixo : excluirZeros ? _limiteNumericoExcluido : _limiteNumericoFixo;
+        if (valor < limite)
         {
             entrada.CopyTo(saida);
             return true;
         }
 
-        var permutado = temLetra
-            ? _alfanumerica.Permutar(valor, [], _excluidosAlfanumericos)
-            : _numerica.Permutar(valor, [], _excluidosNumericos);
+        var (permutacao, excluidos) = temLetra
+            ? (_alfanumerica, _excluidosAlfanumericos)
+            : (_numerica, excluirZeros ? _excluidosNumericosComZeros! : _excluidosNumericos);
+        var permutado = inversa ? permutacao.Inverter(valor, [], excluidos) : permutacao.Permutar(valor, [], excluidos);
         Escrever(permutado, radix, saida);
         return false;
-    }
-
-    /// <summary>Descarta as duas permutações e as cópias das chaves.</summary>
-    public void Dispose()
-    {
-        try
-        {
-            _numerica.Dispose();
-        }
-        finally
-        {
-            _alfanumerica.Dispose();
-        }
     }
 
     private static bool TemLetra(ReadOnlySpan<char> entrada)

@@ -40,6 +40,10 @@ internal sealed class PseudonimizadorCnpj : IDisposable
 {
     private const int TamanhoDaRaiz = 8;
     private const int TamanhoDaBase = 12;
+    private const int TamanhoDoCnpj = 14;
+
+    // Na chave de CT-e e MDF-e, a raiz numérica 000xxxxx seria lida como CPF (regra dos zeros).
+    private const int ZerosDoCpfNaChave = 3;
     private const long MaiorCnpj = 99_999_999_999_999;
     private const string MensagemTextoMalformado =
         "Valor fora da forma de CNPJ (14 caracteres, máscara 00.000.000/0000-00 ou 12 ou 13 dígitos sem os zeros à esquerda; raiz e ordem com dígitos ou letras maiúsculas, DV com dígitos); a política entradaMalformada é falhar. O valor não é exibido.";
@@ -82,13 +86,13 @@ internal sealed class PseudonimizadorCnpj : IDisposable
             if (permutarOrdem)
             {
                 Subchaves.DerivarChaveDeDominio(chave, dominio, versao, Variantes.Ordem, ambiente, numerica);
-                _permutacao = new PermutacaoParticionada(numerica, numerica, TamanhoDaBase, TamanhoDaRaiz);
+                _permutacao = new PermutacaoParticionada(numerica, numerica, TamanhoDaBase, TamanhoDaRaiz, ZerosDoCpfNaChave);
             }
             else
             {
                 Subchaves.DerivarChaveDeDominio(chave, dominio, versao, Variantes.Numerico, ambiente, numerica);
                 Subchaves.DerivarChaveDeDominio(chave, dominio, versao, Variantes.Alfanumerico, ambiente, alfanumerica);
-                _permutacao = new PermutacaoParticionada(numerica, alfanumerica, TamanhoDaRaiz, TamanhoDaRaiz);
+                _permutacao = new PermutacaoParticionada(numerica, alfanumerica, TamanhoDaRaiz, TamanhoDaRaiz, ZerosDoCpfNaChave);
             }
         }
         finally
@@ -99,10 +103,14 @@ internal sealed class PseudonimizadorCnpj : IDisposable
         _permutados = permutarOrdem ? TamanhoDaBase : TamanhoDaRaiz;
         _invalida = invalida;
         _malformada = malformada;
+        Ambiente = ambiente;
     }
 
     /// <summary>Política para valor fora da forma, conferida por quem compõe este pseudonimizador (a chave Pix).</summary>
     internal PoliticaEntradaMalformada Malformada => _malformada;
+
+    /// <summary>Ambiente da configuração, conferido por quem compõe este pseudonimizador (a chave de DF-e).</summary>
+    internal string Ambiente { get; }
 
     /// <summary>Pseudonimiza um CNPJ em texto.</summary>
     /// <param name="entrada">O CNPJ como veio da coluna.</param>
@@ -195,6 +203,44 @@ internal sealed class PseudonimizadorCnpj : IDisposable
         return desfecho;
     }
 
+    /// <summary>
+    /// Pseudonimiza, no lugar, o CNPJ do emitente dentro da chave de DF-e: o mesmo pseudônimo da coluna, com o DV errado
+    /// sempre mantido pelo deslocamento (δ mod 100), sem a política de DV da coluna, que na chave vale só para o cDV.
+    /// Sem alocação.
+    /// </summary>
+    /// <param name="cnpj">Os 14 caracteres do CNPJ: base com dígitos ou letras maiúsculas ASCII, DV com dígitos.</param>
+    /// <param name="excluirRaizComZeros">
+    /// Regra dos zeros (CT-e e MDF-e): a raiz numérica sai sem os zeros nas três primeiras posições (com
+    /// <c>permutarOrdem</c>, os 12 caracteres numéricos menores que 10⁹), para não ser lida como CPF. A saída só difere
+    /// da coluna quando a da coluna cairia nesse prefixo; uma entrada com o prefixo é recusada.
+    /// </param>
+    /// <returns>Se o emitente ficou como veio ou tinha DV errado.</returns>
+    /// <exception cref="ArgumentException">
+    /// Fora da forma de 14 caracteres, ou raiz que a regra dos zeros lê como CPF; a mensagem não traz o valor.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">Já descartado.</exception>
+    internal OcorrenciasChaveDfe TransformarNaChave(Span<char> cnpj, bool excluirRaizComZeros)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
+        if (cnpj.Length != TamanhoDoCnpj || !SoDigitosEMaiusculas(cnpj[..TamanhoDaBase]) || !SoDigitos(cnpj[TamanhoDaBase..]))
+        {
+            throw new ArgumentException("O CNPJ do emitente está fora da forma de 14 caracteres.", nameof(cnpj));
+        }
+
+        // Na regra dos zeros, essa raiz é lida como CPF e nunca chega aqui; copiá-la como ponto fixo deixaria um CNPJ
+        // em claro com cara de caso previsto.
+        if (excluirRaizComZeros && cnpj.StartsWith("000") && SoDigitos(cnpj[.._permutados]))
+        {
+            throw new ArgumentException("O CNPJ do emitente tem a raiz que a regra dos zeros lê como CPF.", nameof(cnpj));
+        }
+
+        var deslocamento = Deslocamento(cnpj);
+        var ocorrencias = deslocamento == 0 ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.DvDoEmitenteInvalido;
+        return Permutar(cnpj, deslocamento, excluirRaizComZeros)
+            ? ocorrencias
+            : ocorrencias | OcorrenciasChaveDfe.EmitentePontoFixo;
+    }
+
     /// <summary>Descarta as permutações e as cópias das chaves de domínio.</summary>
     public void Dispose()
     {
@@ -205,23 +251,39 @@ internal sealed class PseudonimizadorCnpj : IDisposable
     // Troca os 14 caracteres no lugar: raiz (ou raiz e ordem) permutada e DV recalculado com o mesmo deslocamento.
     private Desfecho Transformar(Span<char> caracteres)
     {
-        var dvEntrada = ((caracteres[12] - '0') * 10) + (caracteres[13] - '0');
-        var deslocamento = (dvEntrada - DigitosVerificadores.Cnpj(caracteres[..TamanhoDaBase]) + 100) % 100;
+        var deslocamento = Deslocamento(caracteres);
         if (deslocamento != 0 && !Politicas.SeguirComDvInvalido(_invalida, "CNPJ"))
         {
             return Desfecho.AnuladoDvInvalido;
         }
 
-        var permutados = caracteres[.._permutados];
-        if (_permutacao.Permutar(permutados, permutados))
+        if (!Permutar(caracteres, deslocamento, excluirZeros: false))
         {
             return Desfecho.PontoFixo;
+        }
+
+        return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
+    }
+
+    private static int Deslocamento(ReadOnlySpan<char> caracteres)
+    {
+        var dvEntrada = ((caracteres[12] - '0') * 10) + (caracteres[13] - '0');
+        return (dvEntrada - DigitosVerificadores.Cnpj(caracteres[..TamanhoDaBase]) + 100) % 100;
+    }
+
+    // Falso se a raiz (ou raiz e ordem) ficou como veio, com o DV intacto; senão, o DV é recalculado com o deslocamento.
+    private bool Permutar(Span<char> caracteres, int deslocamento, bool excluirZeros)
+    {
+        var permutados = caracteres[.._permutados];
+        if (_permutacao.Permutar(permutados, permutados, excluirZeros))
+        {
+            return false;
         }
 
         var dvSaida = (DigitosVerificadores.Cnpj(caracteres[..TamanhoDaBase]) + deslocamento) % 100;
         caracteres[12] = (char)('0' + (dvSaida / 10));
         caracteres[13] = (char)('0' + (dvSaida % 10));
-        return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
+        return true;
     }
 
     private static int Formatar(ReadOnlySpan<char> caracteres, bool comMascara, Span<char> destino)
