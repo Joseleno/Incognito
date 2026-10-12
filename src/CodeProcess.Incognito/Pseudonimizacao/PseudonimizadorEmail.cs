@@ -58,6 +58,9 @@ internal sealed class PseudonimizadorEmail : IDisposable
         _malformada = malformada;
     }
 
+    /// <summary>Política para valor fora da forma, conferida por quem compõe este pseudonimizador (a chave Pix).</summary>
+    internal PoliticaEntradaMalformada Malformada => _malformada;
+
     /// <summary>Pseudonimiza um e-mail.</summary>
     /// <param name="entrada">O e-mail como veio da coluna.</param>
     /// <param name="saida">O pseudônimo; nulo se anulado; a própria entrada se copiada em claro ou vazia.</param>
