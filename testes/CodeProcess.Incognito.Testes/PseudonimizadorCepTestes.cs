@@ -48,6 +48,9 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         ["RS"] = [(90_000_000, 99_999_999)],
     };
 
+    // Faixa antiga de RO, fora da tabela atual dos Correios: aceita como entrada, mas nunca escolhida para a saída.
+    private static readonly (int Inicio, int Fim) _faixaAntigaDeRo = (78_900_000, 78_999_999);
+
     private readonly ChaveIncognito _chave = ChaveDoVetor();
 
     public static TheoryData<string> Malformados =>
@@ -66,7 +69,7 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         "١٢٣٤٥٦٧٨",
     ];
 
-    public static TheoryData<int> ForaDasFaixas => [0, 999_999, 78_900_000, 78_999_999];
+    public static TheoryData<int> ForaDasFaixas => [0, 1, 999_999];
 
     public void Dispose() => _chave.Dispose();
 
@@ -183,7 +186,7 @@ public sealed class PseudonimizadorCepTestes : IDisposable
     [MemberData(nameof(ForaDasFaixas))]
     public void CEP_fora_das_faixas_segue_a_politica(int valor)
     {
-        // Abaixo de 01000-000 não há UF; 78900-000 a 78999-999 não está nas faixas atuais.
+        // Abaixo de 01000-000 não há UF.
         using var falhar = Criar();
         using var anular = Criar(PoliticaEntradaMalformada.Anular);
         var entidade = Digitos(new Random(1725), 11);
@@ -192,6 +195,35 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         Assert.Equal("INC1003", Assert.Throws<IncognitoException>(() => falhar.Pseudonimizar((long)valor, entidade, out _)).Codigo);
         Assert.Equal(Desfecho.AnuladoMalformado, anular.Pseudonimizar(Oito(valor), entidade, out var anulado));
         Assert.Null(anulado);
+    }
+
+    [Fact]
+    public void Faixa_antiga_de_RO_e_entrada_de_RO_e_sai_so_nas_faixas_atuais()
+    {
+        // A faixa antiga só decide a UF: o CEP sai nas faixas atuais de RO e é o mesmo que um CEP atual de RO daria
+        // para a mesma entidade. As bordas e os vizinhos de MT e MS ficam nas UFs deles.
+        using var cep = Criar();
+        var sorteio = new Random(1738);
+        var (inicio, fim) = _faixaAntigaDeRo;
+        for (var vez = 0; vez < 1_000; vez++)
+        {
+            var entrada = vez switch { 0 => inicio, 1 => fim, _ => Sortear(sorteio, [_faixaAntigaDeRo]) };
+            var entidade = Digitos(sorteio, 11);
+
+            Assert.Equal(Desfecho.Pseudonimizado, cep.Pseudonimizar(Oito(entrada), entidade, out var antiga));
+            cep.Pseudonimizar(Oito(Sortear(sorteio, _faixasPorUf["RO"])), entidade, out var atual);
+            cep.Pseudonimizar(Mascarar(Oito(entrada)), entidade, out var comMascara);
+            cep.Pseudonimizar((long)entrada, entidade, out var numero);
+
+            Assert.True(antiga == atual, "A faixa antiga de RO deu outro CEP que a faixa atual.");
+            Assert.True(UfDe(int.Parse(antiga!, CultureInfo.InvariantCulture)) == "RO", "A faixa antiga de RO saiu de outra UF.");
+            Assert.True(comMascara == Mascarar(antiga!) && numero == int.Parse(antiga!, CultureInfo.InvariantCulture), "Máscara ou coluna numérica mudou o CEP.");
+        }
+
+        var vizinha = Digitos(sorteio, 11);
+        cep.Pseudonimizar(Oito(inicio - 1), vizinha, out var mt);
+        cep.Pseudonimizar(Oito(fim + 1), vizinha, out var ms);
+        Assert.True(UfDe(int.Parse(mt!, CultureInfo.InvariantCulture)) == "MT" && UfDe(int.Parse(ms!, CultureInfo.InvariantCulture)) == "MS", "Um vizinho da faixa antiga de RO mudou de UF.");
     }
 
     [Fact]

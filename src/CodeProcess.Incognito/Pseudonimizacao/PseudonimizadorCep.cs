@@ -20,7 +20,8 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// vazia (o Motor passa vazio para NULL) dá um CEP fixo por UF. Máscara ou outra grafia da entidade é outra entidade.
 /// </para>
 /// <para>
-/// Faixas por UF dos Correios; um CEP fora de toda faixa (como <c>00000-000</c>) segue <c>entradaMalformada</c>.
+/// Faixas por UF dos Correios; a faixa antiga de RO (<c>78900-000</c> a <c>78999-999</c>) é aceita como entrada de RO,
+/// mas a saída sai só das faixas atuais. Um CEP fora de toda faixa (como <c>00000-000</c>) segue <c>entradaMalformada</c>.
 /// Formas: 8 dígitos, <c>00000-000</c> e <c>00.000-000</c>, com a máscara preservada; em texto só com dígitos, 7 dígitos
 /// (CEP que perdeu o zero à esquerda) completados e devolvidos com 8, com o zero acrescentado saindo do preenchimento
 /// de <c>char(n)</c>; em coluna numérica, de 0 a 99.999.999. Espaços à direita voltam como estavam; texto vazio ou só
@@ -74,6 +75,13 @@ internal sealed class PseudonimizadorCep : IDisposable
         new(80_000_000, 87_999_999, 24),
         new(88_000_000, 89_999_999, 25),
         new(90_000_000, 99_999_999, 26),
+    ];
+
+    // Faixas que só decidem a UF da entrada e nunca são escolhidas para a saída: a 78900-000 a 78999-999, de RO em
+    // tabelas antigas e fora da atual dos Correios, ainda pode estar em bases antigas.
+    private static readonly Faixa[] _faixasSoDeEntrada =
+    [
+        new(78_900_000, 78_999_999, 20),
     ];
 
     // Quantidade de CEPs de cada UF, somada uma vez a partir das faixas.
@@ -201,18 +209,14 @@ internal sealed class PseudonimizadorCep : IDisposable
         return quantidades;
     }
 
-    // Acha a UF do CEP e escolhe um CEP nas faixas dela pela entidade; falso se o CEP não está em faixa nenhuma.
+    // Acha a UF do CEP e escolhe um CEP nas faixas de saída dela pela entidade; falso se o CEP não está em faixa nenhuma.
     private bool Escolher(int cepDeEntrada, string entidade, out int cep)
     {
         cep = 0;
-        var uf = -1;
-        foreach (var faixa in _faixas)
+        var uf = UfDe(cepDeEntrada, _faixas);
+        if (uf < 0)
         {
-            if (cepDeEntrada >= faixa.Inicio && cepDeEntrada <= faixa.Fim)
-            {
-                uf = faixa.Uf;
-                break;
-            }
+            uf = UfDe(cepDeEntrada, _faixasSoDeEntrada);
         }
 
         if (uf < 0)
@@ -238,6 +242,19 @@ internal sealed class PseudonimizadorCep : IDisposable
         }
 
         throw new UnreachableException("A escolha saiu das faixas da UF.");
+    }
+
+    private static int UfDe(int cep, Faixa[] faixas)
+    {
+        foreach (var faixa in faixas)
+        {
+            if (cep >= faixa.Inicio && cep <= faixa.Fim)
+            {
+                return faixa.Uf;
+            }
+        }
+
+        return -1;
     }
 
     private ulong Semente(int uf, string entidade)
