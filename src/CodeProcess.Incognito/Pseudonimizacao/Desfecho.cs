@@ -11,7 +11,8 @@ internal enum Desfecho
 
     /// <summary>
     /// Base excluída da permutação (repdígito do CPF, raiz zero do CNPJ): base e DV ficam como vieram, com os zeros à
-    /// esquerda completados. A regra vale com qualquer DV; um DV errado só chega aqui com a política de preservar.
+    /// esquerda completados. A regra vale com qualquer DV; um DV errado só chega aqui com a política de preservar. No
+    /// <c>id.permutar</c>, são o zero e os negativos, que ficam fora do domínio e voltam como vieram.
     /// </summary>
     PontoFixo,
 
