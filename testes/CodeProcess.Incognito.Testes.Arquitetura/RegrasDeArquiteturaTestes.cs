@@ -84,6 +84,63 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.True(proibidos.Length == 0, $"Tipos com nome ou namespace proibido: {string.Join(", ", proibidos)}.");
     }
 
+    [Fact]
+    public void Assinaturas_do_gerador_nao_citam_a_chave_nem_a_pseudonimizacao()
+    {
+        // O GeradorBr não é criptográfico e não pode ser confundido com a pseudonimização: nenhum campo, parâmetro,
+        // retorno ou tipo aninhado dele e do namespace Geracao vem da criptografia, da pseudonimização ou da chave.
+        var gerador = Tipos(Nucleo).Where(tipo => tipo.FullName == Nucleo + ".GeradorBr" || tipo.Namespace == Nucleo + ".Geracao").ToArray();
+        string[] proibidos = [Nucleo + ".Criptografia", Nucleo + ".Pseudonimizacao"];
+
+        var usados = gerador
+            .SelectMany(TiposDaAssinatura)
+            .Where(tipo => proibidos.Contains(tipo.Namespace) || tipo.FullName == Nucleo + ".ChaveIncognito")
+            .Select(tipo => tipo.FullName)
+            .Distinct()
+            .ToArray();
+
+        Assert.NotEmpty(gerador);
+        Assert.True(usados.Length == 0, $"O gerador usa tipos da chave ou da pseudonimização: {string.Join(", ", usados)}.");
+    }
+
+    // Os tipos que aparecem nos campos, propriedades, parâmetros, retornos, tipo base e tipos aninhados (inclusive os
+    // gerados para lambdas). Não percorre o corpo dos métodos.
+    private static IEnumerable<Type> TiposDaAssinatura(Type tipo)
+    {
+        const BindingFlags Todos = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var tipos = new List<Type>();
+        if (tipo.BaseType is not null)
+        {
+            tipos.Add(tipo.BaseType);
+        }
+
+        tipos.AddRange(tipo.GetFields(Todos).Select(campo => campo.FieldType));
+        tipos.AddRange(tipo.GetProperties(Todos).Select(propriedade => propriedade.PropertyType));
+        foreach (var metodo in tipo.GetMethods(Todos).Cast<MethodBase>().Concat(tipo.GetConstructors(Todos)))
+        {
+            tipos.AddRange(metodo.GetParameters().Select(parametro => parametro.ParameterType));
+            if (metodo is MethodInfo comRetorno)
+            {
+                tipos.Add(comRetorno.ReturnType);
+            }
+        }
+
+        return tipos
+            .SelectMany(Desembrulhar)
+            .Concat(tipo.GetNestedTypes(Todos).SelectMany(TiposDaAssinatura));
+    }
+
+    // O tipo dos elementos de array, ponteiro e referência, e os argumentos de tipos genéricos.
+    private static IEnumerable<Type> Desembrulhar(Type tipo)
+    {
+        if (tipo.HasElementType)
+        {
+            return Desembrulhar(tipo.GetElementType()!);
+        }
+
+        return tipo.IsGenericType ? tipo.GetGenericArguments().SelectMany(Desembrulhar).Prepend(tipo) : [tipo];
+    }
+
     // Um tipo que não carrega não pode esconder os outros da verificação.
     private static IEnumerable<Type> Tipos(string assembly)
     {
