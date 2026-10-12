@@ -115,6 +115,9 @@ internal sealed class PseudonimizadorTelefone : IDisposable
         ServicoNaoGeografico,
     }
 
+    /// <summary>Política para valor fora da forma, conferida por quem compõe este pseudonimizador (a chave Pix).</summary>
+    internal PoliticaEntradaMalformada Malformada => _malformada;
+
     /// <summary>Pseudonimiza um telefone em texto.</summary>
     /// <param name="entrada">O telefone como veio da coluna.</param>
     /// <param name="saida">O pseudônimo; nulo se anulado; a própria entrada se copiada em claro, vazia ou de serviço.</param>
