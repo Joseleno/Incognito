@@ -30,6 +30,7 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// </remarks>
 internal sealed class PseudonimizadorCpf : IDisposable
 {
+    private const int TamanhoDoCpf = 11;
     private const ulong TamanhoA = 10_000;
     private const ulong TamanhoB = 100_000;
     private const long MaiorCpf = 99_999_999_999;
@@ -79,10 +80,14 @@ internal sealed class PseudonimizadorCpf : IDisposable
 
         _invalida = invalida;
         _malformada = malformada;
+        Ambiente = ambiente;
     }
 
     /// <summary>Política para valor fora da forma, conferida por quem compõe este pseudonimizador (a chave Pix).</summary>
     internal PoliticaEntradaMalformada Malformada => _malformada;
+
+    /// <summary>Ambiente da configuração, conferido por quem compõe este pseudonimizador (a chave de DF-e).</summary>
+    internal string Ambiente { get; }
 
     /// <summary>Pseudonimiza um CPF em texto.</summary>
     /// <param name="entrada">O CPF como veio da coluna.</param>
@@ -161,6 +166,35 @@ internal sealed class PseudonimizadorCpf : IDisposable
         return desfecho;
     }
 
+    /// <summary>
+    /// Pseudonimiza, no lugar, o CPF do emitente dentro da chave de DF-e: o mesmo pseudônimo da coluna, com o DV errado
+    /// sempre mantido pelo deslocamento (δ mod 100), sem a política de DV da coluna, que na chave vale só para o cDV.
+    /// Sem alocação.
+    /// </summary>
+    /// <param name="cpf">Os 11 dígitos do CPF.</param>
+    /// <returns>Se o emitente ficou como veio ou tinha DV errado.</returns>
+    /// <exception cref="ArgumentException">Não são 11 dígitos ASCII; a mensagem não traz o valor.</exception>
+    /// <exception cref="ObjectDisposedException">Já descartado.</exception>
+    internal OcorrenciasChaveDfe TransformarNaChave(Span<char> cpf)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
+        if (cpf.Length != TamanhoDoCpf || !SoDigitos(cpf))
+        {
+            throw new ArgumentException("O CPF do emitente não tem 11 dígitos.", nameof(cpf));
+        }
+
+        var baseEntrada = Numero(cpf[..9]);
+        var deslocamento = ((int)Numero(cpf[9..]) - Dv(baseEntrada) + 100) % 100;
+        var ocorrencias = deslocamento == 0 ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.DvDoEmitenteInvalido;
+        if (!Permutar(baseEntrada, deslocamento, out var baseSaida, out var dvSaida))
+        {
+            return ocorrencias | OcorrenciasChaveDfe.EmitentePontoFixo;
+        }
+
+        Formatar(baseSaida, dvSaida, comMascara: false, cpf);
+        return ocorrencias;
+    }
+
     /// <summary>Descarta a permutação e a cópia da chave de domínio.</summary>
     public void Dispose()
     {
@@ -179,16 +213,29 @@ internal sealed class PseudonimizadorCpf : IDisposable
             return Desfecho.AnuladoDvInvalido;
         }
 
-        if (_repdigitos.Contem(baseEntrada))
+        if (!Permutar(baseEntrada, deslocamento, out baseSaida, out dvSaida))
         {
             baseSaida = baseEntrada;
             dvSaida = dvEntrada;
             return Desfecho.PontoFixo;
         }
 
+        return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
+    }
+
+    // Base repdígito fica como veio (falso); as outras são permutadas sem cair nos repdígitos, com o DV deslocado.
+    private bool Permutar(ulong baseEntrada, int deslocamento, out ulong baseSaida, out int dvSaida)
+    {
+        if (_repdigitos.Contem(baseEntrada))
+        {
+            baseSaida = 0;
+            dvSaida = 0;
+            return false;
+        }
+
         baseSaida = _permutacao.Permutar(baseEntrada, [], _repdigitos);
         dvSaida = (Dv(baseSaida) + deslocamento) % 100;
-        return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
+        return true;
     }
 
     // Escreve da direita para a esquerda: DVs, hífen e a base, com os pontos da máscara a cada três dígitos.

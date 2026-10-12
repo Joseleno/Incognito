@@ -64,7 +64,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             var numeroEsperado = (long)nnf.Permutar((ulong)numero, Ascii(emitente + "\0" + modelo + serie), ConjuntoExcluido.DeValores(0));
             var adicional = numeroEsperado < 100_000_000 ? (ulong)numeroEsperado : (ulong?)null;
             var codigoEsperado = (long)cnf8.Permutar((ulong)codigo, Ascii(emitente + Nove(numeroEsperado)), Proibidos(), adicional);
-            Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+            Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
             Assert.True(saida[25..34] == Nove(numeroEsperado), "O número não é a permutação nnf com o ajuste esperado.");
             Assert.True(saida[35..43] == Oito(codigoEsperado), "O código não é a permutação cnf8 com o ajuste esperado.");
             Assert.True(saida[..25] == chave[..25] && saida[34..35] == chave[34..35] && saida[43] == chave[43], "Uma posição fora do número e do código mudou.");
@@ -92,7 +92,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
 
             var numeroEsperado = (long)nnf.Permutar((ulong)numero, Ascii(emitente + "\0" + modelo + serie), ConjuntoExcluido.DeValores(0));
             var codigoEsperado = (long)cnf7.Permutar(ulong.Parse(codigo[1..], CultureInfo.InvariantCulture), Ascii(emitente + Nove(numeroEsperado)), ConjuntoExcluido.Vazio);
-            Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+            Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
             Assert.True(saida[35] == chave[35], "A posição 36 (nSiteAutoriz) mudou.");
             Assert.True(saida[36..43] == codigoEsperado.ToString("0000000", CultureInfo.InvariantCulture), "O código não é a permutação cnf7.");
         }
@@ -134,7 +134,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             mascarado[indiceDoDia + 1] = diaTexto[1];
             var sequencialEsperado = (long)sequencial.Permutar((ulong)sequencialEntrada, Ascii(emitente + "\0" + "2604" + modelo + serie + new string(mascarado)), ConjuntoExcluido.DeValores(0));
 
-            Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+            Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
             Assert.True(saida[25..34] == Numero(transporte, diaEsperado, 4, transporte ? null : '2', sequencialEsperado), "As partes da NFF não são as permutações esperadas.");
         }
     }
@@ -160,7 +160,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
                 var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
 
                 var diaSaida = int.Parse(transporte ? saida[27..29] : saida[25..27], CultureInfo.InvariantCulture);
-                Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+                Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
                 Assert.True(diaSaida >= 1 && diaSaida <= dias, "O dia permutado não existe no mês.");
                 saidas.Add(diaSaida);
             }
@@ -191,7 +191,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             }
             else
             {
-                Assert.Equal(OcorrenciasNumeroDfe.DataNffInvalida, ocorrencias);
+                Assert.Equal(OcorrenciasChaveDfe.DataNffInvalida, ocorrencias);
                 Assert.Equal(dia, diaSaida);
             }
         }
@@ -225,7 +225,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
 
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
 
-            Assert.True(ocorrencias.HasFlag(OcorrenciasNumeroDfe.DataNffInvalida), "A data inválida não foi contada.");
+            Assert.True(ocorrencias.HasFlag(OcorrenciasChaveDfe.DataNffInvalida), "A data inválida não foi contada.");
             Assert.True(saida[25..30] == chave[25..30], "O dia, o mês ou o tipo mudou com a data inválida.");
             Assert.True(Inverter(numeroDfe, saida) == chave, "A inversa não desfez a chave com data inválida.");
         }
@@ -256,7 +256,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
 
         var zero = Montar(sorteio, "2606", emitente, modelo, "126", Numero(transporte, 0, 6, transporte ? null : '2', 0), '3', codigo);
         var saidaDoZero = Pseudonimizar(numeroDfe, zero, out var ocorrencias);
-        Assert.True(ocorrencias.HasFlag(OcorrenciasNumeroDfe.SequencialZero), "O sequencial 0 não foi contado.");
+        Assert.True(ocorrencias.HasFlag(OcorrenciasChaveDfe.SequencialZero), "O sequencial 0 não foi contado.");
         Assert.True(saidaDoZero[25..34] == zero[25..34], "O número com sequencial 0 e data inválida mudou.");
     }
 
@@ -295,7 +295,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
         Assert.Equal(100_000, saidas.Count);
         var zero = Montar(sorteio, "2601", emitente, "57", "001", "000000000", '1', codigo);
         var saidaDoZero = Pseudonimizar(numeroDfe, zero, out var ocorrencias);
-        Assert.True(ocorrencias.HasFlag(OcorrenciasNumeroDfe.NumeroZero), "O número 0 não foi contado.");
+        Assert.True(ocorrencias.HasFlag(OcorrenciasChaveDfe.NumeroZero), "O número 0 não foi contado.");
         Assert.True(saidaDoZero[25..34] == "000000000", "O número 0 mudou.");
     }
 
@@ -308,7 +308,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
         {
             var chave = ChaveQualquer(sorteio, codigoDe8: true);
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
-            if ((ocorrencias & (OcorrenciasNumeroDfe.CodigoProibido | OcorrenciasNumeroDfe.CodigoIgualAoNumero)) != 0)
+            if ((ocorrencias & (OcorrenciasChaveDfe.CodigoProibido | OcorrenciasChaveDfe.CodigoIgualAoNumero)) != 0)
             {
                 continue;
             }
@@ -330,7 +330,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
 
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
 
-            Assert.True(ocorrencias.HasFlag(OcorrenciasNumeroDfe.CodigoProibido), "O código proibido não foi contado.");
+            Assert.True(ocorrencias.HasFlag(OcorrenciasChaveDfe.CodigoProibido), "O código proibido não foi contado.");
             Assert.True(saida[35..43] == chave[35..43], "O código proibido mudou.");
             Assert.True(Inverter(numeroDfe, saida) == chave, "A inversa não desfez a chave com código proibido.");
         }
@@ -360,14 +360,14 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
             if (numeroSaida[0] == '0')
             {
-                Assert.Equal(OcorrenciasNumeroDfe.CodigoIgualAoNumero, ocorrencias);
+                Assert.Equal(OcorrenciasChaveDfe.CodigoIgualAoNumero, ocorrencias);
                 Assert.True(saida[35..43] == codigo, "O código igual ao número' mudou.");
                 Assert.True(Inverter(numeroDfe, saida) == chave, "A inversa não desfez a chave com código igual ao número'.");
                 achados++;
             }
             else
             {
-                Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+                Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
                 maiores++;
             }
         }
@@ -402,7 +402,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             var chave = Montar(sorteio, "2601", emitente, "55", "001", numero, '1', Oito((long)codigo));
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
 
-            Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+            Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
             Assert.True(saida[35..43] != numeroSaida[1..], "O código saiu igual ao número pseudonimizado.");
             Assert.True(saida[35..43] == Oito((long)cnf8.Permutar(codigo, ajuste, Proibidos(), numeroPseudonimizado)), "O código não seguiu para o próximo do ciclo.");
             Assert.True(Inverter(numeroDfe, saida) == chave, "A inversa não desfez o código que seguiu para o próximo do ciclo.");
@@ -461,7 +461,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             var chave = Montar(sorteio, "2601", emitente, "55", "001", numero, '1', Oito((long)codigo));
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
 
-            Assert.Equal(OcorrenciasNumeroDfe.Nenhuma, ocorrencias);
+            Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
             Assert.False(RegrasChaveDfe.EhCodigoNumericoProibido(int.Parse(saida[35..43], CultureInfo.InvariantCulture)), "O código saiu proibido.");
             Assert.True(saida[35..43] == Oito((long)cnf8.Permutar(codigo, ajuste, Proibidos(), adicional)), "O código não seguiu para o próximo do ciclo.");
             Assert.True(Inverter(numeroDfe, saida) == chave, "A inversa não desfez o código levado a um proibido.");
@@ -485,7 +485,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);
 
             Assert.True(saida[25..34] == Nove(proibido), "O número pseudonimizado não é o proibido montado.");
-            Assert.Equal(OcorrenciasNumeroDfe.CodigoProibido, ocorrencias);
+            Assert.Equal(OcorrenciasChaveDfe.CodigoProibido, ocorrencias);
             Assert.True(saida[35..43] == chave[35..43], "O código proibido mudou.");
         }
     }
@@ -515,7 +515,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
             }
             else
             {
-                Assert.Equal(OcorrenciasNumeroDfe.DataNffInvalida, ocorrencias);
+                Assert.Equal(OcorrenciasChaveDfe.DataNffInvalida, ocorrencias);
                 Assert.Equal(dia, diaSaida);
             }
         }
@@ -669,7 +669,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
         }
     }
 
-    private static string Pseudonimizar(PseudonimizadorNumeroDfe numeroDfe, string chave, out OcorrenciasNumeroDfe ocorrencias)
+    private static string Pseudonimizar(PseudonimizadorNumeroDfe numeroDfe, string chave, out OcorrenciasChaveDfe ocorrencias)
     {
         var classificacao = ClassificadorEmitente.Classificar(chave);
         var caracteres = chave.ToCharArray();
@@ -680,7 +680,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
 
     private static string Inverter(PseudonimizadorNumeroDfe numeroDfe, string saida) => Inverter(numeroDfe, saida, out _);
 
-    private static string Inverter(PseudonimizadorNumeroDfe numeroDfe, string saida, out OcorrenciasNumeroDfe ocorrencias)
+    private static string Inverter(PseudonimizadorNumeroDfe numeroDfe, string saida, out OcorrenciasChaveDfe ocorrencias)
     {
         var caracteres = saida.ToCharArray();
         ocorrencias = numeroDfe.Inverter(caracteres);

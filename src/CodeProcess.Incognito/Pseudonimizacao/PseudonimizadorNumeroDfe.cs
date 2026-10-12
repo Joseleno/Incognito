@@ -119,20 +119,31 @@ internal sealed class PseudonimizadorNumeroDfe : IDisposable
     /// <returns>O que ficou como veio.</returns>
     /// <exception cref="ArgumentException">Chave fora da estrutura ou sem emitente classificado.</exception>
     /// <exception cref="ObjectDisposedException">Já descartado.</exception>
-    internal OcorrenciasNumeroDfe Pseudonimizar(Span<char> chave)
+    internal OcorrenciasChaveDfe Pseudonimizar(Span<char> chave) => Pseudonimizar(chave, out _);
+
+    /// <summary>
+    /// Como <see cref="Pseudonimizar(Span{char})"/>, devolvendo a classificação lida na chave com o emitente já
+    /// pseudonimizado, para quem chama conferir que ela não mudou.
+    /// </summary>
+    /// <param name="chave">As 44 posições, com o emitente já pseudonimizado.</param>
+    /// <param name="classificacao">A classificação que decidiu as partes.</param>
+    /// <returns>O que ficou como veio.</returns>
+    /// <exception cref="ArgumentException">Chave fora da estrutura ou sem emitente classificado.</exception>
+    /// <exception cref="ObjectDisposedException">Já descartado.</exception>
+    internal OcorrenciasChaveDfe Pseudonimizar(Span<char> chave, out ClassificacaoEmitente classificacao)
     {
-        var classificacao = Classificar(chave);
+        classificacao = Classificar(chave);
         var leiaute = classificacao.Leiaute!;
         var ocorrencias = classificacao.EhNff ? PartesDaNff(chave, leiaute.Nff!, inversa: false) : NumeroInteiro(chave, inversa: false);
         return ocorrencias | Codigo(chave, leiaute, inversa: false);
     }
 
-    /// <summary>Desfaz <see cref="Pseudonimizar"/>, no lugar. Uso interno e de testes.</summary>
+    /// <summary>Desfaz <see cref="Pseudonimizar(Span{char})"/>, no lugar. Uso interno e de testes.</summary>
     /// <param name="chave">A chave pseudonimizada, com o emitente ainda pseudonimizado.</param>
     /// <returns>O que ficou como veio.</returns>
     /// <exception cref="ArgumentException">Chave fora da estrutura ou sem emitente classificado.</exception>
     /// <exception cref="ObjectDisposedException">Já descartado.</exception>
-    internal OcorrenciasNumeroDfe Inverter(Span<char> chave)
+    internal OcorrenciasChaveDfe Inverter(Span<char> chave)
     {
         var classificacao = Classificar(chave);
         var leiaute = classificacao.Leiaute!;
@@ -171,13 +182,13 @@ internal sealed class PseudonimizadorNumeroDfe : IDisposable
         return classificacao;
     }
 
-    private OcorrenciasNumeroDfe NumeroInteiro(Span<char> chave, bool inversa)
+    private OcorrenciasChaveDfe NumeroInteiro(Span<char> chave, bool inversa)
     {
         var posicoes = chave.Slice(IndiceDoNumero, TamanhoDoNumero);
         var numero = (ulong)Valor(posicoes);
         if (numero == 0)
         {
-            return OcorrenciasNumeroDfe.NumeroZero;
+            return OcorrenciasChaveDfe.NumeroZero;
         }
 
         Span<byte> ajuste = stackalloc byte[TamanhoDoEmitente + 1 + 5];
@@ -185,27 +196,27 @@ internal sealed class PseudonimizadorNumeroDfe : IDisposable
         ajuste[TamanhoDoEmitente] = 0x00;
         Copiar(chave.Slice(IndiceDoModelo, 5), ajuste[(TamanhoDoEmitente + 1)..]);
         Escrever(inversa ? _numero.Inverter(numero, ajuste, _zero) : _numero.Permutar(numero, ajuste, _zero), posicoes);
-        return OcorrenciasNumeroDfe.Nenhuma;
+        return OcorrenciasChaveDfe.Nenhuma;
     }
 
     // Na ida, o dia antes do sequencial, que leva o dia já permutado no ajuste; na volta, o contrário.
-    private OcorrenciasNumeroDfe PartesDaNff(Span<char> chave, LeiauteNff nff, bool inversa)
+    private OcorrenciasChaveDfe PartesDaNff(Span<char> chave, LeiauteNff nff, bool inversa)
     {
-        var ocorrencias = OcorrenciasNumeroDfe.Nenhuma;
+        var ocorrencias = OcorrenciasChaveDfe.Nenhuma;
         var dias = DiasValidos(chave, nff);
         var posicoesDoDia = chave.Slice(nff.IndiceDia, 2);
         var dia = (ulong)Valor(posicoesDoDia);
         var diaPermutavel = dia >= 1 && dia <= (ulong)dias;
         if (!diaPermutavel)
         {
-            ocorrencias |= OcorrenciasNumeroDfe.DataNffInvalida;
+            ocorrencias |= OcorrenciasChaveDfe.DataNffInvalida;
         }
 
         var posicoesDoSequencial = chave.Slice(nff.IndiceSequencial, nff.TamanhoSequencial);
         var sequencial = (ulong)Valor(posicoesDoSequencial);
         if (sequencial == 0)
         {
-            ocorrencias |= OcorrenciasNumeroDfe.SequencialZero;
+            ocorrencias |= OcorrenciasChaveDfe.SequencialZero;
         }
 
         var permutacaoDoSequencial = nff.TamanhoSequencial == 4 ? _sequencial4 : _sequencial5;
@@ -233,7 +244,7 @@ internal sealed class PseudonimizadorNumeroDfe : IDisposable
         return ocorrencias;
     }
 
-    private OcorrenciasNumeroDfe Codigo(Span<char> chave, LeiauteDfe leiaute, bool inversa)
+    private OcorrenciasChaveDfe Codigo(Span<char> chave, LeiauteDfe leiaute, bool inversa)
     {
         Span<byte> ajuste = stackalloc byte[TamanhoDoEmitente + TamanhoDoNumero];
         Copiar(chave.Slice(IndiceDoEmitente, TamanhoDoEmitente), ajuste);
@@ -245,27 +256,27 @@ internal sealed class PseudonimizadorNumeroDfe : IDisposable
             Escrever(
                 inversa ? _codigo7.Inverter(codigo7, ajuste, ConjuntoExcluido.Vazio) : _codigo7.Permutar(codigo7, ajuste, ConjuntoExcluido.Vazio),
                 posicoes7);
-            return OcorrenciasNumeroDfe.Nenhuma;
+            return OcorrenciasChaveDfe.Nenhuma;
         }
 
         var posicoes = chave[IndiceDoCodigo8..(IndiceDoCodigo8 + 8)];
         var codigo = (ulong)Valor(posicoes);
         if (_codigosProibidos.Contem(codigo))
         {
-            return OcorrenciasNumeroDfe.CodigoProibido;
+            return OcorrenciasChaveDfe.CodigoProibido;
         }
 
         var numero = (ulong)Valor(chave.Slice(IndiceDoNumero, TamanhoDoNumero));
         if (codigo == numero)
         {
-            return OcorrenciasNumeroDfe.CodigoIgualAoNumero;
+            return OcorrenciasChaveDfe.CodigoIgualAoNumero;
         }
 
         ulong? adicional = numero < LimiteDoCodigo8 ? numero : null;
         Escrever(
             inversa ? _codigo8.Inverter(codigo, ajuste, _codigosProibidos, adicional) : _codigo8.Permutar(codigo, ajuste, _codigosProibidos, adicional),
             posicoes);
-        return OcorrenciasNumeroDfe.Nenhuma;
+        return OcorrenciasChaveDfe.Nenhuma;
     }
 
     // emitente' ‖ 0x00 ‖ AAMM ‖ mod ‖ série ‖ número, com o sequencial e, sem o dia, também o dia em '0'.

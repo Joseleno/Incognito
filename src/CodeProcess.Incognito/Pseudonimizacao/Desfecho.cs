@@ -12,7 +12,8 @@ internal enum Desfecho
     /// <summary>
     /// Base excluída da permutação (repdígito do CPF, raiz zero do CNPJ): base e DV ficam como vieram, com os zeros à
     /// esquerda completados. A regra vale com qualquer DV; um DV errado só chega aqui com a política de preservar. No
-    /// <c>id.permutar</c>, são o zero e os negativos, que ficam fora do domínio e voltam como vieram.
+    /// <c>id.permutar</c>, são o zero e os negativos, que ficam fora do domínio e voltam como vieram. Na chave de DF-e,
+    /// quando emitente, número e código ficam todos como vieram (as ocorrências dizem por quê).
     /// </summary>
     PontoFixo,
 
@@ -30,4 +31,10 @@ internal enum Desfecho
 
     /// <summary>Texto vazio ou só com espaços (<c>char(n)</c> em branco): não há dado a tratar e ele volta como veio.</summary>
     Vazio,
+
+    /// <summary>
+    /// Chave de DF-e com as 44 posições em zero (valor de preenchimento do sistema, sem dado pessoal): volta como veio,
+    /// com prefixo, grupos e preenchimento, antes da política de entrada malformada.
+    /// </summary>
+    ChaveZerada,
 }
