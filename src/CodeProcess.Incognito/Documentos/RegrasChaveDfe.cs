@@ -3,6 +3,21 @@ namespace CodeProcess.Incognito.Documentos;
 /// <summary>Regras da chave de acesso de DF-e usadas pela validação e pela pseudonimização.</summary>
 internal static class RegrasChaveDfe
 {
+    /// <summary>Tamanho da chave de acesso.</summary>
+    internal const int Tamanho = 44;
+
+    /// <summary>
+    /// Se a chave tem a estrutura de 44 posições: dígitos ASCII, com letras maiúsculas ASCII permitidas só nas posições
+    /// 7 a 18 (o CNPJ alfanumérico). O cDV não é conferido.
+    /// </summary>
+    /// <param name="chave">As posições, sem prefixo nem separadores.</param>
+    /// <returns><see langword="true"/> se a estrutura está certa.</returns>
+    internal static bool TemEstrutura(ReadOnlySpan<char> chave) =>
+        chave.Length == Tamanho
+        && Caracteres.SoDigitos(chave[..6])
+        && Caracteres.SoDigitosEMaiusculas(chave[6..18])
+        && Caracteres.SoDigitos(chave[18..]);
+
     /// <summary>
     /// Os 20 códigos numéricos de 8 dígitos proibidos pela regra B03-10 (rejeição 897, NT 2019.001 v1.70): os 10
     /// repdígitos e as 10 sequências crescentes. A regra é da NF-e (a NT retirou o modelo 65), mas o projeto exclui

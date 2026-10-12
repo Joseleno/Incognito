@@ -110,7 +110,7 @@ internal sealed class PseudonimizadorCep : IDisposable
             return Politicas.AplicarMalformado(_malformada, MensagemTextoMalformado, entrada, out saida);
         }
 
-        if (!Caracteres.SoDigitos(digitos) || !Escolher(Ler(digitos), entidade, out var cep))
+        if (!Caracteres.SoDigitos(digitos) || !Escolher(Caracteres.Valor(digitos), entidade, out var cep))
         {
             return Politicas.AplicarMalformado(_malformada, MensagemTextoMalformado, entrada, out saida);
         }
@@ -174,17 +174,6 @@ internal sealed class PseudonimizadorCep : IDisposable
         Span<byte> resultado = stackalloc byte[HmacDeSemente.Tamanho];
         _hmac.Calcular(prefixo, entidade.AsSpan().Trim(), resultado, recusarInvalido: false);
         return BinaryPrimitives.ReadUInt64BigEndian(resultado);
-    }
-
-    private static int Ler(ReadOnlySpan<char> digitos)
-    {
-        var valor = 0;
-        foreach (var digito in digitos)
-        {
-            valor = (valor * 10) + (digito - '0');
-        }
-
-        return valor;
     }
 
     private static int Formatar(int cep, Mascara mascara, Span<char> destino)

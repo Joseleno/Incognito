@@ -25,7 +25,6 @@ public static class ValidadorBr
     private const int TamanhoCpfComMascara = 14;
     private const int TamanhoCnpj = 14;
     private const int TamanhoCnpjComMascara = 18;
-    private const int TamanhoChaveDfe = 44;
 
     /// <summary>Valida um CPF com 11 dígitos ou com a máscara <c>000.000.000-00</c>.</summary>
     /// <param name="cpf">O CPF.</param>
@@ -113,11 +112,7 @@ public static class ValidadorBr
 
     /// <inheritdoc cref="ChaveDfe(string?)"/>
     public static bool ChaveDfe(ReadOnlySpan<char> chave) =>
-        chave.Length == TamanhoChaveDfe
-        && SoDigitos(chave[..6])
-        && SoDigitosEMaiusculas(chave[6..18])
-        && SoDigitos(chave[18..])
-        && DigitosVerificadores.ChaveDfe(chave[..43]) == chave[43] - '0';
+        RegrasChaveDfe.TemEstrutura(chave) && DigitosVerificadores.ChaveDfe(chave[..43]) == chave[43] - '0';
 
     private static bool EhRepetido(ReadOnlySpan<char> texto)
     {
