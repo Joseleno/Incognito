@@ -44,9 +44,17 @@ public sealed class ClassificadorEmitenteTestes
         { "55", "2601", "026", '3', '0', Cpf, nameof(MotivoAnomaliaDfe.NffSemTipoDeEmissor), false, false },
         { "65", "2601", "026", '3', '9', Cpf, nameof(MotivoAnomaliaDfe.NffSemTipoDeEmissor), false, false },
         { "55", "2601", "026", '3', '2', CnpjComLetra, Cnpj, true, false },
-        { "55", "2601", "985", '3', '1', CnpjSemZeros, Cnpj, true, false },
-        { "65", "2601", "975", '3', '2', Cpf, Cpf, true, false },
         { "65", "2601", "999", '3', '1', CnpjSemZeros, Cnpj, true, false },
+        { "55", "2601", "969", '3', '2', Cpf, Cpf, true, false },
+        { "55", "2601", "990", '3', '1', CnpjSemZeros, Cnpj, true, false },
+
+        // tpEmis 3 com série do PAA (970 a 989) não é NFF: segue as séries, mesmo antes de 2104.
+        { "55", "2601", "985", '3', '1', CnpjSemZeros, Cnpj, false, false },
+        { "55", "2601", "970", '3', '1', Cpf, Cpf, false, false },
+        { "55", "2601", "979", '3', '0', CnpjSemZeros, nameof(MotivoAnomaliaDfe.CpfSemZerosAEsquerda), false, false },
+        { "55", "1901", "989", '3', '2', Cpf, Cnpj, false, false },
+        { "65", "2601", "975", '3', '2', Cpf, nameof(MotivoAnomaliaDfe.SerieSemEmissao), false, false },
+        { "65", "1901", "980", '3', '1', CnpjSemZeros, nameof(MotivoAnomaliaDfe.SerieSemEmissao), false, false },
 
         // Séries, com os outros tpEmis; fora da NFF, a posição 30 é do número e não decide.
         { "55", "2601", "000", '1', '5', CnpjSemZeros, Cnpj, false, false },
@@ -75,7 +83,10 @@ public sealed class ClassificadorEmitenteTestes
         { "57", "2601", "975", '1', '5', Cpf, Cpf, false, false },
         { "58", "2601", "985", '1', '2', CnpjSemZeros, Cnpj, false, true },
         { "57", "2601", "126", '3', '5', Cpf, Cpf, true, false },
-        { "57", "1501", "126", '3', '5', Cpf, Cpf, true, false },
+        { "57", "1501", "126", '3', '5', Cpf, Cpf, false, false },
+        { "58", "2005", "120", '3', '5', Cpf, Cpf, false, false },
+        { "57", "2006", "120", '3', '5', Cpf, Cpf, true, false },
+        { "58", "2006", "120", '3', '5', CnpjSemZeros, Cnpj, true, true },
         { "58", "2601", "126", '3', '1', CnpjSemZeros, Cnpj, true, true },
         { "57", "2601", "126", '3', '5', CnpjComLetra, Cnpj, true, false },
         { "58", "2601", "001", '1', '5', CnpjComLetra, Cnpj, false, false },
@@ -496,7 +507,9 @@ public sealed class ClassificadorEmitenteTestes
         }
 
         var numero = Digitos(sorteio, 9).ToCharArray();
-        if (chave[20..22] is "55" or "65" && chave[34] == '3' && int.Parse(chave[2..6], CultureInfo.InvariantCulture) >= 2104)
+        var serie = int.Parse(chave[22..25], CultureInfo.InvariantCulture);
+        if (chave[20..22] is "55" or "65" && chave[34] == '3' && (serie is < 970 or > 989)
+            && int.Parse(chave[2..6], CultureInfo.InvariantCulture) >= 2104)
         {
             // Na NFF da NF-e e da NFC-e, a posição 30 é o tipo do emissor, preservado; fora dela, é dígito do número.
             numero[29 - 25] = chave[29];

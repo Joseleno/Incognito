@@ -33,6 +33,7 @@ public sealed class PermutacaoFeistelTestes
     public static TheoryData<uint, ulong, ulong> DominiosReduzidos => new()
     {
         { 10, 100, 100 },
+        { 10, 10, 100 },
         { 10, 40, 100 },
         { 10, 100, 40 },
         { 36, 36, 1296 },
@@ -122,6 +123,65 @@ public sealed class PermutacaoFeistelTestes
             Assert.True(x % 2 != 0 || y == x, "Valor excluído não ficou como ponto fixo.");
             Assert.Equal(x, permutacao.Inverter(y, [], excluidos));
         }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(4_321UL)]
+    [InlineData(17UL)]
+    [InlineData(0UL)]
+    [InlineData(9_999UL)]
+    [InlineData(10_000UL)]
+    public void Excluido_adicional_e_bijecao_exaustiva_fora_dos_excluidos(ulong? adicional)
+    {
+        // 20 excluídos fixos e mais um por chamada (que pode repetir um deles ou cair fora do domínio).
+        using var permutacao = new PermutacaoFeistel(ChaveAleatoria(), 10, 100, 100);
+        var excluidos = ConjuntoExcluido.DeValores(0, 17, 1_111, 2_222, 3_333, 4_444, 5_555, 6_666, 7_777, 8_888, 9_999, 1_234, 2_345, 3_456, 4_567, 5_678, 6_789, 7_890, 8_901, 9_012);
+        var vistos = new bool[10_000];
+
+        for (ulong x = 0; x < 10_000; x++)
+        {
+            var y = permutacao.Permutar(x, "nnf"u8, excluidos, adicional);
+            var entradaExcluida = excluidos.Contem(x) || x == adicional;
+
+            Assert.False(vistos[y], "Duas entradas deram a mesma saída.");
+            vistos[y] = true;
+            Assert.True(entradaExcluida ? y == x : !excluidos.Contem(y) && y != adicional, "A saída caiu nos excluídos ou o excluído não ficou.");
+            Assert.Equal(x, permutacao.Inverter(y, "nnf"u8, excluidos, adicional));
+        }
+    }
+
+    [Fact]
+    public void Excluido_adicional_sozinho_e_bijecao_exaustiva()
+    {
+        // Sem conjunto, o limite de passos vem só do adicional: a pré-imagem dele caminha um passo.
+        using var permutacao = new PermutacaoFeistel(ChaveAleatoria(), 10, 10, 100);
+        foreach (var adicional in new ulong[] { 0, 1, 500, 999 })
+        {
+            var vistos = new bool[1_000];
+            for (ulong x = 0; x < 1_000; x++)
+            {
+                var y = permutacao.Permutar(x, "cnf8"u8, ConjuntoExcluido.Vazio, adicional);
+
+                Assert.False(vistos[y], "Duas entradas deram a mesma saída.");
+                vistos[y] = true;
+                Assert.True(x == adicional ? y == x : y != adicional, "A saída caiu no adicional ou ele não ficou.");
+                Assert.Equal(x, permutacao.Inverter(y, "cnf8"u8, ConjuntoExcluido.Vazio, adicional));
+            }
+        }
+    }
+
+    [Fact]
+    public void Excluido_adicional_conta_uma_vez_e_so_quando_e_novo()
+    {
+        using var permutacao = new PermutacaoFeistel(ChaveAleatoria(), 10, 100, 100);
+        var metade = ConjuntoExcluido.PorRegra(valor => valor % 2 == 0, 5_000);
+
+        // Repetir um excluído ou cair fora do domínio não aumenta o conjunto; um valor novo passaria da metade.
+        Assert.True(permutacao.Permutar(1, [], metade, adicional: 2) % 2 == 1, "A saída caiu nos excluídos.");
+        Assert.True(permutacao.Permutar(1, [], metade, adicional: 10_001) % 2 == 1, "A saída caiu nos excluídos.");
+        Assert.Throws<ArgumentException>("excluidos", () => permutacao.Permutar(1, [], metade, adicional: 3));
+        Assert.Equal(permutacao.Permutar(1, [], metade), permutacao.Permutar(1, [], metade, adicional: null));
     }
 
     [Theory]
