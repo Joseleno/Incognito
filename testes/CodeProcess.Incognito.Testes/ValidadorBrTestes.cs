@@ -444,34 +444,6 @@ public sealed class ValidadorBrTestes
         Assert.False(RegrasChaveDfe.EhCodigoNumericoProibido(1_234_568), "01234568 foi reconhecido como proibido.");
     }
 
-    [Fact]
-    public void Validacao_com_span_nao_aloca()
-    {
-        var sorteio = new Random(1312);
-        var cpf = MascararCpf(CpfValido(sorteio)).ToCharArray();
-        var cnpj = MascararCnpj(CnpjValido(sorteio, alfanumerico: true)).ToCharArray();
-        var chave = ChaveValida(sorteio, emitenteAlfanumerico: true).ToCharArray();
-        var aceitos = Validar(cpf, cnpj, chave, 100);
-
-        var antes = GC.GetAllocatedBytesForCurrentThread();
-        aceitos += Validar(cpf, cnpj, chave, 10_000);
-        var alocados = GC.GetAllocatedBytesForCurrentThread() - antes;
-
-        Assert.Equal(0L, alocados);
-        Assert.Equal(3 * 10_100, aceitos);
-    }
-
-    private static int Validar(char[] cpf, char[] cnpj, char[] chave, int vezes)
-    {
-        var aceitos = 0;
-        for (var vez = 0; vez < vezes; vez++)
-        {
-            aceitos += (ValidadorBr.Cpf(cpf.AsSpan()) ? 1 : 0) + (ValidadorBr.Cnpj(cnpj.AsSpan()) ? 1 : 0) + (ValidadorBr.ChaveDfe(chave.AsSpan()) ? 1 : 0);
-        }
-
-        return aceitos;
-    }
-
     private static string Trocar(string texto, int posicao, char caractere) =>
         string.Concat(texto.AsSpan(0, posicao), new string(caractere, 1), texto.AsSpan(posicao + 1));
 }

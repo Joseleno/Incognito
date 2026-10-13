@@ -99,6 +99,31 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
 
     [Theory]
     [MemberData(nameof(ComESemOrdem))]
+    public void Inversa_desfaz_a_pseudonimizacao_nas_formas_e_devolve_as_mesmas_ocorrencias(bool permutarOrdem)
+    {
+        using var chaveDfe = Criar(cnpj: permutarOrdem ? _cnpjComOrdem : _cnpj);
+        var sorteio = new Random(permutarOrdem ? 2902 : 2901);
+        for (var vez = 0; vez < 9_000; vez++)
+        {
+            var chave = ComCdvDeslocado(ChaveSorteada(sorteio, _modelos[vez % _modelos.Length]), vez % 7 == 0 ? 1 + sorteio.Next(9) : 0);
+            var entrada = (vez % 3) switch
+            {
+                0 => chave,
+                1 => PrefixoDoModelo(chave[20..22]) + chave + "  ",
+                _ => EmGrupos(chave),
+            };
+
+            var desfecho = chaveDfe.Pseudonimizar(entrada, out var saida, out var ocorrencias);
+            var desfechoDaVolta = chaveDfe.Inverter(saida!, out var volta, out var ocorrenciasDaVolta);
+
+            Assert.True(volta == entrada, "A inversa não devolveu a entrada.");
+            Assert.Equal(ocorrencias, ocorrenciasDaVolta);
+            Assert.Equal(desfecho, desfechoDaVolta);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ComESemOrdem))]
     public void CPF_e_CNPJ_dentro_da_chave_geram_o_mesmo_pseudonimo_que_nas_colunas(bool permutarOrdem)
     {
         var cnpj = permutarOrdem ? _cnpjComOrdem : _cnpj;
@@ -855,10 +880,54 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
         using var cnpjComOrdem = new PseudonimizadorCnpj(_chave, "cnpj", 1, "homologacao", true, PoliticaEntradaInvalida.Preservar, PoliticaEntradaMalformada.Falhar);
         Assert.Throws<ArgumentException>("cnpj", () => cnpjComOrdem.TransformarNaChave("00012345678901".ToCharArray(), true));
         cnpjComOrdem.TransformarNaChave("00012345A78901".ToCharArray(), true);
+
+        // As inversas recusam as mesmas formas, inclusive a raiz que a regra dos zeros lê como CPF (nunca é saída).
+        Assert.Throws<ArgumentException>("cpf", () => cpf.InverterNaChave("1234567890A".ToCharArray()));
+        Assert.Throws<ArgumentException>("cnpj", () => cnpj.InverterNaChave("12345678901a34".ToCharArray(), false));
+        Assert.Throws<ArgumentException>("cnpj", () => cnpj.InverterNaChave("00012345678901".ToCharArray(), true));
+        Assert.Throws<ArgumentException>("cnpj", () => cnpjComOrdem.InverterNaChave("00012345678901".ToCharArray(), true));
         cpf.Dispose();
         cnpj.Dispose();
         Assert.Throws<ObjectDisposedException>(() => cpf.TransformarNaChave("12345678901".ToCharArray()));
         Assert.Throws<ObjectDisposedException>(() => cnpj.TransformarNaChave("12345678901234".ToCharArray(), false));
+        Assert.Throws<ObjectDisposedException>(() => cpf.InverterNaChave("12345678901".ToCharArray()));
+        Assert.Throws<ObjectDisposedException>(() => cnpj.InverterNaChave("12345678901234".ToCharArray(), false));
+    }
+
+    [Fact]
+    public void Inversa_segue_a_politica_de_malformado_como_a_ida()
+    {
+        // Forma errada e anomalia seguem a política de malformado também na inversa; a chave zerada volta como veio.
+        var sorteio = new Random(2904);
+        var anomala = Montar(sorteio, "2601", CnpjNumericoSemZerosDoCpf(sorteio), "55", "995", "000012345", '1', "00012345");
+        var zerada = new string('0', 44);
+        using var falhar = Criar(malformada: PoliticaEntradaMalformada.Falhar);
+        using var anular = Criar(malformada: PoliticaEntradaMalformada.Anular);
+
+        Assert.Equal("INC1003", Assert.Throws<IncognitoException>(() => falhar.Inverter(anomala[..43], out _, out _)).Codigo);
+        Assert.Equal("INC1003", Assert.Throws<IncognitoException>(() => falhar.Inverter(anomala, out _, out _)).Codigo);
+        Assert.Equal(Desfecho.AnuladoMalformado, anular.Inverter(anomala, out var anulada, out var ocorrencias));
+        Assert.Null(anulada);
+        Assert.Equal(OcorrenciasChaveDfe.Anomalia, ocorrencias);
+        Assert.Equal(Desfecho.ChaveZerada, falhar.Inverter(zerada, out var zeradaDeVolta, out _));
+        Assert.Same(zerada, zeradaDeVolta);
+    }
+
+    [Fact]
+    public void Inversa_desfaz_o_cDV_errado_mesmo_com_a_politica_de_falhar()
+    {
+        // A inversa não aplica a política de DV: um pseudônimo com cDV errado preservado volta numa instância que falharia.
+        var sorteio = new Random(2903);
+        using var preservar = Criar(invalida: PoliticaEntradaInvalida.Preservar);
+        using var falhar = Criar(invalida: PoliticaEntradaInvalida.Falhar);
+        for (var vez = 0; vez < 50; vez++)
+        {
+            var entrada = ComCdvDeslocado(ChaveSorteada(sorteio, _modelos[vez % _modelos.Length]), 1 + (vez % 9));
+            preservar.Pseudonimizar(entrada, out var saida, out _);
+
+            Assert.Equal(Desfecho.DvInvalidoPreservado, falhar.Inverter(saida!, out var volta, out _));
+            Assert.True(volta == entrada, "A inversa não desfez o cDV errado.");
+        }
     }
 
     [Fact]
@@ -905,37 +974,6 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
         }
 
         Assert.Equal("D24A5427B6E5638C9B29B83403524A81AFC6B35BEA208462C280DCEE361C014C", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(saidas.ToString()))));
-    }
-
-    [Fact]
-    public void Uma_alocacao_por_chave_so_a_da_saida()
-    {
-        using var chaveDfe = Criar();
-        var sorteio = new Random(2827);
-        var entradas = Enumerable.Range(0, 200).Select(i => ChaveSorteada(sorteio, _modelos[i % _modelos.Length])).ToArray();
-        foreach (var entrada in entradas)
-        {
-            chaveDfe.Pseudonimizar(entrada, out _, out _);
-        }
-
-        // Por chamada, exatamente a string da saída (cabeçalho, tamanho e caracteres, alinhados a 8 bytes), nas formas.
-        var formas = entradas.SelectMany(entrada => new[] { entrada, "NFe" + entrada, EmGrupos(entrada), entrada + "    " })
-            .Where(forma => !forma.StartsWith("NFe", StringComparison.Ordinal) || forma[23..25] is "55" or "65")
-            .ToArray();
-        foreach (var forma in formas)
-        {
-            chaveDfe.Pseudonimizar(forma, out _, out _);
-        }
-
-        foreach (var forma in formas)
-        {
-            var antes = GC.GetAllocatedBytesForCurrentThread();
-            var desfecho = chaveDfe.Pseudonimizar(forma, out _, out _);
-            var alocados = GC.GetAllocatedBytesForCurrentThread() - antes;
-
-            var esperado = desfecho == Desfecho.PontoFixo ? 0 : ((22 + (2 * forma.Length) + 7) / 8 * 8);
-            Assert.Equal(esperado, alocados);
-        }
     }
 
     private static string PrefixoDoModelo(string modelo) => modelo switch

@@ -31,4 +31,4 @@ request que toma a decisão. Preferência de estilo sem efeito para quem usa ou 
 | 0016 | Proteção do destino por marcador e recusa de origem marcada | a registrar |
 | 0017 | Contratos de extensão como classes abstratas e tipos do modelo sem construtor público | a registrar |
 | 0018 | Lançamento único `1.0.0`, com versões candidatas internas | a registrar |
-| 0019 | Chave de acesso de documentos fiscais eletrônicos: transformador e classificação do emitente | a registrar |
+| [0019](0019-chave-de-acesso-de-dfe.md) | Chave de acesso de DF-e pseudonimizada por partes, com o emitente classificado por campos preservados | aceito |

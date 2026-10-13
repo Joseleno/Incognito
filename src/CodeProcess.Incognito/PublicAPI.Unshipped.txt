@@ -19,6 +19,7 @@ static CodeProcess.Incognito.ValidadorBr.Cnpj(System.ReadOnlySpan<char> cnpj) ->
 static CodeProcess.Incognito.ValidadorBr.Cpf(string? cpf) -> bool
 static CodeProcess.Incognito.ValidadorBr.Cpf(System.ReadOnlySpan<char> cpf) -> bool
 CodeProcess.Incognito.GeradorBr
+CodeProcess.Incognito.GeradorBr.ChaveDfe(int modelo, bool alfanumerico = false) -> string!
 CodeProcess.Incognito.GeradorBr.Cnpj(bool alfanumerico = false, bool formatado = false) -> string!
 CodeProcess.Incognito.GeradorBr.Cpf(bool formatado = false) -> string!
 CodeProcess.Incognito.GeradorBr.GeradorBr(long semente) -> void
