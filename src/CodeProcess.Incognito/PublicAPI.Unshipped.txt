@@ -24,3 +24,13 @@ CodeProcess.Incognito.GeradorBr.Cnpj(bool alfanumerico = false, bool formatado =
 CodeProcess.Incognito.GeradorBr.Cpf(bool formatado = false) -> string!
 CodeProcess.Incognito.GeradorBr.GeradorBr(long semente) -> void
 static CodeProcess.Incognito.GeradorBr.Padrao.get -> CodeProcess.Incognito.GeradorBr!
+CodeProcess.Incognito.Pseudonimizador
+CodeProcess.Incognito.Pseudonimizador.Ambiente.get -> string!
+CodeProcess.Incognito.Pseudonimizador.ChaveDfe(string! chaveDeAcesso) -> string!
+CodeProcess.Incognito.Pseudonimizador.ChavePix(string! chavePix) -> string!
+CodeProcess.Incognito.Pseudonimizador.Cnpj(string! cnpj) -> string!
+CodeProcess.Incognito.Pseudonimizador.Cpf(string! cpf) -> string!
+CodeProcess.Incognito.Pseudonimizador.Dispose() -> void
+CodeProcess.Incognito.Pseudonimizador.Email(string! email) -> string!
+CodeProcess.Incognito.Pseudonimizador.Pseudonimizador(CodeProcess.Incognito.ChaveIncognito! chave, string! ambiente) -> void
+CodeProcess.Incognito.Pseudonimizador.Telefone(string! telefone) -> string!

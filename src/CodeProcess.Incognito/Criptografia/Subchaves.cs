@@ -137,7 +137,12 @@ internal static class Subchaves
         return string.Create(CultureInfo.InvariantCulture, $"{dominio}@{versao}");
     }
 
-    private static void ValidarNome(string nome, string parametro)
+    /// <summary>Recusa um nome de domínio, transformador ou ambiente fora da regra dos nomes.</summary>
+    /// <param name="nome">O nome.</param>
+    /// <param name="parametro">O nome do parâmetro de quem chama.</param>
+    /// <exception cref="ArgumentNullException">Nome nulo.</exception>
+    /// <exception cref="ArgumentException">Nome fora da regra; a mensagem não traz o nome.</exception>
+    internal static void ValidarNome(string nome, string parametro)
     {
         ArgumentNullException.ThrowIfNull(nome, parametro);
         if (!EhNomeValido(nome))

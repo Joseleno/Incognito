@@ -269,7 +269,9 @@ public sealed class ChaveIncognito : IDisposable
         _ => -1,
     };
 
-    private void LancarSeDescartada() => ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartada) != 0, this);
+    /// <summary>Lança se a chave já foi descartada; quem compõe a chave confere antes de usá-la.</summary>
+    /// <exception cref="ObjectDisposedException">Chave descartada.</exception>
+    internal void LancarSeDescartada() => ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartada) != 0, this);
 
     // A barreira completa impede que as leituras do valor feitas no uso se resolvam depois da leitura da marca: um
     // Volatile.Read só ordena o que vem depois dele, e em ARM64 o uso poderia ler a chave já zerada com a marca em 0.
