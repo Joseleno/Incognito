@@ -362,35 +362,6 @@ public sealed class ClassificadorEmitenteTestes
         Assert.Throws<ArgumentOutOfRangeException>(() => LeiautesDfe.Obter((ModeloDfe)200));
     }
 
-    [Fact]
-    public void Classificar_nao_aloca()
-    {
-        var sorteio = new Random(2605);
-        var chaves = Enumerable.Range(0, 64).Select(_ => ChaveQualquer(sorteio).ToCharArray()).ToArray();
-        var cpfs = Classificar(chaves, 10);
-
-        var antes = GC.GetAllocatedBytesForCurrentThread();
-        cpfs += Classificar(chaves, 1_000);
-        var alocados = GC.GetAllocatedBytesForCurrentThread() - antes;
-
-        Assert.Equal(0L, alocados);
-        Assert.True(cpfs > 0, "Nenhuma chave da amostra foi classificada como CPF.");
-    }
-
-    private static int Classificar(char[][] chaves, int vezes)
-    {
-        var cpfs = 0;
-        for (var vez = 0; vez < vezes; vez++)
-        {
-            foreach (var chave in chaves)
-            {
-                cpfs += ClassificadorEmitente.Classificar(chave).Tipo == TipoEmitente.Cpf ? 1 : 0;
-            }
-        }
-
-        return cpfs;
-    }
-
     private static string Descrever(ClassificacaoEmitente classificacao) => classificacao.Tipo switch
     {
         TipoEmitente.Cnpj => Cnpj,

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using CodeProcess.Incognito.Documentos;
 using CodeProcess.Incognito.Geracao;
 using CodeProcess.Incognito.Pseudonimizacao;
 using static CodeProcess.Incognito.Testes.DocumentosDeTeste;
@@ -21,6 +22,22 @@ public sealed class GeradorBrTestes
         48, 49, 51, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 71, 73, 74, 75, 77, 79, 81, 82, 83, 84, 85, 86, 87,
         88, 89, 91, 92, 93, 94, 95, 96, 97, 98, 99,
     ];
+
+    // Os 27 códigos de UF do IBGE e os 20 códigos numéricos proibidos, escritos à parte da implementação.
+    private static readonly HashSet<int> _ufs = [11, 12, 13, 14, 15, 16, 17, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 41, 42, 43, 50, 51, 52, 53];
+
+    private static readonly HashSet<int> _codigosProibidos =
+    [
+        0, 11_111_111, 22_222_222, 33_333_333, 44_444_444, 55_555_555, 66_666_666, 77_777_777, 88_888_888, 99_999_999,
+        12_345_678, 23_456_789, 34_567_890, 45_678_901, 56_789_012, 67_890_123, 78_901_234, 89_012_345, 90_123_456, 1_234_567,
+    ];
+
+    private static readonly int[] _modelosDaChave = [55, 57, 58, 62, 63, 64, 65, 66, 67];
+
+    private static readonly bool[] _numericoEAlfanumerico = [false, true];
+
+    public static TheoryData<int, bool> ModelosEAlfanumerico =>
+        new(from modelo in _modelosDaChave from alfanumerico in _numericoEAlfanumerico select (modelo, alfanumerico));
 
     public static TheoryData<long, ulong[], ulong[]> EstadosDaSemente => new()
     {
@@ -469,6 +486,206 @@ public sealed class GeradorBrTestes
 
         var esperado = (double)total / contagem.Count;
         return contagem.Values.Sum(observado => (observado - esperado) * (observado - esperado) / esperado);
+    }
+
+    [Theory]
+    [MemberData(nameof(ModelosEAlfanumerico))]
+    public void Chave_de_DF_e_gerada_e_valida_lida_como_CNPJ_e_sem_nada_fora_do_comum(int modelo, bool alfanumerico)
+    {
+        // Conferida à parte da implementação: cUF entre os 27 do IBGE, AAMM na janela do modelo, emitente CNPJ de matriz,
+        // série até 889, tpEmis 1, código fora dos proibidos e diferente do número (ou nSiteAutoriz 0 e 7 dígitos), e o
+        // br.chave-dfe a lê como CNPJ, sem anomalia nem ocorrência.
+        using var chave = ChaveIncognito.Ler(TextoDaChaveDoVetor());
+        using var cpf = new PseudonimizadorCpf(chave, "cpf", 1, "homologacao", PoliticaEntradaInvalida.Falhar, PoliticaEntradaMalformada.Falhar);
+        using var cnpj = new PseudonimizadorCnpj(chave, "cnpj", 1, "homologacao", false, PoliticaEntradaInvalida.Falhar, PoliticaEntradaMalformada.Falhar);
+        using var chaveDfe = new PseudonimizadorChaveDfe(chave, 1, "homologacao", cpf, cnpj, null, PoliticaEntradaInvalida.Falhar, PoliticaEntradaMalformada.Falhar);
+        var gerador = new GeradorBr(2920 + modelo);
+        var primeiro = alfanumerico ? 2607 : modelo switch { 64 => 2009, 62 => 2201, _ => 2001 };
+        var aamms = new HashSet<int>();
+        for (var vez = 0; vez < 500; vez++)
+        {
+            var gerada = gerador.ChaveDfe(modelo, alfanumerico);
+            var aamm = int.Parse(gerada.AsSpan(2, 4), CultureInfo.InvariantCulture);
+            var emitente = gerada[6..20];
+            var numero = long.Parse(gerada.AsSpan(25, 9), CultureInfo.InvariantCulture);
+
+            Assert.True(ValidadorBr.ChaveDfe(gerada) && gerada.Length == 44, "A chave gerada não é válida.");
+            Assert.Contains(int.Parse(gerada.AsSpan(0, 2), CultureInfo.InvariantCulture), _ufs);
+            Assert.True(aamm >= primeiro && aamm <= 2609 && aamm % 100 is >= 1 and <= 12, "AAMM fora da janela do modelo.");
+            Assert.True(ValidadorBr.Cnpj(emitente) && emitente[8..12] == "0001", "O emitente não é um CNPJ de matriz válido.");
+            Assert.Equal(alfanumerico, emitente[..8].Any(char.IsAsciiLetterUpper));
+            Assert.False(modelo is 57 or 58 && !alfanumerico && emitente.StartsWith("000", StringComparison.Ordinal), "Raiz 000 no CT-e ou no MDF-e.");
+            Assert.True(gerada[20..22] == modelo.ToString(CultureInfo.InvariantCulture) && int.Parse(gerada.AsSpan(22, 3), CultureInfo.InvariantCulture) <= 889 && gerada[34] == '1', "Modelo, série ou tpEmis fora do prometido.");
+            if (modelo is 62 or 66)
+            {
+                Assert.Equal('0', gerada[35]);
+            }
+            else
+            {
+                var codigo = int.Parse(gerada.AsSpan(35, 8), CultureInfo.InvariantCulture);
+                Assert.True(codigo != numero && !_codigosProibidos.Contains(codigo), "Código proibido ou igual ao número.");
+            }
+
+            Assert.Equal(Desfecho.Pseudonimizado, chaveDfe.Pseudonimizar(gerada, out _, out var ocorrencias));
+            Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
+            Assert.Equal(TipoEmitente.Cnpj, ClassificadorEmitente.Classificar(gerada).Tipo);
+            aamms.Add(aamm);
+        }
+
+        Assert.True(aamms.Count > (alfanumerico ? 2 : 20), "O AAMM não variou.");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(54)]
+    [InlineData(59)]
+    [InlineData(99)]
+    [InlineData(100)]
+    [InlineData(311)]
+    [InlineData(-1)]
+    [InlineData(int.MaxValue)]
+    public void Modelo_fora_dos_nove_e_recusado_sem_sortear(int codigo)
+    {
+        // Uma fonte vazia lançaria outra exceção ao primeiro sorteio.
+        var gerador = new GeradorBr(new FonteRoteirizada([]));
+
+        var excecao = Assert.Throws<ArgumentOutOfRangeException>("modelo", () => gerador.ChaveDfe(codigo));
+        Assert.Contains("55, 57, 58, 62, 63, 64, 65, 66 ou 67", excecao.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Sequencia_fixa_da_semente_42_na_chave_de_DF_e()
+    {
+        // SHA-256 de 50 rodadas dos nove modelos, numérico e alfanumérico, da semente 42, calculado por esta implementação
+        // (a referência Python do gerador é opcional). Fixa a ordem dos sorteios, a tabela de cUF e a janela do AAMM: mudar
+        // é mudança de contrato, só numa versão maior, com registro no CHANGELOG.
+        var gerador = new GeradorBr(42);
+        var linhas = new List<string>();
+        for (var vez = 0; vez < 50; vez++)
+        {
+            foreach (var modelo in _modelosDaChave)
+            {
+                linhas.Add(gerador.ChaveDfe(modelo));
+                linhas.Add(gerador.ChaveDfe(modelo, alfanumerico: true));
+            }
+        }
+
+        var resumo = Convert.ToHexStringLower(SHA256.HashData(Encoding.ASCII.GetBytes(string.Join('\n', linhas))));
+
+        Assert.Equal("41ddb2dd1a23f3c2ec47634cccb0fac6c670329b48aaa61d7b78bf9fd2eefd5b", resumo);
+    }
+
+    [Fact]
+    public void Chave_de_DF_e_sorteia_de_novo_a_raiz_000_do_transporte_o_codigo_proibido_e_o_igual_ao_numero()
+    {
+        // cUF (índice 0, 11), AAMM (índice 0, 2001), raiz 00012345 (lida como CPF no CT-e) e de novo 12345670, série 0,
+        // número 12345, código 12345678 (proibido), 00012345 (igual ao número) e, de novo, 87654321.
+        var fonte = Roteiro(
+            ([0], 27),
+            ([0], 81),
+            ("00012345".Select(c => c - '0'), 10),
+            ("12345670".Select(c => c - '0'), 10),
+            ([0], 890),
+            ([12_344], 999_999_999),
+            ("12345678".Select(c => c - '0'), 10),
+            ("00012345".Select(c => c - '0'), 10),
+            ("87654321".Select(c => c - '0'), 10));
+
+        var gerada = new GeradorBr(fonte).ChaveDfe(57);
+
+        var cnpj = "123456700001" + DvCnpjClassico("123456700001").ToString("00", CultureInfo.InvariantCulture);
+        var primeiros43 = "11" + "2001" + cnpj + "57" + "000" + "000012345" + "1" + "87654321";
+        Assert.True(gerada == primeiros43 + (char)('0' + DvChaveClassico(primeiros43)), "A chave não segue a ordem dos sorteios.");
+        Assert.Equal(1 + 1 + 8 + 8 + 1 + 1 + 8 + 8 + 8, fonte.Consumidos);
+    }
+
+    [Fact]
+    public void Raiz_000_so_e_sorteada_de_novo_no_transporte_e_com_raiz_numerica()
+    {
+        // NF-e com raiz 00012345 e CT-e com raiz alfanumérica 000A1234: as duas aceitas na primeira (só a raiz numérica
+        // 000xxxxx do CT-e e do MDF-e seria lida como CPF).
+        var nfe = Roteiro(([0], 27), ([0], 81), ("00012345".Select(c => c - '0'), 10), ([0], 890), ([0], 999_999_999), ("87654321".Select(c => c - '0'), 10));
+        var cte = Roteiro(([0], 27), ([0], 3), ("000A1234".Select(c => c is >= 'A' ? c - 'A' + 10 : c - '0'), 36), ([0], 890), ([0], 999_999_999), ("87654321".Select(c => c - '0'), 10));
+
+        var daNfe = new GeradorBr(nfe).ChaveDfe(55);
+        var doCte = new GeradorBr(cte).ChaveDfe(57, alfanumerico: true);
+
+        Assert.True(daNfe[6..14] == "00012345" && nfe.Consumidos == 1 + 1 + 8 + 1 + 1 + 8, "A raiz 000 da NF-e foi sorteada de novo.");
+        Assert.True(doCte[6..14] == "000A1234" && cte.Consumidos == 1 + 1 + 8 + 1 + 1 + 8, "A raiz alfanumérica 000 do CT-e foi sorteada de novo.");
+    }
+
+    [Fact]
+    public void Gerador_detalhado_sorteia_de_novo_a_filial_0001_e_a_raiz_alfanumerica_sem_letra()
+    {
+        // Filial com ordem 0001 (a da matriz) é sorteada de novo, como a raiz sem letra no CNPJ todo alfanumérico.
+        var filial = Roteiro(
+            ([0], 27),
+            ("12345678".Select(c => c - '0'), 10),
+            ("0001".Select(c => c - '0'), 10),
+            ("12345679".Select(c => c - '0'), 10),
+            ("0002".Select(c => c - '0'), 10),
+            ([0], 999_999_999),
+            ("12345678".Select(c => c - '0'), 10));
+        var alfanumerica = Roteiro(
+            ([0], 27),
+            ("12345678".Select(c => c - '0'), 36),
+            ("ABCD".Select(c => c - 'A' + 10), 36),
+            ("1234567A".Select(c => c is >= 'A' ? c - 'A' + 10 : c - '0'), 36),
+            ("0000".Select(c => c - '0'), 36),
+            ([0], 999_999_999),
+            ("12345678".Select(c => c - '0'), 10));
+
+        var deFilial = GeradorChaveDfe.Gerar(filial, new(2601, 55, 1, '1', EmitenteGerado.CnpjFilial, NumeroGerado.Qualquer, CodigoGerado.Qualquer));
+        var comLetra = GeradorChaveDfe.Gerar(alfanumerica, new(2601, 55, 1, '1', EmitenteGerado.CnpjAlfanumericoComOrdemAlfanumerica, NumeroGerado.Qualquer, CodigoGerado.Qualquer));
+
+        Assert.True(deFilial[6..18] == "123456790002", "A filial 0001 não foi sorteada de novo.");
+
+        // A raiz 000xxxxx que sai 00000000 (cadastrada em toda ordem de estabelecimento) também é sorteada de novo.
+        var comZeros = Roteiro(
+            ([0], 27),
+            ("00000".Select(c => c - '0'), 10),
+            ("0002".Select(c => c - '0'), 10),
+            ("12345".Select(c => c - '0'), 10),
+            ("0002".Select(c => c - '0'), 10),
+            ([0], 999_999_999),
+            ("12345678".Select(c => c - '0'), 10));
+        var daRaizComZeros = GeradorChaveDfe.Gerar(comZeros, new(2601, 57, 1, '1', EmitenteGerado.CnpjRaizComZeros, NumeroGerado.Qualquer, CodigoGerado.Qualquer));
+        Assert.True(daRaizComZeros[6..18] == "000123450002", "A raiz 00000000 não foi sorteada de novo.");
+        Assert.True(comLetra[6..18] == "1234567A0000", "A raiz sem letra não foi sorteada de novo.");
+    }
+
+    [Fact]
+    public void Ultimo_indice_da_janela_da_chave_e_09_2026()
+    {
+        // NF-e numérica: 81 meses, de 01/2020 a 09/2026; o índice 80 é o último.
+        var fonte = Roteiro(([0], 27), ([80], 81), ("12345670".Select(c => c - '0'), 10), ([0], 890), ([0], 999_999_999), ("87654321".Select(c => c - '0'), 10));
+
+        Assert.Equal("2609", new GeradorBr(fonte).ChaveDfe(55)[2..6]);
+    }
+
+    [Fact]
+    public void NF3e_e_NFCom_tem_nSiteAutoriz_0_e_codigo_de_7_digitos_sem_rejeicao()
+    {
+        // NFCom: AAMM a partir de 2201 (índice 0); código 0 e 7 dígitos 0000000, sem rejeição no código de 7.
+        var fonte = Roteiro(
+            ([0], 27),
+            ([0], 57),
+            ("12345670".Select(c => c - '0'), 10),
+            ([0], 890),
+            ([0], 999_999_999),
+            ("0000000".Select(c => c - '0'), 10));
+
+        var gerada = new GeradorBr(fonte).ChaveDfe(62);
+
+        Assert.True(gerada[2..6] == "2201" && gerada[35..43] == "00000000", "AAMM ou código da NFCom fora do prometido.");
+        Assert.Equal(1 + 1 + 8 + 1 + 1 + 7, fonte.Consumidos);
+    }
+
+    private static string TextoDaChaveDoVetor()
+    {
+        using var documento = ArquivosDeTeste.Ler("vetores", "derivacao@1.json");
+        return ArquivosDeTeste.Texto(ArquivosDeTeste.Caso(documento, "chaves", "aleatoria"), "texto");
     }
 
     // Números que fazem o Uniforme(n) de cada parte devolver exatamente os valores pedidos, em sequência: com

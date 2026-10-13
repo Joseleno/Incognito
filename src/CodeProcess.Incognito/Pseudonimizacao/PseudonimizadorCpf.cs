@@ -175,25 +175,18 @@ internal sealed class PseudonimizadorCpf : IDisposable
     /// <returns>Se o emitente ficou como veio ou tinha DV errado.</returns>
     /// <exception cref="ArgumentException">Não são 11 dígitos ASCII; a mensagem não traz o valor.</exception>
     /// <exception cref="ObjectDisposedException">Já descartado.</exception>
-    internal OcorrenciasChaveDfe TransformarNaChave(Span<char> cpf)
-    {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
-        if (cpf.Length != TamanhoDoCpf || !SoDigitos(cpf))
-        {
-            throw new ArgumentException("O CPF do emitente não tem 11 dígitos.", nameof(cpf));
-        }
+    internal OcorrenciasChaveDfe TransformarNaChave(Span<char> cpf) => NaChave(cpf, inversa: false);
 
-        var baseEntrada = Numero(cpf[..9]);
-        var deslocamento = ((int)Numero(cpf[9..]) - Dv(baseEntrada) + 100) % 100;
-        var ocorrencias = deslocamento == 0 ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.DvDoEmitenteInvalido;
-        if (!Permutar(baseEntrada, deslocamento, out var baseSaida, out var dvSaida))
-        {
-            return ocorrencias | OcorrenciasChaveDfe.EmitentePontoFixo;
-        }
-
-        Formatar(baseSaida, dvSaida, comMascara: false, cpf);
-        return ocorrencias;
-    }
+    /// <summary>
+    /// Desfaz <see cref="TransformarNaChave"/>, no lugar: a base pseudonimizada volta pela permutação inversa e o DV,
+    /// pelo mesmo deslocamento. Uma base repdígito nunca é produzida, então só pode ter ficado como veio. Uso interno e
+    /// de testes.
+    /// </summary>
+    /// <param name="cpf">Os 11 dígitos do CPF pseudonimizado.</param>
+    /// <returns>Se o emitente original ficou como veio ou tinha DV errado.</returns>
+    /// <exception cref="ArgumentException">Não são 11 dígitos ASCII; a mensagem não traz o valor.</exception>
+    /// <exception cref="ObjectDisposedException">Já descartado.</exception>
+    internal OcorrenciasChaveDfe InverterNaChave(Span<char> cpf) => NaChave(cpf, inversa: true);
 
     /// <summary>Descarta a permutação e a cópia da chave de domínio.</summary>
     public void Dispose()
@@ -221,6 +214,28 @@ internal sealed class PseudonimizadorCpf : IDisposable
         }
 
         return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
+    }
+
+    // Ida e volta na chave: um repdígito nunca é produzido, então nos dois sentidos ele só pode ter ficado como veio.
+    private OcorrenciasChaveDfe NaChave(Span<char> cpf, bool inversa)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
+        if (cpf.Length != TamanhoDoCpf || !SoDigitos(cpf))
+        {
+            throw new ArgumentException("O CPF do emitente não tem 11 dígitos.", nameof(cpf));
+        }
+
+        var baseCpf = Numero(cpf[..9]);
+        var deslocamento = ((int)Numero(cpf[9..]) - Dv(baseCpf) + 100) % 100;
+        var ocorrencias = deslocamento == 0 ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.DvDoEmitenteInvalido;
+        if (_repdigitos.Contem(baseCpf))
+        {
+            return ocorrencias | OcorrenciasChaveDfe.EmitentePontoFixo;
+        }
+
+        var outra = inversa ? _permutacao.Inverter(baseCpf, [], _repdigitos) : _permutacao.Permutar(baseCpf, [], _repdigitos);
+        Formatar(outra, (Dv(outra) + deslocamento) % 100, comMascara: false, cpf);
+        return ocorrencias;
     }
 
     // Base repdígito fica como veio (falso); as outras são permutadas sem cair nos repdígitos, com o DV deslocado.

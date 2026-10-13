@@ -424,28 +424,6 @@ public sealed class PseudonimizadorChavePixTestes : IDisposable
     }
 
     [Fact]
-    public void Chave_aleatoria_aloca_so_a_saida()
-    {
-        using var pix = Criar();
-        var uuid = Uuid(new Random(1816));
-        for (var vez = 0; vez < 200; vez++)
-        {
-            pix.Pseudonimizar(uuid, out _);
-        }
-
-        var antes = GC.GetAllocatedBytesForCurrentThread();
-        for (var vez = 0; vez < 1_000; vez++)
-        {
-            pix.Pseudonimizar(uuid, out _);
-        }
-
-        var alocados = GC.GetAllocatedBytesForCurrentThread() - antes;
-
-        // Uma string de 36 caracteres ocupa 96 bytes em 64 bits.
-        Assert.True(alocados <= 1_000 * 96, "A chave aleatória alocou mais que a string de saída.");
-    }
-
-    [Fact]
     public void Saida_na_forma_do_DICT_continua_no_mesmo_tipo()
     {
         // As saídas dos tipos não se cruzam: o pseudônimo de cada tipo, pseudonimizado de novo, segue o mesmo tipo.

@@ -9,7 +9,10 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// NFCom): o emitente vai aos pseudonimizadores das colunas de CPF e de CNPJ, recebidos prontos, conforme a
 /// classificação; o número e o código, ao domínio <c>dfe-numero</c>; o cDV é recalculado com o mesmo deslocamento
 /// (δ mod 10). cUF, AAMM, modelo, série, tpEmis e o <c>nSiteAutoriz</c> (posição 36 da NF3e e da NFCom) ficam. A saída
-/// tem a mesma classificação da entrada e nunca é anomalia; chaves diferentes continuam diferentes.
+/// tem a mesma classificação da entrada e nunca é anomalia. Injetividade garantida: é uma bijeção sobre as chaves
+/// classificadas (a classificação depende só do que a saída preserva, e cada parte é uma permutação condicionada ao que
+/// já está na saída), e as anomalias preservadas não têm a forma de nenhuma saída; o teste de propriedade sobre a grade
+/// de estratos e a inversa (<see cref="Inverter"/>) conferem isso.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -110,7 +113,33 @@ internal sealed class PseudonimizadorChaveDfe : IDisposable
     /// <returns>Como o valor foi tratado.</returns>
     /// <exception cref="IncognitoException"><c>INC1003</c> (malformado) ou <c>INC1004</c> (cDV errado), pelas políticas.</exception>
     /// <exception cref="ObjectDisposedException">Este ou o pseudonimizador do emitente já descartado.</exception>
-    internal Desfecho Pseudonimizar(string entrada, out string? saida, out OcorrenciasChaveDfe ocorrencias)
+    internal Desfecho Pseudonimizar(string entrada, out string? saida, out OcorrenciasChaveDfe ocorrencias) =>
+        Aplicar(entrada, inversa: false, out saida, out ocorrencias);
+
+    /// <summary>
+    /// Desfaz <see cref="Pseudonimizar"/>: a mesma classificação lida no pseudônimo, o número e o código desfeitos com o
+    /// emitente ainda pseudonimizado no ajuste, depois o emitente e o cDV. Uso interno e de testes; o cDV errado é
+    /// sempre desfeito pelo deslocamento, e as formas e as políticas de malformado são as mesmas.
+    /// </summary>
+    /// <param name="entrada">O pseudônimo como saiu de <see cref="Pseudonimizar"/>.</param>
+    /// <param name="saida">A chave original, com o prefixo, os grupos e o preenchimento como vieram.</param>
+    /// <param name="ocorrencias">O que a chave original teve de fora do comum.</param>
+    /// <returns>Como o valor foi tratado.</returns>
+    /// <exception cref="IncognitoException"><c>INC1003</c> (malformado), pela política.</exception>
+    /// <exception cref="ObjectDisposedException">Este ou o pseudonimizador do emitente já descartado.</exception>
+    internal Desfecho Inverter(string entrada, out string? saida, out OcorrenciasChaveDfe ocorrencias) =>
+        Aplicar(entrada, inversa: true, out saida, out ocorrencias);
+
+    /// <summary>Descarta o domínio <c>dfe-numero</c>; os pseudonimizadores do emitente continuam com quem os criou.</summary>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _descartado, 1) == 0)
+        {
+            _numero.Dispose();
+        }
+    }
+
+    private Desfecho Aplicar(string entrada, bool inversa, out string? saida, out OcorrenciasChaveDfe ocorrencias)
     {
         ArgumentNullException.ThrowIfNull(entrada);
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
@@ -174,19 +203,28 @@ internal sealed class PseudonimizadorChaveDfe : IDisposable
 
         chave.CopyTo(entradaDaChave);
         var deslocamento = ((chave[IndiceDoCdv] - '0') - DigitosVerificadores.ChaveDfe(chave[..IndiceDoCdv]) + 10) % 10;
-        if (deslocamento != 0 && !Politicas.SeguirComDvInvalido(_invalida, "Chave de DF-e"))
+        if (deslocamento != 0 && !inversa && !Politicas.SeguirComDvInvalido(_invalida, "Chave de DF-e"))
         {
             saida = null;
             return Desfecho.AnuladoDvInvalido;
         }
 
-        // Emitente, depois número e código (que usam o emitente pseudonimizado no ajuste), depois o cDV.
-        ocorrencias = classificacao.Tipo == TipoEmitente.Cpf
-            ? _cpf.TransformarNaChave(chave.Slice(IndiceDoCpf, TamanhoDoCpf))
-            : _cnpj.TransformarNaChave(chave.Slice(IndiceDoEmitente, TamanhoDoCnpj), classificacao.ExcluiRaizComZeros);
-        ocorrencias |= _numero.Pseudonimizar(chave, out var depoisDoEmitente);
+        // Emitente, depois número e código (que usam o emitente pseudonimizado no ajuste), depois o cDV; a inversa desfaz
+        // o número e o código antes do emitente, com o mesmo ajuste.
+        ClassificacaoEmitente depoisDoEmitente;
+        if (inversa)
+        {
+            ocorrencias = _numero.Inverter(chave);
+            ocorrencias |= Emitente(chave, classificacao, inversa: true);
+            depoisDoEmitente = ClassificadorEmitente.Classificar(chave);
+        }
+        else
+        {
+            ocorrencias = Emitente(chave, classificacao, inversa: false);
+            ocorrencias |= _numero.Pseudonimizar(chave, out depoisDoEmitente);
+        }
 
-        // Invariante da 10.6: o emitente pseudonimizado mantém a classificação. Se quebrar, a saída perde a inversa.
+        // Invariante da classificação: o emitente pseudonimizado mantém a classificação. Se quebrar, a saída perde a inversa.
         if (depoisDoEmitente.Tipo != classificacao.Tipo || depoisDoEmitente.EhNff != classificacao.EhNff
             || depoisDoEmitente.ExcluiRaizComZeros != classificacao.ExcluiRaizComZeros)
         {
@@ -215,13 +253,18 @@ internal sealed class PseudonimizadorChaveDfe : IDisposable
         return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
     }
 
-    /// <summary>Descarta o domínio <c>dfe-numero</c>; os pseudonimizadores do emitente continuam com quem os criou.</summary>
-    public void Dispose()
+    private OcorrenciasChaveDfe Emitente(Span<char> chave, in ClassificacaoEmitente classificacao, bool inversa)
     {
-        if (Interlocked.Exchange(ref _descartado, 1) == 0)
+        if (classificacao.Tipo == TipoEmitente.Cpf)
         {
-            _numero.Dispose();
+            var cpf = chave.Slice(IndiceDoCpf, TamanhoDoCpf);
+            return inversa ? _cpf.InverterNaChave(cpf) : _cpf.TransformarNaChave(cpf);
         }
+
+        var cnpj = chave.Slice(IndiceDoEmitente, TamanhoDoCnpj);
+        return inversa
+            ? _cnpj.InverterNaChave(cnpj, classificacao.ExcluiRaizComZeros)
+            : _cnpj.TransformarNaChave(cnpj, classificacao.ExcluiRaizComZeros);
     }
 
     private static void ExigirMesmoAmbiente(string doPseudonimizador, string ambiente, string parametro)

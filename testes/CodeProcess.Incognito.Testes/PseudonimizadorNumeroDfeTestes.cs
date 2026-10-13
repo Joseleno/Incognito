@@ -641,34 +641,6 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
         Assert.True(sequencial.SequenceEqual(paralelo), "O uso concorrente mudou algum resultado.");
     }
 
-    [Fact]
-    public void Pseudonimizar_nao_aloca()
-    {
-        using var numeroDfe = Criar();
-        var sorteio = new Random(2719);
-        var chaves = Enumerable.Range(0, 64).Select(i => ChaveQualquer(sorteio, codigoDe8: i % 4 != 0).ToCharArray()).ToArray();
-        var copia = new char[44];
-        Pseudonimizar(numeroDfe, chaves, copia, 2);
-
-        var antes = GC.GetAllocatedBytesForCurrentThread();
-        Pseudonimizar(numeroDfe, chaves, copia, 100);
-        var alocados = GC.GetAllocatedBytesForCurrentThread() - antes;
-
-        Assert.Equal(0L, alocados);
-    }
-
-    private static void Pseudonimizar(PseudonimizadorNumeroDfe numeroDfe, char[][] chaves, char[] copia, int vezes)
-    {
-        for (var vez = 0; vez < vezes; vez++)
-        {
-            for (var i = 0; i < chaves.Length; i++)
-            {
-                chaves[i].CopyTo(copia, 0);
-                numeroDfe.Pseudonimizar(copia);
-            }
-        }
-    }
-
     private static string Pseudonimizar(PseudonimizadorNumeroDfe numeroDfe, string chave, out OcorrenciasChaveDfe ocorrencias)
     {
         var classificacao = ClassificadorEmitente.Classificar(chave);

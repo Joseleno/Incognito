@@ -219,27 +219,22 @@ internal sealed class PseudonimizadorCnpj : IDisposable
     /// Fora da forma de 14 caracteres, ou raiz que a regra dos zeros lê como CPF; a mensagem não traz o valor.
     /// </exception>
     /// <exception cref="ObjectDisposedException">Já descartado.</exception>
-    internal OcorrenciasChaveDfe TransformarNaChave(Span<char> cnpj, bool excluirRaizComZeros)
-    {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
-        if (cnpj.Length != TamanhoDoCnpj || !SoDigitosEMaiusculas(cnpj[..TamanhoDaBase]) || !SoDigitos(cnpj[TamanhoDaBase..]))
-        {
-            throw new ArgumentException("O CNPJ do emitente está fora da forma de 14 caracteres.", nameof(cnpj));
-        }
+    internal OcorrenciasChaveDfe TransformarNaChave(Span<char> cnpj, bool excluirRaizComZeros) =>
+        NaChave(cnpj, excluirRaizComZeros, inversa: false);
 
-        // Na regra dos zeros, essa raiz é lida como CPF e nunca chega aqui; copiá-la como ponto fixo deixaria um CNPJ
-        // em claro com cara de caso previsto.
-        if (excluirRaizComZeros && cnpj.StartsWith("000") && SoDigitos(cnpj[.._permutados]))
-        {
-            throw new ArgumentException("O CNPJ do emitente tem a raiz que a regra dos zeros lê como CPF.", nameof(cnpj));
-        }
-
-        var deslocamento = Deslocamento(cnpj);
-        var ocorrencias = deslocamento == 0 ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.DvDoEmitenteInvalido;
-        return Permutar(cnpj, deslocamento, excluirRaizComZeros)
-            ? ocorrencias
-            : ocorrencias | OcorrenciasChaveDfe.EmitentePontoFixo;
-    }
+    /// <summary>
+    /// Desfaz <see cref="TransformarNaChave"/>, no lugar: a raiz (ou raiz e ordem) volta pela permutação inversa e o DV,
+    /// pelo mesmo deslocamento. Uso interno e de testes.
+    /// </summary>
+    /// <param name="cnpj">Os 14 caracteres do CNPJ pseudonimizado.</param>
+    /// <param name="excluirRaizComZeros">O mesmo usado ao pseudonimizar.</param>
+    /// <returns>Se o emitente original ficou como veio ou tinha DV errado.</returns>
+    /// <exception cref="ArgumentException">
+    /// Fora da forma de 14 caracteres, ou raiz que a regra dos zeros lê como CPF; a mensagem não traz o valor.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">Já descartado.</exception>
+    internal OcorrenciasChaveDfe InverterNaChave(Span<char> cnpj, bool excluirRaizComZeros) =>
+        NaChave(cnpj, excluirRaizComZeros, inversa: true);
 
     /// <summary>Descarta as permutações e as cópias das chaves de domínio.</summary>
     public void Dispose()
@@ -257,12 +252,38 @@ internal sealed class PseudonimizadorCnpj : IDisposable
             return Desfecho.AnuladoDvInvalido;
         }
 
-        if (!Permutar(caracteres, deslocamento, excluirZeros: false))
+        if (!Permutar(caracteres, deslocamento, excluirZeros: false, inversa: false))
         {
             return Desfecho.PontoFixo;
         }
 
         return deslocamento == 0 ? Desfecho.Pseudonimizado : Desfecho.DvInvalidoPreservado;
+    }
+
+    private OcorrenciasChaveDfe NaChave(Span<char> cnpj, bool excluirRaizComZeros, bool inversa)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
+        ConferirNaChave(cnpj, excluirRaizComZeros);
+        var deslocamento = Deslocamento(cnpj);
+        var ocorrencias = deslocamento == 0 ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.DvDoEmitenteInvalido;
+        return Permutar(cnpj, deslocamento, excluirRaizComZeros, inversa)
+            ? ocorrencias
+            : ocorrencias | OcorrenciasChaveDfe.EmitentePontoFixo;
+    }
+
+    private void ConferirNaChave(ReadOnlySpan<char> cnpj, bool excluirRaizComZeros)
+    {
+        if (cnpj.Length != TamanhoDoCnpj || !SoDigitosEMaiusculas(cnpj[..TamanhoDaBase]) || !SoDigitos(cnpj[TamanhoDaBase..]))
+        {
+            throw new ArgumentException("O CNPJ do emitente está fora da forma de 14 caracteres.", nameof(cnpj));
+        }
+
+        // Na regra dos zeros, essa raiz é lida como CPF e nunca chega aqui (nem sai daqui); tratá-la como ponto fixo
+        // deixaria um CNPJ em claro com cara de caso previsto.
+        if (excluirRaizComZeros && cnpj.StartsWith("000") && SoDigitos(cnpj[.._permutados]))
+        {
+            throw new ArgumentException("O CNPJ do emitente tem a raiz que a regra dos zeros lê como CPF.", nameof(cnpj));
+        }
     }
 
     private static int Deslocamento(ReadOnlySpan<char> caracteres)
@@ -272,10 +293,13 @@ internal sealed class PseudonimizadorCnpj : IDisposable
     }
 
     // Falso se a raiz (ou raiz e ordem) ficou como veio, com o DV intacto; senão, o DV é recalculado com o deslocamento.
-    private bool Permutar(Span<char> caracteres, int deslocamento, bool excluirZeros)
+    private bool Permutar(Span<char> caracteres, int deslocamento, bool excluirZeros, bool inversa)
     {
         var permutados = caracteres[.._permutados];
-        if (_permutacao.Permutar(permutados, permutados, excluirZeros))
+        var pontoFixo = inversa
+            ? _permutacao.Inverter(permutados, permutados, excluirZeros)
+            : _permutacao.Permutar(permutados, permutados, excluirZeros);
+        if (pontoFixo)
         {
             return false;
         }
