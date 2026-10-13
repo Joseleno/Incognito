@@ -118,10 +118,32 @@ internal sealed class ExecutorDeCaso : IDisposable
                 var chavePix = Guardar(new PseudonimizadorChavePix(
                     chave, dominio, versao, ambiente, cpfDaChave, cnpjDaChave, emailDaChave, telefoneDaChave, malformada));
                 return entrada => Texto(chavePix.Pseudonimizar(SoTexto(entrada), out var texto), texto);
+            case "br.chave-dfe@1":
+                var doEmitente = caso.GetProperty("componentes");
+                var deCpfDoEmitente = doEmitente.GetProperty("cpf");
+                var deCnpjDoEmitente = doEmitente.GetProperty("cnpj");
+
+                var cpfDoEmitente = Guardar(new PseudonimizadorCpf(
+                    chave, Dominio(deCpfDoEmitente), Versao(deCpfDoEmitente), ambiente, ColunasDoEmitente.InvalidaIgnorada, ColunasDoEmitente.MalformadaIgnorada));
+                var cnpjDoEmitente = Guardar(new PseudonimizadorCnpj(
+                    chave, Dominio(deCnpjDoEmitente), Versao(deCnpjDoEmitente), ambiente, deCnpjDoEmitente.GetProperty("permutarOrdem").GetBoolean(),
+                    ColunasDoEmitente.InvalidaIgnorada, ColunasDoEmitente.MalformadaIgnorada));
+                var modelos = caso.GetProperty("modelos").EnumerateArray().Select(m => m.GetInt32()).ToArray();
+                var chaveDfe = Guardar(new PseudonimizadorChaveDfe(
+                    chave, versao, ambiente, cpfDoEmitente, cnpjDoEmitente, modelos, Invalida(caso), malformada));
+                return entrada =>
+                {
+                    var desfecho = chaveDfe.Pseudonimizar(SoTexto(entrada), out var texto, out var ocorrencias);
+                    return Texto(desfecho, texto) with { Ocorrencias = Nomes(ocorrencias) };
+                };
             default:
                 throw new InvalidDataException("Transformador ou versão sem executor.");
         }
     }
+
+    // Enum.GetValues vem em ordem crescente de valor: a ordem canônica do vetor. Os nomes são contrato dos vetores.
+    private static string[] Nomes(OcorrenciasChaveDfe ocorrencias) =>
+        [.. Enum.GetValues<OcorrenciasChaveDfe>().Where(o => o != OcorrenciasChaveDfe.Nenhuma && ocorrencias.HasFlag(o)).Select(o => o.ToString())];
 
     private static string Dominio(JsonElement componente) => componente.GetProperty("dominio").GetString()!;
 

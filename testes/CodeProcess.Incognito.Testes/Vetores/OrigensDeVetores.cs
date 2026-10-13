@@ -18,7 +18,7 @@ namespace CodeProcess.Incognito.Testes.Vetores;
 internal static class OrigensDeVetores
 {
     private const string Digitos = "0123456789";
-    private const string Base36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    internal const string Base36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private const string Hexadecimais = "0123456789abcdef";
 
     private static readonly Dictionary<string, Func<GeradorBr, string>> _metodos = Metodos();
@@ -156,6 +156,14 @@ internal static class OrigensDeVetores
                 var quantidade = Inteiro(partes[1], forma);
                 Exigir(quantidade > 0 && inicio + quantidade <= valor.Length, forma);
                 return valor.Remove(inicio, quantidade);
+            case "recalcular-cdv":
+                // O cDV certo da chave de DF-e, depois de uma troca nas 43 primeiras posições.
+                Exigir(valor.Length == 44, forma);
+                return valor[..43] + (char)('0' + DigitosVerificadores.ChaveDfe(valor.AsSpan(0, 43)));
+            case "grupos":
+                // As 44 posições da chave de DF-e em 11 grupos de 4 separados por um espaço (DANFE).
+                Exigir(valor.Length == 44, forma);
+                return string.Join(' ', Enumerable.Range(0, 11).Select(grupo => valor.Substring(grupo * 4, 4)));
             case "maiusculas-ascii":
                 return new string([.. valor.Select(c => char.IsAsciiLetterLower(c) ? (char)(c - 32) : c)]);
             case "minusculas-ascii":
@@ -170,6 +178,11 @@ internal static class OrigensDeVetores
         var (nome, argumento) = regra.IndexOf(':', StringComparison.Ordinal) is var dois and >= 0
             ? (regra[..dois], regra[(dois + 1)..])
             : (regra, "");
+        if (OrigensChaveDfe.Trata(nome))
+        {
+            return OrigensChaveDfe.Construido(nome, argumento, fonte, contexto);
+        }
+
         switch (nome)
         {
             case "cpf-repdigito":
@@ -235,6 +248,11 @@ internal static class OrigensDeVetores
     // passo e o cycle-walking acontece. Se a pré-imagem também for excluída, sorteia outro alvo.
     private static string Inversa(string regra, FonteDeSorteio fonte, ContextoDeOrigem contexto)
     {
+        if (regra.IndexOf(':', StringComparison.Ordinal) is var dois and >= 0 && OrigensChaveDfe.Trata(regra[..dois]))
+        {
+            return OrigensChaveDfe.Inversa(regra[..dois], regra[(dois + 1)..], fonte, contexto);
+        }
+
         switch (regra)
         {
             case "cpf-caminhada":
@@ -356,7 +374,7 @@ internal static class OrigensDeVetores
     private static string AplicarDeslocamento(string documento, int deslocamento) =>
         (string)AplicarForma(documento, "dv:" + deslocamento.ToString(CultureInfo.InvariantCulture));
 
-    private static ulong Potencia10(int expoente)
+    internal static ulong Potencia10(int expoente)
     {
         ulong valor = 1;
         for (var i = 0; i < expoente; i++)
@@ -392,7 +410,7 @@ internal static class OrigensDeVetores
     private static string Ddd(FonteDeSorteio fonte) =>
         string.Concat((char)('1' + (int)fonte.Uniforme(9)), (char)('1' + (int)fonte.Uniforme(9)));
 
-    private static string Sortear(FonteDeSorteio fonte, string alfabeto, int tamanho)
+    internal static string Sortear(FonteDeSorteio fonte, string alfabeto, int tamanho)
     {
         var texto = new char[tamanho];
         for (var i = 0; i < tamanho; i++)

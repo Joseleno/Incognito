@@ -361,6 +361,54 @@ public sealed class PropriedadeChaveDfeTestes
         Assert.Throws<ArgumentOutOfRangeException>("especificacao", () => GeradorChaveDfe.Gerar(fonte, invalida));
     }
 
+    [Theory]
+    [InlineData(55, 0, 1, null)]
+    [InlineData(55, 31, 13, null)]
+    [InlineData(57, 29, 2, 1_234_567L)]
+    [InlineData(58, 99, 0, 0L)]
+    [InlineData(66, 15, null, 1_111_111L)]
+    [InlineData(62, null, 7, 0L)]
+    public void Gerador_detalhado_escreve_o_dia_o_mes_e_o_codigo_pedidos(int modelo, int? dia, int? mes, long? codigo)
+    {
+        // Pedidos mesmo fora do mês (dia 0, 31 de fevereiro, mês 13): a NFF com data inválida em cada parte.
+        var fonte = SequenciaXoshiro.DaSemente(2917);
+        var especificacao = new EspecificacaoChaveDfe(2402, modelo, 123, '3', EmitenteGerado.CnpjNumerico, NumeroGerado.Nff, CodigoGerado.Qualquer, '1', Dia: dia, MesDoNumero: mes, ValorDoCodigo: codigo);
+        var transporte = modelo is 57 or 58;
+
+        var chave = GeradorChaveDfe.Gerar(fonte, especificacao);
+
+        Assert.True(RegrasChaveDfe.TemEstrutura(chave), "Fora da estrutura.");
+        Assert.Equal(0, Deslocamento(chave));
+        if (dia is { } diaPedido)
+        {
+            Assert.Equal(diaPedido, int.Parse(chave.AsSpan(transporte ? 27 : 25, 2), CultureInfo.InvariantCulture));
+        }
+
+        Assert.Equal(mes ?? 2, int.Parse(chave.AsSpan(transporte ? 25 : 27, 2), CultureInfo.InvariantCulture));
+        if (codigo is { } codigoPedido)
+        {
+            var de7 = modelo is 62 or 66;
+            Assert.Equal(codigoPedido, long.Parse(chave.AsSpan(de7 ? 36 : 35, de7 ? 7 : 8), CultureInfo.InvariantCulture));
+        }
+    }
+
+    [Theory]
+    [InlineData((int)NumeroGerado.Qualquer, 1, null, null, (int)CodigoGerado.Qualquer)]
+    [InlineData((int)NumeroGerado.NffDataInvalida, null, 1, null, (int)CodigoGerado.Qualquer)]
+    [InlineData((int)NumeroGerado.Nff, 100, null, null, (int)CodigoGerado.Qualquer)]
+    [InlineData((int)NumeroGerado.Nff, null, -1, null, (int)CodigoGerado.Qualquer)]
+    [InlineData((int)NumeroGerado.Qualquer, null, null, 1L, (int)CodigoGerado.Proibido)]
+    [InlineData((int)NumeroGerado.Qualquer, null, null, 100_000_000L, (int)CodigoGerado.Qualquer)]
+    [InlineData((int)NumeroGerado.Qualquer, null, null, -1L, (int)CodigoGerado.Qualquer)]
+    public void Gerador_detalhado_recusa_dia_mes_e_codigo_fora_do_lugar(int numero, int? dia, int? mes, long? codigo, int tipoDoCodigo)
+    {
+        var especificacao = new EspecificacaoChaveDfe(2402, 55, 1, '1', EmitenteGerado.CnpjNumerico, (NumeroGerado)numero, (CodigoGerado)tipoDoCodigo, Dia: dia, MesDoNumero: mes, ValorDoCodigo: codigo);
+        var fonte = SequenciaXoshiro.DaSemente(2918);
+
+        var excecao = Assert.ThrowsAny<ArgumentException>(() => GeradorChaveDfe.Gerar(fonte, especificacao));
+        Assert.Equal("especificacao", excecao.ParamName);
+    }
+
     [Fact]
     public void Oraculo_de_classificacao_bate_com_o_classificador_em_toda_a_grade()
     {
@@ -497,6 +545,7 @@ public sealed class PropriedadeChaveDfeTestes
         {
             EmitenteGerado.CnpjNumerico => !letraNaRaiz && ordem == "0001" && raiz != "00000000",
             EmitenteGerado.CnpjAlfanumerico => letraNaRaiz && ordem == "0001",
+            EmitenteGerado.CnpjAlfanumericoComZeros => raiz.StartsWith("000", StringComparison.Ordinal) && letraNaRaiz && ordem == "0001",
             EmitenteGerado.CnpjNumericoComOrdemAlfanumerica => !letraNaRaiz && letraNaOrdem,
             EmitenteGerado.CnpjAlfanumericoComOrdemAlfanumerica => letraNaRaiz,
             EmitenteGerado.CnpjFilial => !letraNaRaiz && !letraNaOrdem && ordem != "0001" && raiz != "00000000",

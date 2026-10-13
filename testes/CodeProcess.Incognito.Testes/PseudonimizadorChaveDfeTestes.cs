@@ -958,24 +958,6 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
         Assert.True(esperadasDaColuna.SequenceEqual(daColuna), "O uso concorrente mudou a saída da coluna.");
     }
 
-    [Fact]
-    public void Saidas_da_chave_nao_mudam()
-    {
-        // Regressão até os vetores fixos: o resumo SHA-256 de saída, desfecho e ocorrências de chaves sorteadas com
-        // semente fixa. Mudar o gerador de chaves dos testes também muda o resumo, que então se recalcula com revisão.
-        using var chaveDfe = Criar(cnpj: _cnpjComOrdem);
-        var sorteio = new Random(2842);
-        var saidas = new System.Text.StringBuilder();
-        for (var vez = 0; vez < 3_000; vez++)
-        {
-            var entrada = ComCdvDeslocado(ChaveSorteada(sorteio, _modelos[vez % _modelos.Length]), sorteio.Next(5) == 0 ? 1 + sorteio.Next(9) : 0);
-            var desfecho = chaveDfe.Pseudonimizar(entrada, out var saida, out var ocorrencias);
-            saidas.Append(saida).Append(' ').Append(desfecho).Append(' ').Append(ocorrencias).Append('\n');
-        }
-
-        Assert.Equal("D24A5427B6E5638C9B29B83403524A81AFC6B35BEA208462C280DCEE361C014C", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(saidas.ToString()))));
-    }
-
     private static string PrefixoDoModelo(string modelo) => modelo switch
     {
         "55" or "65" => "NFe",

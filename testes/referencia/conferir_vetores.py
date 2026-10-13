@@ -168,15 +168,16 @@ def impressao_digital(chave):
 # rodada HMAC-SHA256 sobre "R" ‖ u8(i) ‖ u32be(radix) ‖ u64be(a) ‖ u64be(b) ‖ u16be(|ajuste|) ‖ ajuste ‖ u64be(v).
 # ---------------------------------------------------------------------------------------------------------------------
 
-# Passos de cada cycle-walking, na ordem: os ramos de caminhada conferem que a entrada caminhou de verdade.
+# Passos de cada cycle-walking, na ordem, com o nome da permutação: os ramos de caminhada conferem que a entrada caminhou
+# de verdade, e na chave de DF-e na parte do nome do ramo.
 PASSOS = []
 
 
 class Feistel:
-    def __init__(self, chave, radix, a, b, rodadas=12):
+    def __init__(self, chave, radix, a, b, rodadas=12, nome=""):
         if rodadas % 2 or rodadas < 10 or not 2 <= a <= 0xFFFFFFFF or not 2 <= b <= 0xFFFFFFFF or max(a, b) > radix * min(a, b):
             raise Falha("Feistel", "parâmetros fora do permitido")
-        self.chave, self.radix, self.a, self.b, self.rodadas = chave, radix, a, b, rodadas
+        self.chave, self.radix, self.a, self.b, self.rodadas, self.nome = chave, radix, a, b, rodadas, nome
 
     def _rodada(self, i, v, modulo, ajuste):
         mensagem = (b"R" + bytes([i]) + self.radix.to_bytes(4, "big") + self.a.to_bytes(8, "big") + self.b.to_bytes(8, "big")
@@ -195,13 +196,13 @@ class Feistel:
     def permutar(self, x, ajuste=b"", excluido=lambda v: False, adicional=None):
         """Aplica de novo enquanto cair no excluído; entrada excluída é ponto fixo. Registra os passos."""
         if excluido(x) or x == adicional:
-            PASSOS.append(0)
+            PASSOS.append((self.nome, 0))
             return x
         y = x
         for passo in range(1, 65):
             y = self.aplicar(y, ajuste)
             if not excluido(y) and y != adicional:
-                PASSOS.append(passo)
+                PASSOS.append((self.nome, passo))
                 return y
         raise Falha("Feistel", "limite de passos do cycle-walking")
 
@@ -272,7 +273,7 @@ REPDIGITOS_CPF = {d * 111_111_111 for d in range(10)}
 
 class Cpf:
     def __init__(self, chave, dominio, versao, ambiente, invalida, malformada):
-        self.feistel = Feistel(chave_de_dominio(chave, dominio, versao, "num", ambiente), 10, 10**4, 10**5)
+        self.feistel = Feistel(chave_de_dominio(chave, dominio, versao, "num", ambiente), 10, 10**4, 10**5, nome="cpf")
         self.invalida, self.malformada = invalida, malformada
 
     def _transformar(self, base, dv):
@@ -312,6 +313,16 @@ class Cpf:
         partes, desfecho = self._transformar(entrada // 100, entrada % 100)
         return (None if partes is None else partes[0] * 100 + partes[1]), desfecho
 
+    def na_chave(self, cpf):
+        """Emitente da chave de DF-e: sem a política de DV da coluna (δ mod 100, contado). Devolve (cpf, ocorrências)."""
+        base, dv = int(cpf[:9]), int(cpf[9:])
+        deslocamento = (dv - dv_cpf(cpf[:9])) % 100
+        ocorrencias = {"DvDoEmitenteInvalido"} if deslocamento else set()
+        if base in REPDIGITOS_CPF:
+            return cpf, ocorrencias | {"EmitentePontoFixo"}
+        nova = self.feistel.permutar(base, excluido=lambda v: v in REPDIGITOS_CPF)
+        return f"{nova:09d}{(dv_cpf(f'{nova:09d}') + deslocamento) % 100:02d}", ocorrencias
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # br.cnpj: raiz (ou raiz e ordem) particionada por num/alfa pela presença de letra; base 36 com 0-9
@@ -322,12 +333,14 @@ BASE36 = DIGITOS + MAIUSCULAS
 
 
 class Particionada:
-    def __init__(self, chave_numerica, chave_alfanumerica, tamanho, zeros_fixos):
+    def __init__(self, chave_numerica, chave_alfanumerica, tamanho, zeros_fixos, zeros_excluidos=0):
         maior, menor = (tamanho + 1) // 2, tamanho // 2
         self.tamanho = tamanho
         self.limite_numerico = 10 ** (tamanho - zeros_fixos)
         self.limite_alfanumerico = 36 ** (tamanho - zeros_fixos)
-        self.numerica = Feistel(chave_numerica, 10, 10**maior, 10**menor)
+        # Regra dos zeros da chave de DF-e: as cadeias numéricas que começam com esses zeros não entram nem saem.
+        self.limite_numerico_excluido = 10 ** (tamanho - zeros_excluidos) if zeros_excluidos else None
+        self.numerica = Feistel(chave_numerica, 10, 10**maior, 10**menor, nome="cnpj-numerica")
         self.alfanumerica = Feistel(chave_alfanumerica, 36, 36**maior, 36**menor)
 
     def _so_digitos_base36(self, valor):
@@ -337,7 +350,7 @@ class Particionada:
             valor //= 36
         return True
 
-    def permutar(self, cadeia):
+    def permutar(self, cadeia, excluir_zeros=False):
         """Devolve (cadeia, fixa)."""
         if any(c in MAIUSCULAS for c in cadeia):
             valor = 0
@@ -352,20 +365,26 @@ class Particionada:
                 saida = BASE36[simbolo] + saida
             return saida, False
         valor = int(cadeia)
-        if valor < self.limite_numerico:
+        limite = self.limite_numerico
+        if excluir_zeros:
+            if self.limite_numerico_excluido is None or valor < self.limite_numerico_excluido:
+                raise Falha("CNPJ", "cadeia que a regra dos zeros lê como CPF")
+            limite = self.limite_numerico_excluido
+        if valor < limite:
             return cadeia, True
-        novo = self.numerica.permutar(valor, excluido=lambda v: v < self.limite_numerico)
+        novo = self.numerica.permutar(valor, excluido=lambda v: v < limite)
         return f"{novo:0{self.tamanho}d}", False
 
 
 class Cnpj:
     def __init__(self, chave, dominio, versao, ambiente, permutar_ordem, invalida, malformada):
+        # Os 3 zeros do CPF na chave de DF-e: na regra dos zeros, essas cadeias numéricas são lidas como CPF.
         if permutar_ordem:
             k = chave_de_dominio(chave, dominio, versao, "ordem", ambiente)
-            self.particionada, self.permutados = Particionada(k, k, 12, 8), 12
+            self.particionada, self.permutados = Particionada(k, k, 12, 8, 3), 12
         else:
             self.particionada = Particionada(
-                chave_de_dominio(chave, dominio, versao, "num", ambiente), chave_de_dominio(chave, dominio, versao, "alfa", ambiente), 8, 8)
+                chave_de_dominio(chave, dominio, versao, "num", ambiente), chave_de_dominio(chave, dominio, versao, "alfa", ambiente), 8, 8, 3)
             self.permutados = 8
         self.invalida, self.malformada = invalida, malformada
 
@@ -407,6 +426,16 @@ class Cnpj:
             return malformado(self.malformada, entrada)
         saida, desfecho = self._transformar(f"{entrada:014d}")
         return (None if saida is None else int(saida)), desfecho
+
+    def na_chave(self, cnpj, excluir_zeros):
+        """Emitente da chave de DF-e: sem a política de DV da coluna (δ mod 100, contado). Devolve (cnpj, ocorrências)."""
+        deslocamento = (int(cnpj[12:]) - dv_cnpj(cnpj[:12])) % 100
+        ocorrencias = {"DvDoEmitenteInvalido"} if deslocamento else set()
+        trocados, fixa = self.particionada.permutar(cnpj[:self.permutados], excluir_zeros)
+        if fixa:
+            return cnpj, ocorrencias | {"EmitentePontoFixo"}
+        base = trocados + cnpj[self.permutados:12]
+        return f"{base}{(dv_cnpj(base) + deslocamento) % 100:02d}", ocorrencias
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -817,6 +846,275 @@ class ChavePix:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# br.chave-dfe: chave de acesso de 44 posições (contadas a partir de 1): cUF (1–2), AAMM (3–6), emitente (7–20: CNPJ, ou
+# CPF com 000 à esquerda), modelo (21–22), série (23–25), número (26–34), tpEmis (35), código numérico (36–43; na NF3e e
+# na NFCom, nSiteAutoriz em 36 e código de 7 dígitos em 37–43) e cDV (44). Estrutura: 6 dígitos, 12 dígitos ou letras
+# maiúsculas, 26 dígitos. cDV: módulo 11 sobre os 43 primeiros, valor ASCII − 48, pesos 2 a 9 cíclicos da direita para
+# a esquerda, resto 0 ou 1 dá 0 (código do Anexo II da NT Conjunta 2025.001, que usa 43 caracteres).
+# ---------------------------------------------------------------------------------------------------------------------
+
+def dv_chave_dfe(primeiros43):
+    soma, peso = 0, 2
+    for c in reversed(primeiros43):
+        soma += (ord(c) - 48) * peso
+        peso = 2 if peso == 9 else peso + 1
+    return _modulo11(soma)
+
+
+# NFF da NF-e e da NFC-e (NT 2021.002, item 2.1): número = dia (26–27), mês (28–29), tipo do emissor (30) e sequencial
+# diário (31–34). NFF do CT-e e do MDF-e (NT CT-e 2020.001 v1.05, NT MDF-e 2020.002 v1.05, MOC CT-e 4.00 e MDF-e 3.00b):
+# mês (26–27), dia (28–29) e sequencial (30–34), pela ordem do texto. Índices a partir de 0 na chave.
+NFF_NFE = {"dia": 25, "mes": 27, "sequencial": 30, "tamanho": 4}
+NFF_TRANSPORTE = {"dia": 27, "mes": 25, "sequencial": 29, "tamanho": 5}
+
+# Por modelo: regra do emitente, tamanho do código numérico, leiaute da NFF e prefixo do Id. 55 NF-e e 65 NFC-e pelas
+# séries (com o PAA só na NF-e, NT 2026.001 v1.02b, campo B07; a NFC-e não usa PAA, regra B07-10); 57 CT-e e 58 MDF-e
+# pela regra dos zeros (nenhuma regra de série separa CPF de CNPJ: o PAA usa tpEmis 3 também com CNPJ de MEI, NT CT-e
+# 2024.002 v1.05 e NT MDF-e 2024.002 v1.01); 67 CT-e OS, 64 GTV-e, 63 BP-e, 66 NF3e e 62 NFCom só admitem CNPJ no
+# emitente (XSD de cada leiaute). Prefixos do Id: a GTV-e e o CT-e OS usam CTe (rejeição 253 da NT CT-e 2020.002).
+MODELOS_DFE = {
+    55: ("series-com-paa", 8, NFF_NFE, "NFe"),
+    65: ("series", 8, NFF_NFE, "NFe"),
+    57: ("zeros", 8, NFF_TRANSPORTE, "CTe"),
+    58: ("zeros", 8, NFF_TRANSPORTE, "MDFe"),
+    67: ("cnpj", 8, None, "CTe"),
+    64: ("cnpj", 8, None, "CTe"),
+    63: ("cnpj", 8, None, "BPe"),
+    66: ("cnpj", 7, None, "NF3e"),
+    62: ("cnpj", 7, None, "NFCom"),
+}
+PREFIXOS_DE_ID = {"NFe", "CTe", "MDFe", "BPe", "NF3e", "NFCom"}
+
+# AAMM a partir do qual o emitente CPF existe na chave (homologação em 01/08/2018, NT 2018.001 v1.00; antes disso, e no
+# leiaute 1.10, em que a posição 35 ainda não era o tpEmis, NT 2013.007, é sempre CNPJ). A NFF começa em 2104 na NF-e e na
+# NFC-e (NT 2021.002: homologação em 26/04/2021) e em 2006 no CT-e e no MDF-e (o tpEmis 3 só passou a ser aceito com as
+# NTs da NFF: NT MDF-e 2020.002, homologação em 06/2020; NT CT-e 2020.001). Séries do PAA: 970 a 989 (NT 2026.001).
+PRIMEIRO_AAMM_COM_CPF = 1808
+PRIMEIRO_AAMM_DA_NFF = 2104
+PRIMEIRO_AAMM_DA_NFF_DE_TRANSPORTE = 2006
+
+# Códigos numéricos de 8 dígitos proibidos (regra B03-10, rejeição 897, NT 2019.001 v1.70): os 10 repdígitos e as 10
+# sequências crescentes. Valem para todos os modelos (só restringem a saída).
+CODIGOS_PROIBIDOS = {d * 11_111_111 for d in range(10)} | {
+    12_345_678, 23_456_789, 34_567_890, 45_678_901, 56_789_012, 67_890_123, 78_901_234, 89_012_345, 90_123_456, 1_234_567}
+
+# Ocorrências na ordem canônica, fixada pelo formato dos vetores.
+OCORRENCIAS = ["NumeroZero", "SequencialZero", "DataNffInvalida", "CodigoProibido", "CodigoIgualAoNumero",
+               "EmitentePontoFixo", "DvDoEmitenteInvalido", "Anomalia"]
+
+
+def estrutura_de_chave_dfe(chave):
+    return (len(chave) == 44 and so_digitos(chave[:6]) and all(c in DIGITOS + MAIUSCULAS for c in chave[6:18])
+            and so_digitos(chave[18:]))
+
+
+def classificar_emitente(chave):
+    """Devolve (tipo, modelo, nff, exclui_zeros, anomalia): tipo "cpf", "cnpj" ou None; anomalia None, "estrutura",
+    "zerada", "modelo" (sem leiaute) ou o motivo da anomalia de classificação (com leiaute)."""
+    if not estrutura_de_chave_dfe(chave):
+        return None, None, False, False, "estrutura"
+    if chave == "0" * 44:
+        return None, None, False, False, "zerada"
+    modelo = int(chave[20:22])
+    if modelo not in MODELOS_DFE:
+        return None, None, False, False, "modelo"
+    regra = MODELOS_DFE[modelo][0]
+    com_letra = any(c in MAIUSCULAS for c in chave[6:18])
+    aamm, serie, tipo_emissao_3 = int(chave[2:6]), int(chave[22:25]), chave[34] == "3"
+    serie_do_paa = 970 <= serie <= 989
+    if regra == "cnpj":
+        return "cnpj", modelo, False, False, None
+    if regra == "zeros":
+        # Letra em 7–18 → CNPJ; senão 7–9 = 000 → CPF; senão CNPJ sem nunca produzir 000 em 7–9.
+        nff = tipo_emissao_3 and not serie_do_paa and aamm >= PRIMEIRO_AAMM_DA_NFF_DE_TRANSPORTE
+        if com_letra:
+            return "cnpj", modelo, nff, False, None
+        if chave[6:9] == "000":
+            return "cpf", modelo, nff, False, None
+        return "cnpj", modelo, nff, True, None
+    # NF-e e NFC-e, na ordem: AAMM anterior ao CPF ou letra → CNPJ; tpEmis 3 fora do PAA é a NFF a partir de 2104 (posição
+    # 30: 1 CNPJ, 2 CPF) e anomalia antes (o SCAN, tpEmis 3 com séries 900 a 999, foi desativado até 30/09/2014, NT
+    # 2013.007 v1.03); depois a série: 000–909 CNPJ (890–899, NFA-e, com o CNPJ da SEFAZ, NT 2018.001 item 03), 910–969
+    # CPF (NT 2018.001 item 03.2; no 65, NT 2023.002), e só na NF-e 970–979 CPF e 980–989 CNPJ (PAA, NT 2026.001 v1.02b,
+    # regras C02-30 e C02a-10); o resto é anomalia. CPF sem 000 em 7–9 é anomalia.
+    nff_possivel = tipo_emissao_3 and not serie_do_paa
+    nff = nff_possivel and aamm >= PRIMEIRO_AAMM_DA_NFF
+    if com_letra or aamm < PRIMEIRO_AAMM_COM_CPF:
+        return "cnpj", modelo, nff, False, None
+    if nff_possivel and not nff:
+        return None, modelo, False, False, "tpemis-3-fora-do-periodo"
+    if nff:
+        tipo = {"1": "cnpj", "2": "cpf"}.get(chave[29])
+        motivo = "nff-sem-tipo-de-emissor"
+    elif serie <= 909:
+        tipo = "cnpj"
+    elif serie <= 969:
+        tipo = "cpf"
+    elif regra == "series-com-paa" and serie <= 979:
+        tipo = "cpf"
+    elif regra == "series-com-paa" and serie <= 989:
+        tipo = "cnpj"
+    else:
+        tipo, motivo = None, "serie-sem-emissao"
+    if tipo is None:
+        return None, modelo, False, False, motivo
+    if tipo == "cpf" and chave[6:9] != "000":
+        return None, modelo, False, False, "cpf-sem-zeros"
+    return tipo, modelo, nff, False, None
+
+
+def dias_no_mes(mes, ano):
+    if mes == 2:
+        return 29 if ano % 4 == 0 else 28
+    return 30 if mes in (4, 6, 9, 11) else 31
+
+
+def mesmo_sem_caixa_ascii(a, b):
+    tabela = str.maketrans(MAIUSCULAS, MINUSCULAS)
+    return a.translate(tabela) == b.translate(tabela)
+
+
+class NumeroDfe:
+    """Domínio dfe-numero (versão do br.chave-dfe): número e código, com o emitente já pseudonimizado nos ajustes."""
+
+    def __init__(self, chave, dominio, versao, ambiente):
+        k = lambda variante: chave_de_dominio(chave, dominio, versao, variante, ambiente)
+        self.numero = Feistel(k("nnf"), 10, 10**4, 10**5, nome="nnf")
+        # Dia: valor = o próprio dia em 6 × 6, 24 rodadas porque min(a, b) < 10 (Durak e Vaudenay, 2018).
+        self.dia = Feistel(k("nff-dia"), 10, 6, 6, rodadas=24, nome="nff-dia")
+        self.sequencial = {4: Feistel(k("nff-seq"), 10, 10**2, 10**2, nome="nff-seq"), 5: Feistel(k("nff-seq"), 10, 10**2, 10**3, nome="nff-seq")}
+        self.codigo8 = Feistel(k("cnf8"), 10, 10**4, 10**4, nome="cnf8")
+        self.codigo7 = Feistel(k("cnf7"), 10, 10**3, 10**4)
+
+    def pseudonimizar(self, chave, nff, tamanho_do_codigo):
+        """Devolve (chave, ocorrências); a chave vem e volta como lista de caracteres, com o emitente já trocado."""
+        ocorrencias = set()
+        emitente = "".join(chave[6:20]).encode("ascii")
+        if nff is None:
+            # ajuste = emitente' ‖ 0x00 ‖ modelo ‖ série; número 0 fica.
+            numero = int("".join(chave[25:34]))
+            if numero == 0:
+                ocorrencias.add("NumeroZero")
+            else:
+                ajuste = emitente + b"\x00" + "".join(chave[20:25]).encode("ascii")
+                chave[25:34] = f"{self.numero.permutar(numero, ajuste, excluido=lambda v: v == 0):09d}"
+        else:
+            ocorrencias |= self._partes_da_nff(chave, nff, emitente)
+        ajuste = emitente + "".join(chave[25:34]).encode("ascii")
+        if tamanho_do_codigo == 7:
+            chave[36:43] = f"{self.codigo7.permutar(int(''.join(chave[36:43])), ajuste):07d}"
+            return chave, ocorrencias
+        # Código proibido antes de código igual ao número' (comparação numérica); depois os dois saem do E.
+        codigo, numero = int("".join(chave[35:43])), int("".join(chave[25:34]))
+        if codigo in CODIGOS_PROIBIDOS:
+            return chave, ocorrencias | {"CodigoProibido"}
+        if codigo == numero:
+            return chave, ocorrencias | {"CodigoIgualAoNumero"}
+        adicional = numero if numero < 10**8 else None
+        chave[35:43] = f"{self.codigo8.permutar(codigo, ajuste, excluido=CODIGOS_PROIBIDOS.__contains__, adicional=adicional):08d}"
+        return chave, ocorrencias
+
+    def _partes_da_nff(self, chave, nff, emitente):
+        """Dia entre os que existem no mês do AAMM e no do número (ano 2000 + AA); sequencial sem o 0."""
+        ocorrencias = set()
+        ano, mes_do_aamm, mes_do_numero = int("".join(chave[2:4])), int("".join(chave[4:6])), int("".join(chave[nff["mes"]:nff["mes"] + 2]))
+        dias = 0
+        if 1 <= mes_do_aamm <= 12 and 1 <= mes_do_numero <= 12:
+            dias = min(dias_no_mes(mes_do_aamm, 2000 + ano), dias_no_mes(mes_do_numero, 2000 + ano))
+        i_dia, i_seq, tamanho = nff["dia"], nff["sequencial"], nff["tamanho"]
+
+        def ajuste(com_dia):
+            # emitente' ‖ 0x00 ‖ AAMM ‖ modelo ‖ série ‖ número, com o sequencial (e, sem o dia, o dia) em '0'.
+            numero = list(chave[25:34])
+            numero[i_seq - 25:i_seq - 25 + tamanho] = "0" * tamanho
+            if not com_dia:
+                numero[i_dia - 25:i_dia - 25 + 2] = "00"
+            return emitente + b"\x00" + "".join(chave[2:6] + chave[20:25] + numero).encode("ascii")
+
+        dia = int("".join(chave[i_dia:i_dia + 2]))
+        if 1 <= dia <= dias:
+            novo = self.dia.permutar(dia, ajuste(False), excluido=lambda v: v == 0 or v > dias)
+            chave[i_dia:i_dia + 2] = f"{novo:02d}"
+        else:
+            ocorrencias.add("DataNffInvalida")
+        sequencial = int("".join(chave[i_seq:i_seq + tamanho]))
+        if sequencial == 0:
+            ocorrencias.add("SequencialZero")
+        else:
+            novo = self.sequencial[tamanho].permutar(sequencial, ajuste(True), excluido=lambda v: v == 0)
+            chave[i_seq:i_seq + tamanho] = f"{novo:0{tamanho}d}"
+        return ocorrencias
+
+
+class ChaveDfe:
+    """Formas: 44 posições; prefixo do Id do modelo (caixa ASCII ignorada, devolvido como veio) e 44 posições; 11 grupos
+    de 4 separados por um espaço (DANFE), sem prefixo. Preenchimento U+0020 à direita volta como veio. A chave de 44
+    zeros volta como veio. Anomalia de classificação, modelo fora dos aceitos e prefixo de outro modelo seguem
+    entradaMalformada; cDV errado segue entradaInvalida (δ mod 10); o DV interno do emitente segue sempre δ mod 100.
+    Ordem: emitente, número e código (com o emitente' nos ajustes), cDV."""
+
+    def __init__(self, chave, dominio, versao, ambiente, modelos, invalida, malformada, componentes):
+        c = componentes
+        # As políticas das colunas não valem dentro da chave: as instâncias só emprestam a permutação.
+        self.cpf = Cpf(chave, c["cpf"]["dominio"], c["cpf"]["versao"], ambiente, "falhar", "falhar")
+        self.cnpj = Cnpj(chave, c["cnpj"]["dominio"], c["cnpj"]["versao"], ambiente, c["cnpj"]["permutarOrdem"], "falhar", "falhar")
+        self.dfe_numero = NumeroDfe(chave, dominio, versao, ambiente)
+        self.modelos, self.invalida, self.malformada = set(modelos), invalida, malformada
+
+    def _malformado(self, entrada, ocorrencias):
+        saida, desfecho = malformado(self.malformada, entrada)
+        return saida, desfecho, ocorrencias
+
+    def texto(self, entrada):
+        corpo, preenchimento = tirar_espacos_a_direita(entrada)
+        if not corpo:
+            return entrada, "Vazio", set()
+        if len(corpo) > 54:
+            return self._malformado(entrada, set())
+        prefixo, em_grupos = "", len(corpo) == 54
+        if em_grupos:
+            if any(corpo[5 * g - 1] != " " for g in range(1, 11)):
+                return self._malformado(entrada, set())
+            chave = "".join(corpo[5 * g:5 * g + 4] for g in range(11))
+        elif len(corpo) >= 44 and (len(corpo) == 44 or any(mesmo_sem_caixa_ascii(corpo[:-44], p) for p in PREFIXOS_DE_ID)):
+            prefixo, chave = corpo[:-44], corpo[-44:]
+        else:
+            return self._malformado(entrada, set())
+        tipo, modelo, nff, exclui_zeros, anomalia = classificar_emitente(chave)
+        if anomalia == "zerada":
+            return entrada, "Zerado", set()
+        ocorrencias = {"Anomalia"} if anomalia is not None and modelo is not None else set()
+        if (anomalia is not None or modelo not in self.modelos
+                or (prefixo and not mesmo_sem_caixa_ascii(prefixo, MODELOS_DFE[modelo][3]))):
+            return self._malformado(entrada, ocorrencias)
+        deslocamento = (int(chave[43]) - dv_chave_dfe(chave[:43])) % 10
+        if deslocamento and not seguir_com_dv_invalido(self.invalida):
+            return None, "AnuladoDvInvalido", set()
+        nova = list(chave)
+        if tipo == "cpf":
+            cpf, ocorrencias = self.cpf.na_chave(chave[9:20])
+            nova[9:20] = cpf
+        else:
+            cnpj, ocorrencias = self.cnpj.na_chave(chave[6:20], exclui_zeros)
+            nova[6:20] = cnpj
+        _, tamanho_do_codigo, leiaute_nff, _ = MODELOS_DFE[modelo]
+        nova, do_numero = self.dfe_numero.pseudonimizar(nova, leiaute_nff if nff else None, tamanho_do_codigo)
+        ocorrencias |= do_numero
+        nova[43] = str((dv_chave_dfe("".join(nova[:43])) + deslocamento) % 10)
+        nova = "".join(nova)
+        # Invariante: a saída tem a mesma classificação da entrada.
+        if classificar_emitente(nova) != (tipo, modelo, nff, exclui_zeros, None):
+            raise Falha("chave de DF-e", "a saída mudou de classificação")
+        if nova == chave:
+            return entrada, "PontoFixo", ocorrencias
+        if em_grupos:
+            corpo_da_saida = " ".join(nova[4 * g:4 * g + 4] for g in range(11))
+        else:
+            corpo_da_saida = prefixo + nova
+        return corpo_da_saida + preenchimento, "DvInvalidoPreservado" if deslocamento else "Pseudonimizado", ocorrencias
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Leitura estrita e conferência dos vetores.
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -913,14 +1211,26 @@ PARAMETROS = {
     "br.cep@1": ["entradaMalformada"],
     "id.permutar@1": ["n", "entradaMalformada"],
     "br.chave-pix@1": ["entradaMalformada", "componentes"],
+    "br.chave-dfe@1": ["modelos", "entradaInvalida", "entradaMalformada", "componentes"],
 }
 
+# Componentes dos transformadores compostos: as instâncias das colunas usadas dentro do valor. Na chave de DF-e, as
+# políticas das colunas não valem dentro da chave, por isso não aparecem.
 COMPONENTES = {
-    "cpf": ["dominio", "versao", "entradaInvalida"],
-    "cnpj": ["dominio", "versao", "permutarOrdem", "entradaInvalida"],
-    "email": ["dominio", "versao"],
-    "telefone": ["dominio", "versao"],
+    "br.chave-pix@1": {
+        "cpf": ["dominio", "versao", "entradaInvalida"],
+        "cnpj": ["dominio", "versao", "permutarOrdem", "entradaInvalida"],
+        "email": ["dominio", "versao"],
+        "telefone": ["dominio", "versao"],
+    },
+    "br.chave-dfe@1": {
+        "cpf": ["dominio", "versao"],
+        "cnpj": ["dominio", "versao", "permutarOrdem"],
+    },
 }
+
+# Versões implementadas de cada componente: uma versão nova só entra com a implementação dela.
+VERSOES_DOS_COMPONENTES = {"cpf": {1}, "cnpj": {1}, "email": {1}, "telefone": {1}}
 
 DESFECHOS = {"Pseudonimizado", "DvInvalidoPreservado", "PontoFixo", "AnuladoDvInvalido", "AnuladoMalformado", "CopiadoEmClaro",
              "ServicoPreservado", "Vazio", "Zerado"}
@@ -956,19 +1266,28 @@ def montar(transformador, versao, chave, caso, onde):
         return Cep(chave, dominio, versao, ambiente, malformada)
     if identidade == "id.permutar@1":
         return Identificador(chave, dominio, versao, ambiente, inteiro(caso["n"], onde), malformada)
-    if identidade != "br.chave-pix@1":
+    if identidade not in COMPONENTES:
         raise Falha(onde, "transformador ou versão sem implementação")
     componentes = caso["componentes"]
-    exigir(componentes, list(COMPONENTES), [], onde)
-    for nome, propriedades in COMPONENTES.items():
+    exigir(componentes, list(COMPONENTES[identidade]), [], onde)
+    for nome, propriedades in COMPONENTES[identidade].items():
         exigir(componentes[nome], propriedades, [], onde)
         texto_de(componentes[nome]["dominio"], onde)
-        inteiro(componentes[nome]["versao"], onde)
+        if inteiro(componentes[nome]["versao"], onde) not in VERSOES_DOS_COMPONENTES[nome]:
+            raise Falha(onde, "versão de componente sem implementação")
         if "permutarOrdem" in propriedades:
             logico(componentes[nome]["permutarOrdem"], onde)
         if "entradaInvalida" in propriedades:
             politica(componentes[nome], "entradaInvalida", onde)
-    return ChavePix(chave, dominio, versao, ambiente, malformada, componentes)
+    if identidade == "br.chave-pix@1":
+        return ChavePix(chave, dominio, versao, ambiente, malformada, componentes)
+    # O número e o código de todos os DF-e ficam no domínio dfe-numero; os modelos são os nove tratados, sem repetição.
+    if dominio != "dfe-numero":
+        raise Falha(onde, "domínio da chave de DF-e diferente de dfe-numero")
+    modelos = lista(caso["modelos"], onde)
+    if any(type(m) is not int or m not in MODELOS_DFE for m in modelos) or len(set(modelos)) != len(modelos):
+        raise Falha(onde, "modelos fora dos nove ou repetidos")
+    return ChaveDfe(chave, dominio, versao, ambiente, modelos, politica(caso, "entradaInvalida", onde), malformada, componentes)
 
 
 def de_utf16(par, campo, onde):
@@ -1006,6 +1325,8 @@ def confere(resultado, par, onde):
         return "erro" in par and "saida" not in par and par["erro"] == resultado[1]
     if "saida" not in par or "erro" in par or par.get("desfecho") != resultado[1]:
         return False
+    if len(resultado) == 3 and par.get("ocorrencias") != [o for o in OCORRENCIAS if o in resultado[2]]:
+        return False
     esperado, obtido = par["saida"], resultado[0]
     if esperado is None or obtido is None:
         return esperado is None and obtido is None
@@ -1014,10 +1335,27 @@ def confere(resultado, par, onde):
     return type(esperado) is str and u16(texto_de(esperado, onde)) == obtido
 
 
+# Na chave de DF-e, a permutação em que cada ramo de caminhada precisa caminhar.
+PARTE_DA_CAMINHADA = {
+    "caminhada-cpf": "cpf", "caminhada-raiz-000": "cnpj-numerica", "caminhada-dia": "nff-dia",
+    "caminhada-sequencial": "nff-seq", "caminhada-numero-zero": "nnf", "caminhada-codigo-proibido": "cnf8",
+    "caminhada-codigo-numero": "cnf8",
+}
+
+
 def conferir_par(transformador, instancia, par, onde):
     obrigatorias = ["ramo", "origem"]
     opcionais = ["entrada", "entradaUtf16", "saida", "erro", "desfecho"] + (["entidade", "entidadeUtf16"] if transformador == "br.cep" else [])
+    if transformador == "br.chave-dfe":
+        opcionais.append("ocorrencias")
     exigir(par, obrigatorias, opcionais, onde)
+    if transformador == "br.chave-dfe":
+        if ("ocorrencias" in par) != ("saida" in par):
+            raise Falha(onde, "ocorrências são obrigatórias com saída e proibidas com erro")
+        ocorrencias = par.get("ocorrencias", [])
+        if (not isinstance(ocorrencias, list) or any(type(o) is not str or o not in OCORRENCIAS for o in ocorrencias)
+                or ocorrencias != [o for o in OCORRENCIAS if o in ocorrencias]):
+            raise Falha(onde, "ocorrências fora do formato, desconhecidas, repetidas ou fora da ordem canônica")
     if ("entrada" in par) == ("entradaUtf16" in par):
         raise Falha(onde, "precisa de exatamente uma entre entrada e entradaUtf16")
     if transformador == "br.cep" and ("entidade" in par) == ("entidadeUtf16" in par):
@@ -1035,7 +1373,9 @@ def conferir_par(transformador, instancia, par, onde):
     if not confere(resultado, par, onde):
         raise Falha(onde, "a saída diverge do vetor")
     # Os ramos de caminhada existem para exercitar o cycle-walking: a entrada precisa ter caminhado de verdade.
-    if par["ramo"].startswith("caminhada") and max(PASSOS[passos_antes:], default=0) < 2:
+    parte = PARTE_DA_CAMINHADA.get(par["ramo"]) if transformador == "br.chave-dfe" else None
+    passos = [passo for nome, passo in PASSOS[passos_antes:] if parte is None or nome == parte]
+    if par["ramo"].startswith("caminhada") and max(passos, default=0) < 2:
         raise Falha(onde, "ramo de caminhada sem cycle-walking")
 
 
@@ -1201,6 +1541,7 @@ ARQUIVOS = {
     "br.cep@1.json": conferir_transformador,
     "id.permutar@1.json": conferir_transformador,
     "br.chave-pix@1.json": conferir_transformador,
+    "br.chave-dfe@1.json": conferir_transformador,
     "volume@1.json": conferir_volume,
 }
 
@@ -1242,6 +1583,30 @@ RAMOS_EXIGIDOS = {
     "br.chave-pix@1.json": {
         "cpf", "cnpj", "email", "telefone", "aleatoria", "aleatoria-assimetrica", "aleatoria-maiusculas",
         "cnpj-minusculas", "cnpj-minusculas-dv-errado", "onze-digitos-e-cpf", "arroba-vence", "telefone-zerado"
+    },
+    "br.chave-dfe@1.json": {
+        "aamm-antes-do-cpf", "aamm-primeiro-com-cpf", "anomalia-com-cdv-errado", "anomalia-com-modelo-fora-da-coluna",
+        "anomalia-com-prefixo-de-outro-modelo", "caminhada-codigo-numero", "caminhada-codigo-proibido",
+        "caminhada-cpf", "caminhada-dia", "caminhada-numero-zero", "caminhada-raiz-000", "caminhada-sequencial",
+        "cdv-errado", "chave-da-nfse", "cnpj-alfanumerico", "cnpj-filial", "cnpj-ordem-alfanumerica", "cnpj-raiz-000",
+        "cnpj-raiz-e-ordem-alfanumericas", "cnpj-raiz-zero", "codigo-7-com-cara-de-proibido",
+        "codigo-igual-ao-numero", "codigo-igual-ao-numero-de-entrada", "codigo-proibido",
+        "codigo-proibido-antes-do-igual", "codigo-proibido-cada", "codigo-proibido-com-zero", "cpf-com-cinco-zeros",
+        "cpf-com-zeros", "cpf-repdigito", "cpf-sem-zeros", "dv-emitente-invalido", "espaco-a-esquerda", "grupos",
+        "grupos-com-espaco-duplo", "grupos-com-outro-separador", "grupos-com-prefixo", "letra-fora-do-emitente",
+        "letra-vence-nff", "letra-vence-serie", "letra-vence-tpemis3", "minuscula-no-emitente", "modelo",
+        "modelo-fora-da-coluna", "modelo-fora-da-coluna-com-cdv-errado", "modelo-fora-da-tabela", "nff-ano-do-aamm",
+        "nff-cnpj", "nff-cnpj-com-zeros-do-cpf", "nff-cpf", "nff-cpf-sem-zeros", "nff-dia-depois-do-ultimo",
+        "nff-dia-zero", "nff-mes-diferente", "nff-mes-do-aamm-invalido", "nff-mes-do-numero-invalido",
+        "nff-numero-zero", "nff-sem-tipo", "nff-sequencial-zero", "nff-transporte", "nff-ultimo-dia", "nsiteautoriz",
+        "numero-pseudonimizado-abaixo-de-10-8", "numero-pseudonimizado-acima-de-10-8", "numero-zero", "outros-tpemis",
+        "paa-transporte", "ponto-fixo", "preenchimento", "prefixo", "prefixo-de-outro-modelo",
+        "prefixo-de-outro-modelo-com-cdv-errado", "prefixo-desconhecido", "prefixo-em-outra-caixa", "saida-raiz-00",
+        "scan", "serie-cnpj", "serie-cpf", "serie-paa-cnpj", "serie-paa-cpf", "serie-sem-emissao", "so-cnpj-raiz-000",
+        "tamanho", "tpemis3-fora-do-paa", "tpemis3-fora-do-periodo", "tpemis3-paa", "transporte-antes-da-nff",
+        "vazio", "zerada", "zerada-com-prefixo-desconhecido", "zeros-alfanumerico-000", "zeros-cnpj", "zeros-cpf",
+        "zeros-cpf-repdigito", "zeros-quase-cpf", "zeros-raiz-000-com-letra", "zeros-raiz-000-e-cpf",
+        "zeros-raiz-zero"
     },
 }
 
@@ -1365,6 +1730,26 @@ def primeiro_par(documento, condicao):
     raise Falha("autoteste", "nenhum par com a forma pedida")
 
 
+def _com_ocorrencias(documento):
+    return primeiro_par(documento, lambda p: len(p.get("ocorrencias", [])) >= 2)
+
+
+def _com_erro(documento):
+    return primeiro_par(documento, lambda p: "erro" in p)
+
+
+# Alterações da leitura estrita da chave de DF-e e o motivo que cada uma precisa dar.
+AUTOTESTE_DA_CHAVE_DFE = [
+    ("ocorrências fora da ordem", lambda d: _com_ocorrencias(d).update(ocorrencias=_com_ocorrencias(d)["ocorrencias"][::-1]), "ordem canônica"),
+    ("ocorrência desconhecida", lambda d: _com_ocorrencias(d).update(ocorrencias=["Outra"]), "ordem canônica"),
+    ("ocorrências com erro", lambda d: _com_erro(d).update(ocorrencias=[]), "proibidas com erro"),
+    ("domínio", lambda d: d["casos"][0].update(dominio="dfe-outro"), "dfe-numero"),
+    ("modelo repetido", lambda d: d["casos"][0]["modelos"].append(d["casos"][0]["modelos"][0]), "modelos fora"),
+    ("modelo fora dos nove", lambda d: d["casos"][0]["modelos"].append(59), "modelos fora"),
+    ("versão de componente", lambda d: d["casos"][0]["componentes"]["cpf"].update(versao=2), "versão de componente"),
+]
+
+
 def autoteste():
     for arquivo, conferidor in ARQUIVOS.items():
         caminho = os.path.join(PASTA_VETORES, arquivo)
@@ -1381,6 +1766,16 @@ def autoteste():
             par = primeiro_par(documento, lambda p: "erro" in p)
             par["erro"] = "INC1004" if par["erro"] == "INC1003" else "INC1003"
             deve_acusar(f"{arquivo}, erro", lambda: conferir_transformador(caminho, documento), "diverge")
+            if arquivo == "br.chave-dfe@1.json":
+                for condicao in (lambda p: p.get("ocorrencias") == [], lambda p: bool(p.get("ocorrencias"))):
+                    documento = ler_arquivo(caminho)
+                    par = primeiro_par(documento, condicao)
+                    par["ocorrencias"] = par["ocorrencias"][1:] if par["ocorrencias"] else ["Anomalia"]
+                    deve_acusar(f"{arquivo}, ocorrências", lambda: conferir_transformador(caminho, documento), "diverge")
+                for rotulo, alterar, motivo in AUTOTESTE_DA_CHAVE_DFE:
+                    documento = ler_arquivo(caminho)
+                    alterar(documento)
+                    deve_acusar(f"{arquivo}, {rotulo}", lambda: conferir_transformador(caminho, documento), motivo)
         elif conferidor is conferir_volume:
             documento = ler_arquivo(caminho)
             caso = documento["casos"][0]

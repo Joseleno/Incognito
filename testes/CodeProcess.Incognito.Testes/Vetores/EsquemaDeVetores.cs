@@ -25,15 +25,32 @@ internal static class EsquemaDeVetores
         ["br.cep@1"] = ["entradaMalformada"],
         ["id.permutar@1"] = ["n", "entradaMalformada"],
         ["br.chave-pix@1"] = ["entradaMalformada", "componentes"],
+        ["br.chave-dfe@1"] = ["modelos", "entradaInvalida", "entradaMalformada", "componentes"],
     };
 
-    private static readonly Dictionary<string, string[]> _componentes = new(StringComparer.Ordinal)
+    // Os componentes de cada transformador composto: as instâncias das colunas que ele usa.
+    private static readonly Dictionary<string, Dictionary<string, string[]>> _componentes = new(StringComparer.Ordinal)
     {
-        ["cpf"] = ["dominio", "versao", "entradaInvalida"],
-        ["cnpj"] = ["dominio", "versao", "permutarOrdem", "entradaInvalida"],
-        ["email"] = ["dominio", "versao"],
-        ["telefone"] = ["dominio", "versao"],
+        ["br.chave-pix"] = new(StringComparer.Ordinal)
+        {
+            ["cpf"] = ["dominio", "versao", "entradaInvalida"],
+            ["cnpj"] = ["dominio", "versao", "permutarOrdem", "entradaInvalida"],
+            ["email"] = ["dominio", "versao"],
+            ["telefone"] = ["dominio", "versao"],
+        },
+        ["br.chave-dfe"] = new(StringComparer.Ordinal)
+        {
+            ["cpf"] = ["dominio", "versao"],
+            ["cnpj"] = ["dominio", "versao", "permutarOrdem"],
+        },
     };
+
+    // Os modelos da chave de DF-e e as ocorrências, na ordem canônica (crescente de valor da flag), escritos aqui à parte
+    // das receitas e do enumerado: o esquema não deriva do que confere.
+    private static readonly int[] _modelosDaChaveDfe = [55, 65, 57, 58, 67, 64, 63, 66, 62];
+
+    private static readonly string[] _ocorrencias =
+        ["NumeroZero", "SequencialZero", "DataNffInvalida", "CodigoProibido", "CodigoIgualAoNumero", "EmitentePontoFixo", "DvDoEmitenteInvalido", "Anomalia"];
 
     /// <summary>Pasta dos vetores copiados para a saída dos testes.</summary>
     internal static string PastaNaSaida => Path.Combine(AppContext.BaseDirectory, "vetores");
@@ -131,7 +148,12 @@ internal static class EsquemaDeVetores
     private static void ConferirCaso(JsonElement caso, string transformador, string[] parametros, string onde)
     {
         Exigir(caso, ["nome", "dominio", "ambiente", "pares", .. parametros], [], onde);
-        Texto(caso, "dominio", onde);
+        var dominio = Texto(caso, "dominio", onde);
+        if (transformador == "br.chave-dfe" && dominio != "dfe-numero")
+        {
+            throw Falha(onde, "o domínio do número e do código da chave de DF-e é sempre dfe-numero");
+        }
+
         Texto(caso, "ambiente", onde);
         foreach (var parametro in parametros)
         {
@@ -147,7 +169,10 @@ internal static class EsquemaDeVetores
                     Inteiro(caso, parametro, onde);
                     break;
                 case "componentes":
-                    ConferirComponentes(caso.GetProperty(parametro), onde);
+                    ConferirComponentes(caso.GetProperty(parametro), _componentes[transformador], onde);
+                    break;
+                case "modelos":
+                    ConferirModelos(caso, onde);
                     break;
                 default:
                     throw Falha(onde, "parâmetro sem conferência");
@@ -167,16 +192,38 @@ internal static class EsquemaDeVetores
         }
     }
 
-    private static void ConferirComponentes(JsonElement componentes, string onde)
+    private static void ConferirModelos(JsonElement caso, string onde)
     {
-        Exigir(componentes, [.. _componentes.Keys], [], onde);
-        foreach (var (nome, propriedades) in _componentes)
+        var modelos = Lista(caso, "modelos", onde);
+        var vistos = new HashSet<int>();
+        foreach (var modelo in modelos.EnumerateArray())
+        {
+            if (modelo.ValueKind != JsonValueKind.Number || !modelo.TryGetInt32(out var codigo) || !_modelosDaChaveDfe.Contains(codigo) || !vistos.Add(codigo))
+            {
+                throw Falha(onde, "modelo fora dos nove ou repetido");
+            }
+        }
+
+        if (vistos.Count == 0)
+        {
+            throw Falha(onde, "lista de modelos vazia");
+        }
+    }
+
+    private static void ConferirComponentes(JsonElement componentes, Dictionary<string, string[]> esperados, string onde)
+    {
+        Exigir(componentes, [.. esperados.Keys], [], onde);
+        foreach (var (nome, propriedades) in esperados)
         {
             var componente = componentes.GetProperty(nome);
             var ondeComponente = $"{onde}, componente {nome}";
             Exigir(componente, propriedades, [], ondeComponente);
             Texto(componente, "dominio", ondeComponente);
-            Inteiro(componente, "versao", ondeComponente);
+            if (Inteiro(componente, "versao", ondeComponente) != 1)
+            {
+                throw Falha(ondeComponente, "versão sem implementação");
+            }
+
             if (componente.TryGetProperty("permutarOrdem", out _))
             {
                 Logico(componente, "permutarOrdem", ondeComponente);
@@ -192,9 +239,12 @@ internal static class EsquemaDeVetores
     private static void ConferirPar(JsonElement par, string transformador, string onde)
     {
         string[] obrigatorias = ["ramo", "origem"];
-        string[] opcionais = transformador == "br.cep"
-            ? ["entrada", "entradaUtf16", "entidade", "entidadeUtf16", "saida", "erro", "desfecho"]
-            : ["entrada", "entradaUtf16", "saida", "erro", "desfecho"];
+        string[] opcionais = transformador switch
+        {
+            "br.cep" => ["entrada", "entradaUtf16", "entidade", "entidadeUtf16", "saida", "erro", "desfecho"],
+            "br.chave-dfe" => ["entrada", "entradaUtf16", "saida", "erro", "desfecho", "ocorrencias"],
+            _ => ["entrada", "entradaUtf16", "saida", "erro", "desfecho"],
+        };
         Exigir(par, obrigatorias, opcionais, onde);
         Texto(par, "ramo", onde);
         UmDos(par, "entrada", "entradaUtf16", onde);
@@ -245,6 +295,27 @@ internal static class EsquemaDeVetores
             }
 
             Texto(par, "desfecho", onde);
+        }
+
+        // Na chave de DF-e, as ocorrências acompanham a saída: nomes conhecidos, na ordem canônica, sem repetição.
+        if (par.TryGetProperty("ocorrencias", out _) != (temSaida && transformador == "br.chave-dfe"))
+        {
+            throw Falha(onde, "ocorrências só com a saída da chave de DF-e, e sempre com ela");
+        }
+
+        if (temSaida && transformador == "br.chave-dfe")
+        {
+            var anterior = -1;
+            foreach (var ocorrencia in Lista(par, "ocorrencias", onde).EnumerateArray())
+            {
+                var posicao = ocorrencia.ValueKind == JsonValueKind.String ? Array.IndexOf(_ocorrencias, ocorrencia.GetString()) : -1;
+                if (posicao <= anterior)
+                {
+                    throw Falha(onde, "ocorrência desconhecida, repetida ou fora da ordem");
+                }
+
+                anterior = posicao;
+            }
         }
 
         ConferirOrigem(par.GetProperty("origem"), $"{onde}, origem");
