@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
+using CsCheck;
 
 namespace CodeProcess.Incognito.Testes;
 
@@ -37,14 +38,6 @@ public sealed class PermutacaoFeistelTestes
         { 10, 40, 100 },
         { 10, 100, 40 },
         { 36, 36, 1296 },
-    };
-
-    public static TheoryData<uint, ulong, ulong> DominiosGrandes => new()
-    {
-        { 10, 10_000, 100_000 },
-        { 10, 4_000, 10_000 },
-        { 36, 1_679_616, 1_679_616 },
-        { 10, 1_000_000_000, 1_000_000_000 },
     };
 
     [Theory]
@@ -184,26 +177,42 @@ public sealed class PermutacaoFeistelTestes
         Assert.Equal(permutacao.Permutar(1, [], metade), permutacao.Permutar(1, [], metade, adicional: null));
     }
 
-    [Theory]
-    [MemberData(nameof(DominiosGrandes))]
-    public void Inversa_desfaz_a_permutacao(uint radix, ulong a, ulong b)
+    [Fact]
+    public void Inversa_desfaz_a_permutacao()
     {
-        using var permutacao = new PermutacaoFeistel(ChaveAleatoria(), radix, a, b);
-        var sorteio = new Random(20261010);
-        var tamanho = a * b;
-        var bytesDeAjuste = new byte[16];
+        // P⁻¹(P(x)) = x sobre parâmetros sorteados pelo CsCheck: radix de 2 a 36, lados até 2³² − 1 com o maior até radix
+        // vezes o menor, 10, 12 ou 24 rodadas, ajuste de 0 a 300 bytes, sem exclusões, com os ímpares excluídos (metade do
+        // domínio, cycle-walking frequente) ou com alguns valores, e um valor adicional. A chave sai da semente sorteada
+        // (é ela que aparece na falha, com a semente do CsCheck para repetir).
+        var lados = Gen.Int[2, 36].SelectMany(radix => Gen.OneOf(Gen.ULong[2, 10_000], Gen.ULong[2, uint.MaxValue]).SelectMany(a =>
+            Gen.ULong[Math.Max(2, (a + (ulong)radix - 1) / (ulong)radix), Math.Min(uint.MaxValue, a * (ulong)radix)].Select(b => (radix, a, b))));
+        var casos = Gen.Select(lados, Gen.OneOfConst(10, 12, 24), Gen.Byte.Array[0, 300], Gen.Int[0, 2], Gen.ULong, Gen.ULong, Gen.Bool);
 
-        for (var amostra = 0; amostra < 2_000; amostra++)
+        casos.Sample((dominio, rodadas, ajuste, exclusao, sementeDaChave, sorteio, comAdicional) =>
         {
-            var x = (ulong)sorteio.NextInt64((long)Math.Min(tamanho, long.MaxValue));
-            var ajuste = bytesDeAjuste.AsSpan(0, sorteio.Next(17));
-            sorteio.NextBytes(ajuste);
+            var (radix, a, b) = dominio;
+            var tamanho = a * b;
+            var excluidos = exclusao switch
+            {
+                0 => ConjuntoExcluido.Vazio,
+                1 => ConjuntoExcluido.PorRegra(valor => valor % 2 == 1, tamanho / 2),
+                _ => ConjuntoExcluido.DeValores(1, tamanho / 3, tamanho - 1),
+            };
+            var x = sorteio % tamanho;
+            while (excluidos.Contem(x))
+            {
+                x = (x + 1) % tamanho;
+            }
 
-            var y = permutacao.Permutar(x, ajuste);
+            // O adicional só entra se os excluídos com ele não passarem de metade do domínio (com a metade excluída, ou em
+            // 2 × 2 e 2 × 3 com três valores, passariam).
+            ulong? adicional = comAdicional && excluidos.Quantidade + 1 <= tamanho / 2 && !excluidos.Contem(tamanho / 2) && tamanho / 2 != x ? tamanho / 2 : null;
+            using var permutacao = new PermutacaoFeistel(SHA256.HashData(BitConverter.GetBytes(sementeDaChave)), (uint)radix, a, b, rodadas);
 
-            Assert.True(y < tamanho, "A saída caiu fora do domínio.");
-            Assert.Equal(x, permutacao.Inverter(y, ajuste));
-        }
+            var y = permutacao.Permutar(x, ajuste, excluidos, adicional);
+
+            return y < tamanho && !excluidos.Contem(y) && y != adicional && permutacao.Inverter(y, ajuste, excluidos, adicional) == x;
+        }, iter: 2_000);
     }
 
     [Fact]

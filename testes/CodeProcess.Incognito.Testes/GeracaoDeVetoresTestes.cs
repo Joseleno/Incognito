@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CodeProcess.Incognito.Testes.Vetores;
 
 namespace CodeProcess.Incognito.Testes;
@@ -31,9 +32,7 @@ public sealed class GeracaoDeVetoresTestes
         {
             if (arquivo == VolumeDeVetores.Arquivo)
             {
-                // O vetor de volume nunca é regravado: só é criado.
-                using var novo = new FileStream(Path.Combine(pasta, arquivo), FileMode.CreateNew, FileAccess.Write);
-                novo.Write(VolumeDeVetores.Escrever(chave, textoDaChave));
+                GerarVolume(Path.Combine(pasta, arquivo), chave, textoDaChave);
                 continue;
             }
 
@@ -41,6 +40,40 @@ public sealed class GeracaoDeVetoresTestes
                 ?? throw new InvalidOperationException($"Sem receita para '{arquivo}'.");
             var acrescentados = GeradorDeVetores.Gerar(receita, pasta, chave, textoDaChave);
             TestContext.Current.TestOutputHelper?.WriteLine($"{arquivo}: {acrescentados} caso(s) acrescentado(s).");
+        }
+    }
+
+    // O vetor de volume só ganha casos: o cabeçalho e os casos que já estão no arquivo precisam sair iguais, comparados
+    // como JSON (como a guarda de crescimento do CI); o diff do arquivo mostra se algum byte deles mudou.
+    private static void GerarVolume(string caminho, ChaveIncognito chave, string textoDaChave)
+    {
+        var conteudo = VolumeDeVetores.Escrever(chave, textoDaChave);
+        if (File.Exists(caminho))
+        {
+            using var antigo = JsonDocument.Parse(File.ReadAllBytes(caminho), EsquemaDeVetores.Opcoes);
+            using var novo = JsonDocument.Parse(conteudo);
+            var casosAntigos = antigo.RootElement.GetProperty("casos").EnumerateArray().ToList();
+            var casosNovos = novo.RootElement.GetProperty("casos").EnumerateArray().ToList();
+            var iguais = antigo.RootElement.GetProperty("descricao").GetString() == novo.RootElement.GetProperty("descricao").GetString()
+                && antigo.RootElement.GetProperty("chave").GetString() == novo.RootElement.GetProperty("chave").GetString()
+                && casosAntigos.Count <= casosNovos.Count
+                && casosAntigos.Zip(casosNovos).All(par => JsonElement.DeepEquals(par.First, par.Second));
+            Assert.True(iguais, $"{VolumeDeVetores.Arquivo}: um caso existente mudaria.");
+        }
+
+        var temporario = caminho + ".novo";
+        try
+        {
+            using (var arquivo = new FileStream(temporario, FileMode.CreateNew, FileAccess.Write))
+            {
+                arquivo.Write(conteudo);
+            }
+
+            File.Move(temporario, caminho, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temporario);
         }
     }
 

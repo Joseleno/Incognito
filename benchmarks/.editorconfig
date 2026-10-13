@@ -1,0 +1,10 @@
+# Benchmarks. Herda o .editorconfig da raiz.
+
+[*.cs]
+# Classes e métodos de benchmark precisam ser públicos para o BenchmarkDotNet; não precisam de documentação XML.
+# GenerateDocumentationFile continua ligado porque o IDE0005 (usings desnecessários) só é verificado no build quando ele
+# está ativo.
+dotnet_diagnostic.CS1591.severity = none
+
+# Métodos de benchmark são de instância por exigência do BenchmarkDotNet, mesmo sem usar o estado.
+dotnet_diagnostic.CA1822.severity = none

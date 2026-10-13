@@ -18,9 +18,15 @@
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 
+  <!-- Benchmarks (solução própria em benchmarks/) -->
+  <ItemGroup>
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+
   <!-- Testes -->
   <ItemGroup>
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
+    <PackageVersion Include="CsCheck" Version="4.9.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
 
