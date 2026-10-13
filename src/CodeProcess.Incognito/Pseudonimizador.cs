@@ -32,7 +32,8 @@ namespace CodeProcess.Incognito;
 /// zeros acrescentados dos espaços). Valor fora da forma lança <see cref="IncognitoException"/> com o código
 /// <c>INC1003</c>, sem o valor na mensagem (não registre a entrada ao tratar a exceção). DV errado é mantido pelo
 /// deslocamento: o pseudônimo continua inválido. Texto vazio ou só com espaços, CPF de base repdígito, CNPJ de raiz zero,
-/// número de serviço do telefone e a chave de 44 zeros voltam como vieram. Nunca devolve nulo. Um erro interno (o
+/// número de serviço do telefone, telefone zerado (como <c>(11) 0000-0000</c>) e a chave de 44 zeros voltam como
+/// vieram. Nunca devolve nulo. Um erro interno (o
 /// limite defensivo da permutação, <c>INC1002</c>, ou um invariante quebrado) só acontece com chance desprezível.
 /// </para>
 /// <para>
@@ -179,7 +180,8 @@ public sealed class Pseudonimizador : IDisposable
     /// <summary>Pseudonimiza um telefone no domínio <c>telefone@1</c>, com o mesmo DDD e a mesma classe (celular ou fixo).</summary>
     /// <param name="telefone">O telefone, com ou sem <c>+55</c>, DDD e separadores.</param>
     /// <returns>
-    /// O pseudônimo com a mesma formatação; os números de serviço (0800, 0300, 0500, 0900, 3003 e 4004) voltam como vieram.
+    /// O pseudônimo com a mesma formatação; os números de serviço (0800, 0300, 0303, 0500, 0900, 3003 e 4004) e o
+    /// telefone zerado voltam como vieram.
     /// </returns>
     /// <exception cref="ArgumentNullException">Valor nulo.</exception>
     /// <exception cref="IncognitoException"><c>INC1003</c>: fora da forma de telefone.</exception>

@@ -20,12 +20,13 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// </para>
 /// <para>
 /// Faixas por UF dos Correios; a faixa antiga de RO (<c>78900-000</c> a <c>78999-999</c>) é aceita como entrada de RO,
-/// mas a saída sai só das faixas atuais. Um CEP fora de toda faixa (como <c>00000-000</c>) segue <c>entradaMalformada</c>.
+/// mas a saída sai só das faixas atuais. Um CEP fora de toda faixa (como <c>00999-999</c>) segue <c>entradaMalformada</c>.
 /// Formas: 8 dígitos, <c>00000-000</c> e <c>00.000-000</c>, com a máscara preservada; em texto só com dígitos, 7 dígitos
 /// (CEP que perdeu o zero à esquerda) completados e devolvidos com 8, com o zero acrescentado saindo do preenchimento
 /// de <c>char(n)</c>; em coluna numérica, de 0 a 99.999.999. Espaços à direita voltam como estavam; texto vazio ou só
-/// com espaços volta como veio. Nenhuma exceção traz o valor. Pode ser usado por várias threads ao mesmo tempo; o
-/// descarte é do dono, depois de todo uso.
+/// com espaços volta como veio. O CEP só com zeros (de 1 a 8, <c>00000-000</c> e <c>00.000-000</c>) e o número 0 são
+/// valor de preenchimento e voltam como vieram (<see cref="Desfecho.Zerado"/>), antes da política. Nenhuma exceção traz
+/// o valor. Pode ser usado por várias threads ao mesmo tempo; o descarte é do dono, depois de todo uso.
 /// </para>
 /// </remarks>
 internal sealed class PseudonimizadorCep : IDisposable
@@ -82,6 +83,12 @@ internal sealed class PseudonimizadorCep : IDisposable
             return Desfecho.Vazio;
         }
 
+        if (EhZerado(corpo))
+        {
+            saida = entrada;
+            return Desfecho.Zerado;
+        }
+
         Span<char> digitos = stackalloc char[8];
         Mascara mascara;
         if (corpo.Length == 9 && corpo[5] == '-')
@@ -132,6 +139,12 @@ internal sealed class PseudonimizadorCep : IDisposable
     {
         ArgumentNullException.ThrowIfNull(entidade);
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
+        if (entrada == 0)
+        {
+            saida = entrada;
+            return Desfecho.Zerado;
+        }
+
         if (entrada is < 0 or > MaiorCep || !Escolher((int)entrada, entidade, out var cep))
         {
             return Politicas.AplicarMalformado(_malformada, MensagemNumeroMalformado, entrada, out saida);
@@ -147,6 +160,19 @@ internal sealed class PseudonimizadorCep : IDisposable
         Interlocked.Exchange(ref _descartado, 1);
         _hmac.Dispose();
     }
+
+    // Valor de preenchimento: de 1 a 8 zeros, 00000-000 e 00.000-000.
+    private static bool EhZerado(ReadOnlySpan<char> corpo) => corpo.Length switch
+    {
+        >= 1 and <= 8 => Caracteres.SoZeros(corpo),
+        9 => corpo[5] == '-' && Caracteres.SoZeros(corpo[..5]) && Caracteres.SoZeros(corpo[6..]),
+        10 => corpo[2] == '.'
+            && corpo[6] == '-'
+            && Caracteres.SoZeros(corpo[..2])
+            && Caracteres.SoZeros(corpo[3..6])
+            && Caracteres.SoZeros(corpo[7..]),
+        _ => false,
+    };
 
     // Acha a UF do CEP e escolhe um CEP nas faixas de saída dela pela entidade; falso se o CEP não está em faixa nenhuma.
     private bool Escolher(int cepDeEntrada, string entidade, out int cep)

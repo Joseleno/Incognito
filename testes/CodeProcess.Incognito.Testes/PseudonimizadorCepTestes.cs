@@ -39,7 +39,10 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         "١٢٣٤٥٦٧٨",
     ];
 
-    public static TheoryData<int> ForaDasFaixas => [0, 1, 999_999];
+    // O 0 é valor de preenchimento (Zerado), não CEP fora das faixas.
+    public static TheoryData<int> ForaDasFaixas => [1, 999_999];
+
+    public static TheoryData<string> Zerados => ["00000000", "0000000", "000000", "00000", "0", "00000-000", "00.000-000"];
 
     public void Dispose() => _chave.Dispose();
 
@@ -165,6 +168,55 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         Assert.Equal("INC1003", Assert.Throws<IncognitoException>(() => falhar.Pseudonimizar((long)valor, entidade, out _)).Codigo);
         Assert.Equal(Desfecho.AnuladoMalformado, anular.Pseudonimizar(Oito(valor), entidade, out var anulado));
         Assert.Null(anulado);
+    }
+
+    [Theory]
+    [MemberData(nameof(Zerados))]
+    public void CEP_so_com_zeros_volta_como_veio_em_toda_politica(string zerado)
+    {
+        var entidade = Digitos(new Random(1726), 11);
+        foreach (var politica in Enum.GetValues<PoliticaEntradaMalformada>())
+        {
+            using var cep = Criar(politica);
+            foreach (var entrada in new[] { zerado, zerado + "  " })
+            {
+                Assert.Equal(Desfecho.Zerado, cep.Pseudonimizar(entrada, entidade, out var saida));
+                Assert.Equal(entrada, saida);
+            }
+
+            Assert.Equal(Desfecho.Zerado, cep.Pseudonimizar(0L, entidade, out var numero));
+            Assert.Equal(0L, numero);
+        }
+    }
+
+    [Theory]
+    [InlineData("000000000")]
+    [InlineData("00-000-000")]
+    [InlineData("00.000-001")]
+    [InlineData("0000-0000")]
+    [InlineData("00000 000")]
+    [InlineData("00.000.000")]
+    [InlineData(" 00000000")]
+    [InlineData("00000001")]
+    [InlineData("00000-001")]
+    [InlineData("00.001-000")]
+    public void Zeros_fora_das_formas_ou_com_outro_digito_nao_sao_zerado(string entrada)
+    {
+        using var cep = Criar();
+
+        Assert.Equal("INC1003", Assert.Throws<IncognitoException>(() => cep.Pseudonimizar(entrada, "entidade", out _)).Codigo);
+    }
+
+    [Theory]
+    [InlineData("01.000-000")]
+    [InlineData("10000-000")]
+    [InlineData("00.100-000")]
+    public void Mascara_com_um_digito_diferente_de_zero_nao_e_zerado(string entrada)
+    {
+        // Ou é um CEP de verdade, ou fica fora das faixas: nunca volta como preenchimento.
+        using var cep = Criar(PoliticaEntradaMalformada.Anular);
+
+        Assert.NotEqual(Desfecho.Zerado, cep.Pseudonimizar(entrada, "entidade", out _));
     }
 
     [Fact]
