@@ -1,0 +1,58 @@
+name: benchmark
+
+# Manual. Roda os benchmarks do núcleo no runner hospedado e guarda o relatório como artefato. Número informativo: a CPU
+# do runner muda entre execuções (o modelo sai no cabeçalho do relatório) e a biblioteca de criptografia é a do sistema
+# (OpenSSL no Linux, CNG no Windows); a referência do gatilho do ADR 0003 é a máquina declarada nele.
+
+on:
+  workflow_dispatch:
+    inputs:
+      filtro:
+        description: Um padrão de filtro do BenchmarkDotNet (por exemplo, *Permutacao*); para vários, rodar mais de uma vez
+        required: true
+        default: '*'
+
+permissions: {}
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  medir:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: |
+          lscpu
+          openssl version
+      - run: dotnet restore benchmarks/Incognito.Benchmarks.slnx --locked-mode
+      - run: dotnet build benchmarks/Incognito.Benchmarks.slnx -c Release --no-restore
+      # O filtro chega por variável de ambiente, nunca interpolado no script.
+      - run: dotnet run -c Release --project benchmarks/CodeProcess.Incognito.Benchmarks --no-build -- --filter "$FILTRO" --exporters github csv
+        env:
+          FILTRO: ${{ inputs.filtro }}
+      # Os dois formatos precisam ter saído (um exportador que falha só registra e segue).
+      - run: |
+          compgen -G 'BenchmarkDotNet.Artifacts/results/*-report-github.md' > /dev/null
+          compgen -G 'BenchmarkDotNet.Artifacts/results/*-report.csv' > /dev/null
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark
+          path: |
+            BenchmarkDotNet.Artifacts/results/*-report-github.md
+            BenchmarkDotNet.Artifacts/results/*-report.csv
+          if-no-files-found: error
+          retention-days: 30

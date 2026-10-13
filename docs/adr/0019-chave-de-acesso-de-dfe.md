@@ -2,7 +2,7 @@
 
 - Status: aceito
 - Data: 2026-10-12
-- Relacionados: ADR 0003 (permutação Feistel, a registrar), ADR 0014 (entrada inválida preservando a invalidade, a registrar)
+- Relacionados: [ADR 0003](0003-permutacao-feistel-com-hmac.md) (permutação Feistel), ADR 0014 (entrada inválida preservando a invalidade, a registrar)
 
 ## Contexto
 

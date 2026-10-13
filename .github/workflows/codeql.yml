@@ -48,6 +48,12 @@ jobs:
         with:
           languages: ${{ matrix.linguagem }}
           build-mode: none
+          # Dois benchmarks (fora dos pacotes) usam AES em modo ECB só para calcular a função de rodada sobre um bloco, e a
+          # consulta de ECB do CodeQL marca qualquer uso do modo. Só esses dois arquivos ficam de fora.
+          config: |
+            paths-ignore:
+              - benchmarks/CodeProcess.Incognito.Benchmarks/RodadaBenchmarks.cs
+              - benchmarks/CodeProcess.Incognito.Benchmarks/PrototipoAesBenchmarks.cs
       - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           category: /language:${{ matrix.linguagem }}

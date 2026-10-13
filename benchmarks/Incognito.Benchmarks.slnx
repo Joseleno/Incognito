@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="CodeProcess.Incognito.Benchmarks/CodeProcess.Incognito.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="../src/CodeProcess.Incognito/CodeProcess.Incognito.csproj" />
+  </Folder>
+</Solution>

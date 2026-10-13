@@ -5,7 +5,7 @@ using CodeProcess.Incognito.Testes.Vetores;
 namespace CodeProcess.Incognito.Testes;
 
 /// <summary>
-/// Vetor de volume: o resumo das saídas de milhares de CPFs e CNPJs não muda. Pega um erro que atinge só uma fração
+/// Vetor de volume: o resumo das saídas de milhares de valores por caso não muda. Pega um erro que atinge só uma fração
 /// pequena dos valores, que os pares dirigidos dos outros vetores deixariam passar. A referência em Python refaz as mesmas
 /// entradas e o mesmo resumo de forma independente.
 /// </summary>
@@ -35,10 +35,7 @@ public sealed class VolumeDosVetoresTestes
         var esperado = VolumeDeVetores.Casos.Single(c => c.Nome == nome);
         using var documento = Ler();
         var caso = documento.RootElement.GetProperty("casos").EnumerateArray().Single(c => c.GetProperty("nome").GetString() == nome);
-        string[] propriedades = esperado.PermutarOrdem is null
-            ? ["nome", "transformador", "versao", "dominio", "ambiente", "quantidade", "resumo"]
-            : ["nome", "transformador", "versao", "dominio", "ambiente", "permutarOrdem", "quantidade", "resumo"];
-        Assert.Equal(propriedades, caso.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(VolumeDeVetores.Propriedades(esperado), caso.EnumerateObject().Select(p => p.Name));
         Assert.Equal(esperado.Transformador, caso.GetProperty("transformador").GetString());
         Assert.Equal(1, caso.GetProperty("versao").GetInt32());
         Assert.Equal(esperado.Dominio, caso.GetProperty("dominio").GetString());
@@ -48,9 +45,19 @@ public sealed class VolumeDosVetoresTestes
             Assert.Equal(ordem, caso.GetProperty("permutarOrdem").GetBoolean());
         }
 
+        if (esperado.N is { } n)
+        {
+            Assert.Equal(n, caso.GetProperty("n").GetInt64());
+        }
+
+        if (esperado.Entradas is { } entradas)
+        {
+            Assert.Equal("preservar", caso.GetProperty("entradaMalformada").GetString());
+            Assert.Equal(entradas, caso.GetProperty("entradas").GetString());
+        }
+
         using var chave = ChaveIncognito.Ler(documento.RootElement.GetProperty("chave").GetString());
-        var resumo = VolumeDeVetores.Resumo(
-            chave, nome, esperado.Transformador, esperado.Dominio, caso.GetProperty("ambiente").GetString()!, esperado.PermutarOrdem, esperado.Quantidade);
+        var resumo = VolumeDeVetores.Resumo(chave, esperado, caso.GetProperty("ambiente").GetString()!);
 
         Assert.True(resumo == caso.GetProperty("resumo").GetString(), $"{VolumeDeVetores.Arquivo}, caso '{nome}': o resumo das saídas mudou.");
     }

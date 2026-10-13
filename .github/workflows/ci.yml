@@ -18,7 +18,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  # Exigido pelo Ruleset. Build com avisos como erro, formatação, todos os testes sem banco e cobertura.
+  # Exigido pelo Ruleset. Build com avisos como erro, formatação, os testes sem banco (menos os Lento) e cobertura.
   rapido:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -61,7 +61,13 @@ jobs:
       - run: dotnet restore --locked-mode
       - run: dotnet build -c Release --no-restore
       - run: dotnet format --verify-no-changes --no-restore
-      - run: dotnet test -c Release --no-build --filter-not-trait "Categoria=Integracao" --coverlet --coverlet-output-format cobertura
+      # A solução dos benchmarks usa os internos do núcleo: compilar e formatar aqui (segundos) impede que uma mudança no
+      # núcleo a quebre sem segurar o merge. O job Dry continua no job benchmarks, informativo.
+      - run: dotnet restore benchmarks/Incognito.Benchmarks.slnx --locked-mode
+      - run: dotnet build benchmarks/Incognito.Benchmarks.slnx -c Release --no-restore
+      - run: dotnet format benchmarks/Incognito.Benchmarks.slnx --verify-no-changes --no-restore
+      # Sem os testes de banco (Docker) e sem os da categoria Lento, que rodam no job lentos (push) e no release.
+      - run: dotnet test -c Release --no-build --filter-not-trait "Categoria=Integracao" --filter-not-trait "Categoria=Lento" --coverlet --coverlet-output-format cobertura
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -88,4 +94,48 @@ jobs:
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - run: dotnet restore testes/CodeProcess.Incognito.Testes --locked-mode
-      - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-restore
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-restore --filter-not-trait "Categoria=Lento"
+
+  # Informativo. Os testes da categoria Lento (estatísticos em domínios maiores), fora do PR para ele seguir rápido: em
+  # todo push na develop e na main, para uma regressão aparecer antes do release.
+  lentos:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: testes/CodeProcess.Incognito.Testes/packages.lock.json
+      - run: dotnet restore testes/CodeProcess.Incognito.Testes --locked-mode
+      # O projeto de testes ignora o código de saída de zero testes: aqui, zero testes Lento é erro.
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-restore --filter-trait "Categoria=Lento" --minimum-expected-tests 1
+
+  # Informativo. Os benchmarks ficam numa solução própria (benchmarks/Incognito.Benchmarks.slnx), fora do build do
+  # release: aqui só restaura travado, compila, confere a formatação e roda o job Dry do BenchmarkDotNet (uma iteração
+  # de cada benchmark, segundos), para o projeto não apodrecer; o programa sai com erro se algum benchmark falhar. O
+  # BenchmarkDotNet gera e compila um projeto próprio, cuja restauração não passa pelo --locked-mode (as versões são as
+  # do Directory.Packages.props, já na pasta de pacotes). Os números saem do workflow benchmark.yml, manual.
+  benchmarks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          # Chave de cache própria: com a do rapido, o job mais curto salvaria um cache sem os pacotes dos testes.
+          cache-dependency-path: |
+            benchmarks/**/packages.lock.json
+            src/CodeProcess.Incognito/packages.lock.json
+      - run: dotnet restore benchmarks/Incognito.Benchmarks.slnx --locked-mode
+      - run: dotnet build benchmarks/Incognito.Benchmarks.slnx -c Release --no-restore
+      - run: dotnet format benchmarks/Incognito.Benchmarks.slnx --verify-no-changes --no-restore
+      - run: dotnet run -c Release --project benchmarks/CodeProcess.Incognito.Benchmarks --no-build -- --filter "*" --job Dry

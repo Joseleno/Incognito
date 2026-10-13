@@ -21,7 +21,10 @@ Requisitos: o SDK do .NET 10 na versão exata fixada no `global.json` e, para os
 dotnet build -c Release
 dotnet test
 dotnet test --filter-not-trait "Categoria=Integracao"    # sem Docker
+dotnet test --filter-not-trait "Categoria=Integracao" --filter-not-trait "Categoria=Lento"    # o que roda em todo PR
 dotnet format --verify-no-changes
+dotnet build benchmarks/Incognito.Benchmarks.slnx -c Release    # a solução dos benchmarks, à parte
+dotnet format benchmarks/Incognito.Benchmarks.slnx --verify-no-changes
 ```
 
 Cada projeto tem um `packages.lock.json` versionado, e o CI restaura com `dotnet restore --locked-mode`: um lock desatualizado quebra o build. Ao adicionar, remover ou atualizar um pacote (sempre no `Directory.Packages.props`), rode `dotnet restore --force-evaluate` e inclua os `packages.lock.json` alterados no commit. Projetos não usam `VersionOverride`, `PackageDownload`, referência a DLL por caminho nem tarefas próprias do MSBuild; o CI recusa.
@@ -38,6 +41,20 @@ python3 -I testes/referencia/conferir_vetores.py --autoteste --base develop
 ```
 
 Uma versão nova de um transformador (`br.cpf@2`) precisa da implementação nos dois lados: o executor em `ExecutorDeCaso` e o esquema em `EsquemaDeVetores`, no C#, e a classe com os parâmetros em `PARAMETROS` e `ARQUIVOS`, no Python. Sem isso, o arquivo da versão nova é recusado em vez de conferido com o algoritmo da anterior.
+
+### Testes lentos e estatísticos
+
+Testes marcados com `[Trait("Categoria", "Lento")]` ficam fora do CI de pull request e rodam em todo push na `develop` e na `main` (job `lentos`, que exige ao menos um) e no release. Ficam só no projeto `CodeProcess.Incognito.Testes`, o único que o job `lentos` roda. Os testes estatísticos (`EstatisticaTestes`) usam semente fixa e são de fumaça contra defeitos grosseiros de desenho; cada família de conferência roda também contra controles ruins que precisam reprovar cada conferência nomeada. Nunca troque a semente para um teste passar. A propriedade da inversa do Feistel usa o CsCheck com semente aleatória: numa falha, a mensagem traz a semente (`CsCheck_Seed`) para repetir.
+
+### Benchmarks
+
+Os benchmarks do núcleo ficam em `benchmarks/`, numa solução própria (`benchmarks/Incognito.Benchmarks.slnx`), fora do build dos pacotes. Rodam só em Release:
+
+```
+dotnet run -c Release --project benchmarks/CodeProcess.Incognito.Benchmarks -- --filter "*Permutacao*"
+```
+
+O CI só compila, confere a formatação e roda uma iteração de cada (`--job Dry`); o programa sai com erro se algum benchmark falhar ou se o filtro não achar nenhum. Os números de referência ficam em `benchmarks/resultados/`, com a máquina declarada: só o relatório `*-report-github.md` e o CSV, nunca o `.log`, que traz caminhos da máquina. O workflow `benchmark`, manual, mede no runner do GitHub, como número informativo.
 
 ## Branches
 

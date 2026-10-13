@@ -1485,15 +1485,115 @@ def conferir_feistel(caminho, documento):
     return conferidos
 
 
+UFS_DO_VOLUME = [11, 12, 13, 14, 15, 16, 17, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 41, 42, 43, 50, 51, 52, 53]
+MODELOS_DO_VOLUME = [55, 65, 57, 58, 67, 64, 63, 66, 62]
+DOMINIOS_DE_EMAIL_DO_VOLUME = ["example.org", "example.com", "example.net"]
+NAO_GEOGRAFICOS_DO_VOLUME = ["800", "300", "303", "500", "900"]
+DDDS_INEXISTENTES_DO_VOLUME = ["23", "25", "26", "29", "36", "39", "52", "56", "57", "58", "59", "72", "76", "78"]
+ACENTOS_DO_VOLUME = "\u00c0\u00c7\u00c9\u00d5\u00de\u00d7\u00df\u00ff"
+
+
+def volume_telefone(h):
+    ddd = f"{1 + h[0] % 9}{1 + h[1] % 9}"
+    r = int.from_bytes(h[3:11], "big")
+    classe = h[2] % 5
+    if classe == 4:
+        telefone = "0" + NAO_GEOGRAFICOS_DO_VOLUME[h[11] % 5] + f"{r % 10**7:07d}"
+    else:
+        if classe == 0:
+            numero = "9" + f"{r % 10**8:08d}"
+        elif classe == 1:
+            numero = str(2 + h[11] % 4) + f"{r % 10**7:07d}"
+        elif classe == 2:
+            numero = str(6 + h[11] % 4) + f"{r % 10**7:07d}"
+        else:
+            numero = ("3003", "4004")[h[11] % 2] + f"{r % 10**4:04d}"
+            ddd = DDDS_INEXISTENTES_DO_VOLUME[h[0] % 14]
+        forma = h[12] % 6
+        if classe == 3 and forma == 4:
+            forma = 0
+        mascarado = f"({ddd}) {numero[:-4]}-{numero[-4:]}"
+        telefone = (ddd + numero, mascarado, "+55" + ddd + numero, "0" + ddd + numero, numero, "+55 " + mascarado)[forma]
+    return telefone + "#" if h[13] % 32 == 0 else telefone
+
+
+def volume_cep(h):
+    valor = int.from_bytes(h[:8], "big") % 10**8
+    cep = f"{valor:08d}"
+    forma = h[8] % 4
+    texto = (cep, f"{cep[:5]}-{cep[5:]}", f"{cep[:2]}.{cep[2:5]}-{cep[5:]}", str(valor))[forma]
+    return texto + "  " if h[13] % 16 == 0 else texto
+
+
+def volume_email(h):
+    local = h[:6].hex()
+    variante = h[6] % 4
+    if variante in (1, 3):
+        local = local.upper()
+    if variante in (2, 3):
+        local = ACENTOS_DO_VOLUME[h[9] % 8] + local
+    dominio = DOMINIOS_DE_EMAIL_DO_VOLUME[h[7] % 3]
+    if h[8] % 2 == 1:
+        dominio = dominio.upper()
+    if h[10] % 16 == 0:
+        return local + "@" + dominio + "  "
+    if h[10] % 16 == 1:
+        return local + dominio
+    return local + "@" + dominio
+
+
+def volume_identificador(h, n):
+    return int.from_bytes(h[:8], "big") % (n + n // 5) - n // 10
+
+
+def raiz_baixa_com_dv_certo(emitente):
+    """Emitente que, lido como CNPJ, tem raiz numérica começando com 00, ordem diferente de 0000 e DV certo."""
+    return (len(emitente) == 14 and emitente[:8].isdigit() and emitente[:8].isascii() and emitente.startswith("00")
+            and emitente[8:12] != "0000" and all(c in BASE36 for c in emitente[8:12])
+            and emitente[12:].isdigit() and emitente[12:].isascii() and dv_cnpj(emitente[:12]) == int(emitente[12:]))
+
+
+def volume_chave_dfe(h):
+    tipo = h[4] % 3
+    if tipo == 0:
+        base = "".join(DIGITOS[h[5 + k] % 10] for k in range(12))
+        emitente = f"{base}{dv_cnpj(base):02d}"
+    elif tipo == 1:
+        base = "".join(DIGITOS[h[5 + k] % 10] for k in range(9))
+        emitente = f"000{base}{dv_cpf(base):02d}"
+    else:
+        base = "".join(BASE36[h[5 + k] % 36] for k in range(12))
+        emitente = f"{base}{dv_cnpj(base):02d}"
+    if raiz_baixa_com_dv_certo(emitente):
+        emitente = emitente[:13] + str((int(emitente[13]) + 1) % 10)
+    modelo = MODELOS_DO_VOLUME[h[3] % 9]
+    chave = (f"{UFS_DO_VOLUME[h[0] % 27]:02d}{18 + h[1] % 9:02d}{1 + h[2] % 12:02d}{emitente}{modelo:02d}"
+             f"{int.from_bytes(h[17:19], 'big') % 1000:03d}{int.from_bytes(h[19:23], 'big') % 10**9:09d}"
+             f"{'3' if h[23] % 4 == 0 else '1'}{int.from_bytes(h[24:28], 'big') % 10**8:08d}")
+    cdv = dv_chave_dfe(chave)
+    chave += str((cdv + 1 + h[30] % 9) % 10 if h[29] % 8 == 0 else cdv)
+    prefixo = MODELOS_DFE[modelo][3]
+    forma = h[28] % 4
+    if forma == 0:
+        return chave
+    if forma == 1:
+        return prefixo + chave
+    if forma == 2:
+        return prefixo.lower() + chave
+    return " ".join(chave[4 * g:4 * g + 4] for g in range(11))
+
+
 def conferir_volume(caminho, documento):
-    """Resumo SHA-256 das saídas de CPFs e CNPJs cujas entradas saem de um contador (regra na descrição do arquivo)."""
+    """Resumo SHA-256 das saídas de valores cujas entradas saem de um contador. A regra de CPF e CNPJ está na descrição do
+    arquivo; a dos outros transformadores, no campo entradas de cada caso."""
     arquivo = os.path.basename(caminho)
     exigir(documento, ["descricao", "chave", "casos"], [], arquivo)
     texto_de(documento["descricao"], arquivo)
     chave = ler_chave(documento["chave"], arquivo)
     conferidos, nomes = 0, set()
     for caso in lista(documento["casos"], arquivo):
-        exigir(caso, ["nome", "transformador", "versao", "dominio", "ambiente", "quantidade", "resumo"], ["permutarOrdem"], arquivo)
+        exigir(caso, ["nome", "transformador", "versao", "dominio", "ambiente", "quantidade", "resumo"],
+               ["permutarOrdem", "n", "entradaMalformada", "entradas"], arquivo)
         nome = texto_de(caso["nome"], arquivo)
         if nome in nomes:
             raise Falha(arquivo, "caso com nome repetido")
@@ -1502,10 +1602,30 @@ def conferir_volume(caminho, documento):
         identidade = f"{texto_de(caso['transformador'], onde)}@{inteiro(caso['versao'], onde)}"
         dominio, ambiente = texto_de(caso["dominio"], onde), texto_de(caso["ambiente"], onde)
         quantidade = inteiro(caso["quantidade"], onde)
-        if identidade == "br.cpf@1" and "permutarOrdem" not in caso:
+        opcoes = set(caso) & {"permutarOrdem", "n", "entradaMalformada", "entradas"}
+        if identidade in ("br.cpf@1", "br.cnpj@1"):
+            if opcoes != ({"permutarOrdem"} if identidade == "br.cnpj@1" else set()):
+                raise Falha(onde, "opções fora das do transformador")
+        else:
+            esperadas = {"entradaMalformada", "entradas"} | ({"n"} if identidade == "id.permutar@1" else set())
+            if opcoes != esperadas or caso["entradaMalformada"] != "preservar":
+                raise Falha(onde, "opções fora das do transformador")
+            texto_de(caso["entradas"], onde)
+        if identidade == "br.cpf@1":
             instancia = Cpf(chave, dominio, 1, ambiente, "preservar", "falhar")
-        elif identidade == "br.cnpj@1" and "permutarOrdem" in caso:
+        elif identidade == "br.cnpj@1":
             instancia = Cnpj(chave, dominio, 1, ambiente, logico(caso["permutarOrdem"], onde), "preservar", "falhar")
+        elif identidade == "br.telefone@1":
+            instancia = Telefone(chave, dominio, 1, ambiente, "preservar")
+        elif identidade == "id.permutar@1":
+            instancia = Identificador(chave, dominio, 1, ambiente, inteiro(caso["n"], onde), "preservar")
+        elif identidade == "br.cep@1":
+            instancia = Cep(chave, dominio, 1, ambiente, "preservar")
+        elif identidade == "email@1":
+            instancia = Email(chave, dominio, 1, ambiente, "preservar")
+        elif identidade == "br.chave-dfe@1" and dominio == "dfe-numero":
+            componentes = {"cpf": {"dominio": "cpf", "versao": 1}, "cnpj": {"dominio": "cnpj", "versao": 1, "permutarOrdem": False}}
+            instancia = ChaveDfe(chave, dominio, 1, ambiente, list(MODELOS_DO_VOLUME), "preservar", "preservar", componentes)
         else:
             raise Falha(onde, "transformador fora do volume")
         if quantidade < 1:
@@ -1513,17 +1633,36 @@ def conferir_volume(caminho, documento):
         resumo = hashlib.sha256()
         for i in range(quantidade):
             h = hashlib.sha256(nome.encode("utf-8") + b"\x00" + i.to_bytes(4, "big")).digest()
-            if isinstance(instancia, Cpf):
-                base = f"{int.from_bytes(h[:8], 'big') % 10**9:09d}"
-                dv = dv_cpf(base)
+            if isinstance(instancia, (Cpf, Cnpj)):
+                if isinstance(instancia, Cpf):
+                    base = f"{int.from_bytes(h[:8], 'big') % 10**9:09d}"
+                    dv = dv_cpf(base)
+                else:
+                    alfabeto = BASE36 if h[10] % 2 == 1 else DIGITOS
+                    base = "".join(alfabeto[h[11 + k] % len(alfabeto)] for k in range(12))
+                    dv = dv_cnpj(base)
+                if h[8] % 4 == 0:
+                    dv = (dv + 1 + h[9] % 99) % 100
+                saida, desfecho = instancia.texto(f"{base}{dv:02d}")
+                linha = f"{'' if saida is None else saida} {desfecho}\n"
+            elif isinstance(instancia, Telefone):
+                saida, desfecho = instancia.texto(u16(volume_telefone(h)))
+                linha = f"{'' if saida is None else saida} {desfecho}\n"
+            elif isinstance(instancia, Identificador):
+                saida, desfecho = instancia.numero(volume_identificador(h, instancia.n))
+                linha = f"{'' if saida is None else saida} {desfecho}\n"
+            elif isinstance(instancia, Cep):
+                saida, desfecho = instancia.texto(u16(volume_cep(h)), u16("pessoa-" + h[9:13].hex()))
+                linha = f"{'' if saida is None else saida} {desfecho}\n"
+            elif isinstance(instancia, Email):
+                saida, desfecho = instancia.texto(u16(volume_email(h)))
+                linha = f"{'' if saida is None else saida} {desfecho}\n"
             else:
-                alfabeto = BASE36 if h[10] % 2 == 1 else DIGITOS
-                base = "".join(alfabeto[h[11 + k] % len(alfabeto)] for k in range(12))
-                dv = dv_cnpj(base)
-            if h[8] % 4 == 0:
-                dv = (dv + 1 + h[9] % 99) % 100
-            saida, desfecho = instancia.texto(f"{base}{dv:02d}")
-            resumo.update(f"{'' if saida is None else saida} {desfecho}\n".encode("utf-8"))
+                saida, desfecho, ocorrencias = instancia.texto(u16(volume_chave_dfe(h)))
+                if not set(ocorrencias) <= set(OCORRENCIAS):
+                    raise Falha(onde, "ocorrência desconhecida")
+                linha = f"{'' if saida is None else saida} {desfecho} {'|'.join(o for o in OCORRENCIAS if o in ocorrencias)}\n"
+            resumo.update(linha.encode("utf-8"))
         if resumo.hexdigest() != texto_de(caso["resumo"], onde):
             raise Falha(onde, "o resumo diverge do vetor")
         conferidos += quantidade
@@ -1777,10 +1916,30 @@ def autoteste():
                     alterar(documento)
                     deve_acusar(f"{arquivo}, {rotulo}", lambda: conferir_transformador(caminho, documento), motivo)
         elif conferidor is conferir_volume:
-            documento = ler_arquivo(caminho)
-            caso = documento["casos"][0]
-            caso["resumo"] = caso["resumo"][:-1] + ("0" if caso["resumo"][-1] != "0" else "1")
-            deve_acusar(f"{arquivo}, resumo", lambda: conferir_volume(caminho, documento), "diverge")
+            for indice in range(len(ler_arquivo(caminho)["casos"])):
+                documento = ler_arquivo(caminho)
+                caso = documento["casos"][indice]
+                caso["resumo"] = caso["resumo"][:-1] + ("0" if caso["resumo"][-1] != "0" else "1")
+                deve_acusar(f"{arquivo}, resumo do caso {indice}", lambda: conferir_volume(caminho, documento), "diverge")
+                if "entradaMalformada" in caso:
+                    documento = ler_arquivo(caminho)
+                    documento["casos"][indice]["entradaMalformada"] = "anular"
+                    deve_acusar(f"{arquivo}, política do caso {indice}", lambda: conferir_volume(caminho, documento), "opções fora")
+            # As recusas das opções e do transformador, cada uma num documento só com o caso alterado.
+            recusas = [
+                ("br.cpf", lambda c: c.update(permutarOrdem=True), "opções fora"),
+                ("br.cpf", lambda c: c.update(entradas="x"), "opções fora"),
+                ("br.telefone", lambda c: c.update(permutarOrdem=False), "opções fora"),
+                ("id.permutar", lambda c: c.pop("n"), "opções fora"),
+                ("br.cep", lambda c: c.update(transformador="br.chave-pix"), "transformador fora do volume"),
+                ("email", lambda c: c.update(quantidade=0), "quantidade menor que 1"),
+            ]
+            for transformador, alterar, motivo in recusas:
+                documento = ler_arquivo(caminho)
+                caso = next(c for c in documento["casos"] if c["transformador"] == transformador)
+                documento["casos"] = [caso]
+                alterar(caso)
+                deve_acusar(f"{arquivo}, recusa em {transformador}", lambda: conferir_volume(caminho, documento), motivo)
         elif conferidor is conferir_feistel:
             documento = ler_arquivo(caminho)
             documento["casos"][0]["pares"][0]["saida"] += 1

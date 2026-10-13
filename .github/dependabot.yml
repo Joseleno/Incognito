@@ -1,6 +1,7 @@
 # Atualizações semanais dos pacotes NuGet e das actions: as de versão menor e de correção chegam juntas
-# num único pull request por ecossistema; as de versão maior chegam uma a uma. Uma versão nova só é
-# proposta depois de 7 dias publicada. Atualizações de segurança não esperam.
+# num único pull request por ecossistema; as de versão maior chegam uma a uma (o BenchmarkDotNet, em
+# qualquer tipo de atualização, num pull request próprio). Uma versão nova só é proposta depois de 7 dias
+# publicada. Atualizações de segurança não esperam.
 #
 # O SDK do .NET fica de fora: subir o global.json exige regenerar os lock files
 # (dotnet restore --force-evaluate), porque o lock do núcleo guarda o Microsoft.NET.ILLink.Tasks na
@@ -8,8 +9,10 @@
 version: 2
 
 updates:
+  # A raiz e a solução dos benchmarks (benchmarks/Incognito.Benchmarks.slnx, fora da solução principal): sem a segunda,
+  # o BenchmarkDotNet não seria achado nem o lock file dos benchmarks regenerado.
   - package-ecosystem: nuget
-    directory: /
+    directories: ['/', '/benchmarks']
     schedule:
       interval: weekly
       day: monday
@@ -18,9 +21,18 @@ updates:
     cooldown:
       default-days: 7
     groups:
+      # O BenchmarkDotNet ainda está na série 0.x, em que uma versão menor pode quebrar: chega num pull request próprio.
+      benchmarks:
+        patterns: ['BenchmarkDotNet*']
       nuget:
         patterns: ['*']
         update-types: [minor, patch]
+      # As de versão maior, uma por dependência e num só pull request para os dois diretórios (sem isto, o mesmo pacote
+      # viria em dois, um por diretório, editando o mesmo Directory.Packages.props).
+      nuget-maior:
+        patterns: ['*']
+        update-types: [major]
+        group-by: dependency-name
     # Sem os rótulos padrão em inglês; os do repositório são só em português.
     labels: []
 

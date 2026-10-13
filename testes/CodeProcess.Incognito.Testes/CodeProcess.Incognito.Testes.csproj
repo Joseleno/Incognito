@@ -4,6 +4,11 @@
     <ProjectReference Include="..\..\src\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
   </ItemGroup>
 
+  <!-- Testes de propriedade com geração e redução automáticas; só neste projeto. -->
+  <ItemGroup>
+    <PackageReference Include="CsCheck" />
+  </ItemGroup>
+
   <!-- Âncoras independentes e vetores fixos, lidos da pasta de saída. -->
   <ItemGroup>
     <None Include="..\ancoras\**\*.json" LinkBase="ancoras" CopyToOutputDirectory="PreserveNewest" />

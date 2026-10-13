@@ -15,7 +15,7 @@ request que toma a decisão. Preferência de estilo sem efeito para quem usa ou 
 | --- | --- | --- |
 | [0001](0001-projeto-em-portugues.md) | Projeto inteiramente em português | aceito |
 | 0002 | Cópia com transformação, em vez de alterar o próprio banco ou copiar para arquivo | a registrar |
-| 0003 | Permutação Feistel modular com HMAC e HKDF | a registrar |
+| [0003](0003-permutacao-feistel-com-hmac.md) | Permutação Feistel modular com HMAC e HKDF | aceito |
 | 0004 | Modos `efemero` e `reproduzivel` | a registrar |
 | 0005 | Remover e recriar chaves estrangeiras com diário, em vez de desligá-las | a registrar |
 | 0006 | Leitura em snapshot compartilhado | a registrar |
