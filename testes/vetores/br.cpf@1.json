@@ -1,0 +1,1848 @@
+{
+  "descricao": "br.cpf, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige br.cpf@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes.",
+  "transformador": "br.cpf",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "texto e número, DV preservado, malformado falha",
+      "dominio": "cpf",
+      "ambiente": "homologacao",
+      "entradaInvalida": "preservar",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "75536103806",
+          "saida": "50957195257",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17176262624",
+          "saida": "87812667073",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 2,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "66254327929",
+          "saida": "85238564201",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29492647001",
+          "saida": "38829690830",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26685758341",
+          "saida": "27253782810",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "79811008957",
+          "saida": "54976891160",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "72899801406",
+          "saida": "13341996982",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 7,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "86593246921",
+          "saida": "21527485307",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 8,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "02179765142",
+          "saida": "96859313307",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 9,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "94104281735",
+          "saida": "23968291654",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 10,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "20240359658",
+          "saida": "07972786216",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "38892278568",
+          "saida": "95295010643",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27916415569",
+          "saida": "25880070310",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "76992727575",
+          "saida": "71104833638",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "64315298557",
+          "saida": "63270729090",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "90908794045",
+          "saida": "76332230142",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "66996988500",
+          "saida": "83154749101",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 17,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "67394597970",
+          "saida": "49366764894",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 18,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "74137637377",
+          "saida": "96574635306",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 19,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "71532095066",
+          "saida": "96347503115",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 20,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "08637094945",
+          "saida": "80016273656",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 21,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "91010315544",
+          "saida": "81236435435",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 22,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43220886868",
+          "saida": "41735990485",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 23,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "88699100086",
+          "saida": "21914463706",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 24,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "83213631566",
+          "saida": "33557230619",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 25,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24210591351",
+          "saida": "53766813862",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 26,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27478225594",
+          "saida": "27968337046",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 27,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25136246880",
+          "saida": "28659028465",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 28,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "71866534998",
+          "saida": "74561014349",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 29,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "01288138229",
+          "saida": "90328575410",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 30,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "754.485.655-06",
+          "saida": "086.749.302-04",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 31,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "633.100.476-95",
+          "saida": "949.286.677-35",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 32,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "361.916.850-41",
+          "saida": "264.998.311-66",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 33,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "744.864.194-80",
+          "saida": "901.097.301-86",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 34,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "356.610.622-49",
+          "saida": "031.872.000-01",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 35,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "695.034.769-33",
+          "saida": "988.782.197-70",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 36,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15787281854",
+          "saida": "81594533459",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 37,
+            "formas": [
+              "dv:1"
+            ]
+          }
+        },
+        {
+          "entrada": "01172026005",
+          "saida": "14143437141",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 38,
+            "formas": [
+              "dv:37"
+            ]
+          }
+        },
+        {
+          "entrada": "04361317495",
+          "saida": "35628138648",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 39,
+            "formas": [
+              "dv:99"
+            ]
+          }
+        },
+        {
+          "entrada": "000.248.125-60",
+          "saida": "258.476.749-52",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "mascara-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 40,
+            "formas": [
+              "dv:50"
+            ]
+          }
+        },
+        {
+          "entrada": "3699778746",
+          "saida": "52557899925",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 42,
+            "formas": [
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "8262414500",
+          "saida": "68952640942",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 64,
+            "formas": [
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "3893915818",
+          "saida": "23298643025",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 79,
+            "formas": [
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "352301007",
+          "saida": "33942717026",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-2",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 100,
+            "formas": [
+              "sem-zeros:2"
+            ]
+          }
+        },
+        {
+          "entrada": "578477890",
+          "saida": "37375242461",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-2",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 165,
+            "formas": [
+              "sem-zeros:2"
+            ]
+          }
+        },
+        {
+          "entrada": "256920389",
+          "saida": "79262093500",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-2",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 304,
+            "formas": [
+              "sem-zeros:2"
+            ]
+          }
+        },
+        {
+          "entrada": "8663985044",
+          "saida": "26047391199",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "sem-zeros-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 319,
+            "formas": [
+              "dv:7",
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "27309329503   ",
+          "saida": "63423521279   ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 320,
+            "formas": [
+              "espacos:3"
+            ]
+          }
+        },
+        {
+          "entrada": "49836124918   ",
+          "saida": "93994371163   ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 321,
+            "formas": [
+              "espacos:3"
+            ]
+          }
+        },
+        {
+          "entrada": "794.152.044-35  ",
+          "saida": "094.085.051-66  ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 322,
+            "formas": [
+              "espacos:2"
+            ]
+          }
+        },
+        {
+          "entrada": "758210876 ",
+          "saida": "23334411273",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-preenchimento-menor",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 330,
+            "formas": [
+              "sem-zeros:2",
+              "espacos:1"
+            ]
+          }
+        },
+        {
+          "entrada": "778217850  ",
+          "saida": "56138211430",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-preenchimento-igual",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 333,
+            "formas": [
+              "sem-zeros:2",
+              "espacos:2"
+            ]
+          }
+        },
+        {
+          "entrada": "9162628801    ",
+          "saida": "37985245138   ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-preenchimento-maior",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 344,
+            "formas": [
+              "sem-zeros:1",
+              "espacos:4"
+            ]
+          }
+        },
+        {
+          "entrada": "66666666666",
+          "saida": "66666666666",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 345,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33333333333",
+          "saida": "33333333333",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 346,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "99999999999",
+          "saida": "99999999999",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 347,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33333333333",
+          "saida": "33333333333",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 348,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "444.444.444-44",
+          "saida": "444.444.444-44",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito-mascara",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 349,
+            "formas": [
+              "mascara-cpf"
+            ]
+          }
+        },
+        {
+          "entrada": "22222222233",
+          "saida": "22222222233",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito-dv-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 350,
+            "formas": [
+              "dv:11"
+            ]
+          }
+        },
+        {
+          "entrada": "88888888899",
+          "saida": "88888888899",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito-dv-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 351,
+            "formas": [
+              "dv:11"
+            ]
+          }
+        },
+        {
+          "entrada": "000000000",
+          "saida": "00000000000",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito-sem-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 377,
+            "formas": [
+              "sem-zeros:2"
+            ]
+          }
+        },
+        {
+          "entrada": "77442506216",
+          "saida": "21114386189",
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "cpf-caminhada",
+            "semente": 378,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "83734238005",
+          "saida": "40098217100",
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "cpf-caminhada",
+            "semente": 379,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29151097532",
+          "saida": "82129183271",
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "cpf-caminhada",
+            "semente": 380,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "   ",
+          "saida": "   ",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "412195859470",
+          "erro": "INC1003",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 383,
+            "formas": [
+              "sufixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "60676035",
+          "erro": "INC1003",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 498,
+            "formas": [
+              "sem-zeros:3"
+            ]
+          }
+        },
+        {
+          "entrada": "2881A255916",
+          "erro": "INC1003",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 499,
+            "formas": [
+              "trocar:4:A"
+            ]
+          }
+        },
+        {
+          "entrada": "8383٣724887",
+          "erro": "INC1003",
+          "ramo": "digito-nao-ascii",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 500,
+            "formas": [
+              "trocar:4:٣"
+            ]
+          }
+        },
+        {
+          "entrada": "０3628383838",
+          "erro": "INC1003",
+          "ramo": "digito-nao-ascii",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 501,
+            "formas": [
+              "trocar:0:０"
+            ]
+          }
+        },
+        {
+          "entrada": "03354537400\t",
+          "erro": "INC1003",
+          "ramo": "sufixo-nao-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 502,
+            "formas": [
+              "sufixo:\t"
+            ]
+          }
+        },
+        {
+          "entrada": "37308211720\u00A0",
+          "erro": "INC1003",
+          "ramo": "sufixo-nao-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 503,
+            "formas": [
+              "sufixo:\u00A0"
+            ]
+          }
+        },
+        {
+          "entrada": "28566268237\u3000",
+          "erro": "INC1003",
+          "ramo": "sufixo-nao-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 504,
+            "formas": [
+              "sufixo:\u3000"
+            ]
+          }
+        },
+        {
+          "entrada": " 49070617064",
+          "erro": "INC1003",
+          "ramo": "espaco-a-esquerda",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 505,
+            "formas": [
+              "prefixo: "
+            ]
+          }
+        },
+        {
+          "entrada": "890,011.940-01",
+          "erro": "INC1003",
+          "ramo": "mascara-errada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 506,
+            "formas": [
+              "trocar:3:,"
+            ]
+          }
+        },
+        {
+          "entrada": "527.557.398.78",
+          "erro": "INC1003",
+          "ramo": "mascara-errada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 507,
+            "formas": [
+              "trocar:11:."
+            ]
+          }
+        },
+        {
+          "entrada": "504382.459-03",
+          "erro": "INC1003",
+          "ramo": "mascara-errada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 508,
+            "formas": [
+              "remover:3:1"
+            ]
+          }
+        },
+        {
+          "entrada": 23988620548,
+          "saida": 95571742186,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 509,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 33015308505,
+          "saida": 26110749842,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 510,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 32729851313,
+          "saida": 52756717924,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 511,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1763423972,
+          "saida": 59389082137,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 512,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 71621628353,
+          "saida": 69549323617,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 513,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 50854752242,
+          "saida": 43910537219,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 514,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 874197422,
+          "saida": 48529293193,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-com-zeros",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 526,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 7622776025,
+          "saida": 45464907394,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-com-zeros",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 527,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 30174350,
+          "saida": 62324740745,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-com-zeros",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4527,
+            "formas": [
+              "sem-zeros:3",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 53209553170,
+          "saida": 32704253004,
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "numero-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4528,
+            "formas": [
+              "dv:5",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "numero-repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4529,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "numero-repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4530,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": -1,
+          "erro": "INC1003",
+          "ramo": "numero-fora-da-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "erro": "INC1003",
+          "ramo": "numero-fora-da-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 100000000000,
+          "erro": "INC1003",
+          "ramo": "numero-fora-da-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000000",
+          "saida": "00000000000",
+          "desfecho": "PontoFixo",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "000.000.000-00",
+          "saida": "000.000.000-00",
+          "desfecho": "PontoFixo",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 99999999999,
+          "saida": 99999999999,
+          "desfecho": "PontoFixo",
+          "ramo": "numero-maximo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4554,
+            "formas": [
+              "numero"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio e ambiente próprios, DV e malformado anulados",
+      "dominio": "cpf-cliente",
+      "ambiente": "desenvolvimento",
+      "entradaInvalida": "anular",
+      "entradaMalformada": "anular",
+      "pares": [
+        {
+          "entrada": "46275669640",
+          "saida": "86731125326",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4555,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "73962183574",
+          "saida": "11271596156",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4556,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "93941892037",
+          "saida": "47867975373",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4557,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "66387265878",
+          "saida": "79595654493",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4558,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "61809920884",
+          "saida": "86785525144",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4559,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "70364515643",
+          "saida": "44524796509",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4560,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "30782167136",
+          "saida": "57351818746",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4561,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "60059806702",
+          "saida": "30075994585",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4562,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "908.408.240-09",
+          "saida": "133.363.195-28",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 4563,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "106.987.310-18",
+          "saida": "304.779.755-26",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 4564,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0283410906",
+          "saida": "76569316516",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-zeros-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4586,
+            "formas": [
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "21922611130",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4587,
+            "formas": [
+              "dv:23"
+            ]
+          }
+        },
+        {
+          "entrada": "14862150021",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4588,
+            "formas": [
+              "dv:23"
+            ]
+          }
+        },
+        {
+          "entrada": "67130851404",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4589,
+            "formas": [
+              "dv:23"
+            ]
+          }
+        },
+        {
+          "entrada": "58355035300",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "dv-deslocado-em-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4590,
+            "formas": [
+              "dv:1"
+            ]
+          }
+        },
+        {
+          "entrada": "55555555555",
+          "saida": "55555555555",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4591,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22222222225",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "repdigito-dv-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4592,
+            "formas": [
+              "dv:3"
+            ]
+          }
+        },
+        {
+          "entrada": "3469A097207",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4593,
+            "formas": [
+              "trocar:4:A"
+            ]
+          }
+        },
+        {
+          "entrada": "  ",
+          "saida": "  ",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 48203561195,
+          "saida": 45016890218,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4595,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 6613555860,
+          "saida": 2014107882,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4596,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 19381003298,
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "numero-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4597,
+            "formas": [
+              "dv:9",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "numero-fora-da-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "DV falha, malformado preservado",
+      "dominio": "cpf",
+      "ambiente": "homologacao",
+      "entradaInvalida": "falhar",
+      "entradaMalformada": "preservar",
+      "pares": [
+        {
+          "entrada": "35746884316",
+          "saida": "44738748262",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4599,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "00228997070",
+          "saida": "77734824625",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4600,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "97893216271",
+          "saida": "95238692803",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4601,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "38499156207",
+          "saida": "93998646000",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4602,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "48035741039",
+          "saida": "47606279446",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4603,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "77768088776",
+          "erro": "INC1004",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4604,
+            "formas": [
+              "dv:41"
+            ]
+          }
+        },
+        {
+          "entrada": "75370874199",
+          "erro": "INC1004",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4605,
+            "formas": [
+              "dv:41"
+            ]
+          }
+        },
+        {
+          "entrada": "13812353793",
+          "erro": "INC1004",
+          "ramo": "dv-deslocado-em-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4606,
+            "formas": [
+              "dv:1"
+            ]
+          }
+        },
+        {
+          "entrada": "44444444444",
+          "saida": "44444444444",
+          "desfecho": "PontoFixo",
+          "ramo": "repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4607,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33333333393",
+          "erro": "INC1004",
+          "ramo": "repdigito-dv-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 4608,
+            "formas": [
+              "dv:60"
+            ]
+          }
+        },
+        {
+          "entrada": "2713A653706",
+          "saida": "2713A653706",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4609,
+            "formas": [
+              "trocar:4:A"
+            ]
+          }
+        },
+        {
+          "entrada": "82410167195\t",
+          "saida": "82410167195\t",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "sufixo-nao-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4610,
+            "formas": [
+              "sufixo:\t"
+            ]
+          }
+        },
+        {
+          "entrada": "618446632130",
+          "saida": "618446632130",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4611,
+            "formas": [
+              "sufixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": 100000000000,
+          "saida": 100000000000,
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "numero-fora-da-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 35080459273,
+          "erro": "INC1004",
+          "ramo": "numero-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4613,
+            "formas": [
+              "dv:2",
+              "numero"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio padrão em outro ambiente",
+      "dominio": "cpf",
+      "ambiente": "producao",
+      "entradaInvalida": "preservar",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "12277783099",
+          "saida": "34873647940",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4614,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "34429915520",
+          "saida": "72784915840",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4615,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69881235120",
+          "saida": "80118603485",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4616,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "96390092709",
+          "saida": "63937764550",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4617,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "30038768640",
+          "saida": "63238413040",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4618,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "125.667.071-54",
+          "saida": "569.422.959-22",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 4619,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33949878062",
+          "saida": "41392356338",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4620,
+            "formas": [
+              "dv:12"
+            ]
+          }
+        },
+        {
+          "entrada": "2814A416565",
+          "erro": "INC1003",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 4621,
+            "formas": [
+              "trocar:4:A"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

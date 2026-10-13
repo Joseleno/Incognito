@@ -7,7 +7,8 @@
   <!-- Âncoras independentes e vetores fixos, lidos da pasta de saída. -->
   <ItemGroup>
     <None Include="..\ancoras\**\*.json" LinkBase="ancoras" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\vetores\**\*.json" LinkBase="vetores" CopyToOutputDirectory="PreserveNewest" />
+    <!-- A pasta inteira: uma sobra que não seja .json também chega ao teste da pasta e é acusada. -->
+    <None Include="..\vetores\**\*" LinkBase="vetores" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

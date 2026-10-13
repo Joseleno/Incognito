@@ -26,6 +26,19 @@ dotnet format --verify-no-changes
 
 Cada projeto tem um `packages.lock.json` versionado, e o CI restaura com `dotnet restore --locked-mode`: um lock desatualizado quebra o build. Ao adicionar, remover ou atualizar um pacote (sempre no `Directory.Packages.props`), rode `dotnet restore --force-evaluate` e inclua os `packages.lock.json` alterados no commit. Projetos não usam `VersionOverride`, `PackageDownload`, referência a DLL por caminho nem tarefas próprias do MSBuild; o CI recusa.
 
+### Vetores fixos
+
+Cada arquivo de `testes/vetores/` (`transformador@versão.json`) é contrato: os casos que já estão lá nunca mudam; casos novos só se acrescentam. As receitas ficam em `testes/CodeProcess.Incognito.Testes/Vetores/ReceitasDeVetores.cs`, e cada par registra de onde veio a entrada (semente do `GeradorBr`, regra de construção ou permutação inversa). Uma referência independente em Python, só com a biblioteca padrão, confere todos os arquivos no CI, e uma guarda recusa a mudança de um caso que já existe na base do pull request.
+
+Para acrescentar um caso, inclua-o na receita, gere a partir da raiz do repositório e confira com a referência (no Windows, `py -3 -I` no lugar de `python3 -I`):
+
+```
+INCOGNITO_GERAR_VETORES="br.cpf@1.json" dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --filter-class "CodeProcess.Incognito.Testes.GeracaoDeVetoresTestes"
+python3 -I testes/referencia/conferir_vetores.py --autoteste --base develop
+```
+
+Uma versão nova de um transformador (`br.cpf@2`) precisa da implementação nos dois lados: o executor em `ExecutorDeCaso` e o esquema em `EsquemaDeVetores`, no C#, e a classe com os parâmetros em `PARAMETROS` e `ARQUIVOS`, no Python. Sem isso, o arquivo da versão nova é recusado em vez de conferido com o algoritmo da anterior.
+
 ## Branches
 
 - `main` guarda apenas o código lançado; cada versão é uma tag na `main`.

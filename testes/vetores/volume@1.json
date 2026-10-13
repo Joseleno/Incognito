@@ -1,0 +1,35 @@
+{
+  "descricao": "Volume: resumo SHA-256 das saídas de CPFs e CNPJs (versão 1) cujas entradas saem de um contador. Chave pública de teste: nunca use fora dos testes. Para cada caso e i de 0 a quantidade - 1, h = SHA-256(nome do caso, 0x00, u32be(i)); CPF: base = u64be(h[0..8]) mod 10^9; CNPJ: alfanumérico se h[10] for ímpar, caractere k = h[11 + k] mod 36 em 0-9A-Z (mod 10 em 0-9 no numérico); DV calculado e, se h[8] mod 4 = 0, deslocado em 1 + h[9] mod 99. Linha do resumo: saída, espaço, desfecho, LF, em UTF-8. DV errado preservado, malformado falha. Contrato: um resumo que mudar exige outra versão do transformador; casos novos só se acrescentam.",
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "br.cpf@1, DV preservado",
+      "transformador": "br.cpf",
+      "versao": 1,
+      "dominio": "cpf",
+      "ambiente": "homologacao",
+      "quantidade": 3000,
+      "resumo": "6a197220c0d3777f089528e7de85d36dc024d2a19f0bc50df8dfd2495ab6b23f"
+    },
+    {
+      "nome": "br.cnpj@1, raiz permutada",
+      "transformador": "br.cnpj",
+      "versao": 1,
+      "dominio": "cnpj",
+      "ambiente": "homologacao",
+      "permutarOrdem": false,
+      "quantidade": 3000,
+      "resumo": "468ba127b3e8782d945f4d2e81d334222b69ed88f2ccbc524ee290ca66580b79"
+    },
+    {
+      "nome": "br.cnpj@1, raiz e ordem permutadas",
+      "transformador": "br.cnpj",
+      "versao": 1,
+      "dominio": "cnpj",
+      "ambiente": "homologacao",
+      "permutarOrdem": true,
+      "quantidade": 3000,
+      "resumo": "6bbc661f8134aec429d1c78e8a79a89e9e9aa82611229520927dc513860212ad"
+    }
+  ]
+}
