@@ -1,0 +1,2923 @@
+{
+  "descricao": "br.telefone, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige br.telefone@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes. Os números de serviço (0800, 0300, 0303, 0500 e 0900 com 7 dígitos sorteados, ou 6 no formato antigo; DDD inexistente com 3003 ou 4004 e 4 sorteados) podem coincidir com números de empresas: são necessários para provar a preservação e nunca são de pessoa.",
+  "transformador": "br.telefone",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "malformado falha",
+      "dominio": "telefone",
+      "ambiente": "homologacao",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "77955361038",
+          "saida": "77948601234",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17971762626",
+          "saida": "17913729963",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 2,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "75962543279",
+          "saida": "75912668847",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "34994926470",
+          "saida": "34909749502",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "37966857583",
+          "saida": "37952629657",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "83998110089",
+          "saida": "83991881059",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "75928998014",
+          "saida": "75997978784",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 7,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "87965932469",
+          "saida": "87985495945",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 8,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11921797651",
+          "saida": "11983775540",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 9,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "96941042817",
+          "saida": "96997047869",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 10,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3122403596",
+          "saida": "3152266213",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3858922785",
+          "saida": "3827559267",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3359164155",
+          "saida": "3336903971",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7949927275",
+          "saida": "7953162410",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7433152985",
+          "saida": "7426034751",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "9429087940",
+          "saida": "9436393817",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7349969885",
+          "saida": "7335476393",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 17,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7343945979",
+          "saida": "7326296574",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 18,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "8331376373",
+          "saida": "8347245557",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 19,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7925320950",
+          "saida": "7948085114",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 20,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5513986370949",
+          "saida": "+5513912157126",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 21,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5599910103155",
+          "saida": "+5599972662517",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 22,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5548932208868",
+          "saida": "+5548923772143",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 23,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+558956991000",
+          "saida": "+558929702564",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais)",
+            "semente": 24,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+559232136315",
+          "saida": "+559241744959",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais)",
+            "semente": 25,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+553232105913",
+          "saida": "+553226882041",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais)",
+            "semente": 26,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(38) 97478-2255",
+          "saida": "(38) 91644-6653",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 27,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(28) 95136-2468",
+          "saida": "(28) 94953-5737",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 28,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(77) 91866-5349",
+          "saida": "(77) 95200-8265",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 29,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(17) 2288-1382",
+          "saida": "(17) 4687-7076",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 30,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(77) 4448-5655",
+          "saida": "(77) 2667-7617",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 31,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(69) 3310-0476",
+          "saida": "(69) 3890-2541",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 32,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 (42) 96191-6850",
+          "saida": "+55 (42) 92128-0811",
+          "desfecho": "Pseudonimizado",
+          "ramo": "com-pais-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais, formatado)",
+            "semente": 33,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 (79) 94486-4194",
+          "saida": "+55 (79) 97877-8375",
+          "desfecho": "Pseudonimizado",
+          "ramo": "com-pais-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais, formatado)",
+            "semente": 34,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 (42) 4661-0622",
+          "saida": "+55 (42) 2052-6403",
+          "desfecho": "Pseudonimizado",
+          "ramo": "com-pais-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais, formatado)",
+            "semente": 35,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 (74) 5503-4769",
+          "saida": "+55 (74) 3262-0529",
+          "desfecho": "Pseudonimizado",
+          "ramo": "com-pais-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais, formatado)",
+            "semente": 36,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5518957872818",
+          "saida": "5518986139829",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pais-sem-mais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 37,
+            "formas": [
+              "prefixo:55"
+            ]
+          }
+        },
+        {
+          "entrada": "5516911720260",
+          "saida": "5516960265650",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pais-sem-mais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 38,
+            "formas": [
+              "prefixo:55"
+            ]
+          }
+        },
+        {
+          "entrada": "01333613174",
+          "saida": "01324447963",
+          "desfecho": "Pseudonimizado",
+          "ramo": "tronco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 39,
+            "formas": [
+              "prefixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "01420248125",
+          "saida": "01428533410",
+          "desfecho": "Pseudonimizado",
+          "ramo": "tronco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 40,
+            "formas": [
+              "prefixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "079916742773",
+          "saida": "079958805002",
+          "desfecho": "Pseudonimizado",
+          "ramo": "tronco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 41,
+            "formas": [
+              "prefixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "016936997787",
+          "saida": "016906415146",
+          "desfecho": "Pseudonimizado",
+          "ramo": "tronco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 42,
+            "formas": [
+              "prefixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "(064) 5601-2800",
+          "saida": "(064) 2214-6571",
+          "desfecho": "Pseudonimizado",
+          "ramo": "tronco-parenteses",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 43,
+            "formas": [
+              "trocar:0:(0"
+            ]
+          }
+        },
+        {
+          "entrada": "968326742",
+          "saida": "984243285",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 44,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "901637592",
+          "saida": "970013697",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 45,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "962668097",
+          "saida": "940751990",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 46,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "40473533",
+          "saida": "44890689",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 47,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "47711094",
+          "saida": "53081674",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 48,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "34975561",
+          "saida": "50608803",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 49,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "93088-6097",
+          "saida": "94483-4088",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 50,
+            "formas": [
+              "remover:0:5"
+            ]
+          }
+        },
+        {
+          "entrada": "(42) 9 7502-8100",
+          "saida": "(42) 9 9365-2686",
+          "desfecho": "Pseudonimizado",
+          "ramo": "grupos-1-4-4",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 51,
+            "formas": [
+              "trocar:5:9 "
+            ]
+          }
+        },
+        {
+          "entrada": "(61) 3059.4175",
+          "saida": "(61) 3529.3458",
+          "desfecho": "Pseudonimizado",
+          "ramo": "grupos-com-ponto",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 52,
+            "formas": [
+              "trocar:9:."
+            ]
+          }
+        },
+        {
+          "entrada": "(98) 2930 2802",
+          "saida": "(98) 4387 6070",
+          "desfecho": "Pseudonimizado",
+          "ramo": "grupos-com-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 53,
+            "formas": [
+              "trocar:9: "
+            ]
+          }
+        },
+        {
+          "entrada": "37 915696151",
+          "saida": "37 916323489",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-separado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 54,
+            "formas": [
+              "inserir:2: "
+            ]
+          }
+        },
+        {
+          "entrada": "45-39152068",
+          "saida": "45-34146347",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-separado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 55,
+            "formas": [
+              "inserir:2:-"
+            ]
+          }
+        },
+        {
+          "entrada": "+55.62964935918",
+          "saida": "+55.62905928365",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pais-separado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 56,
+            "formas": [
+              "inserir:3:."
+            ]
+          }
+        },
+        {
+          "entrada": "3897091180",
+          "saida": "3881520800",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 57,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5775719130",
+          "saida": "5779938095",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 58,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7464895632",
+          "saida": "7470371233",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 59,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5661227776",
+          "saida": "5690177616",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 60,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "95 9256-8084",
+          "saida": "95 8843-5403",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 61,
+            "formas": [
+              "inserir:2: ",
+              "inserir:7:-"
+            ]
+          }
+        },
+        {
+          "entrada": "77019763",
+          "saida": "60494030",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo-sem-ddd",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 62,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "96084306",
+          "saida": "93182609",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-antigo-sem-ddd",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 63,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "55908262414",
+          "saida": "55960601681",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-55",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-ddd:55",
+            "semente": 64,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "55959865990",
+          "saida": "55925493513",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-55",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-ddd:55",
+            "semente": 65,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5555954788219",
+          "saida": "+5555912043751",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-55",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-ddd:55",
+            "semente": 66,
+            "formas": [
+              "prefixo:+55"
+            ]
+          }
+        },
+        {
+          "entrada": "555548127689",
+          "saida": "555541512602",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-55",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-ddd:55",
+            "semente": 67,
+            "formas": [
+              "prefixo:55"
+            ]
+          }
+        },
+        {
+          "entrada": "23968223779",
+          "saida": "23902140630",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-inexistente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-ddd:23",
+            "semente": 68,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11990592021",
+          "saida": "11938070887",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-extremo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-ddd:11",
+            "semente": 69,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "9939656858",
+          "saida": "9957341698",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ddd-extremo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-ddd:99",
+            "semente": 70,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "09000683167",
+          "saida": "09000683167",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 71,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "05003164902",
+          "saida": "05003164902",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 72,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "09000962182",
+          "saida": "09000962182",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 73,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "08007302594",
+          "saida": "08007302594",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 74,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5509001794886",
+          "saida": "+5509001794886",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 75,
+            "formas": [
+              "prefixo:+55"
+            ]
+          }
+        },
+        {
+          "entrada": "+5505005344232",
+          "saida": "+5505005344232",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 76,
+            "formas": [
+              "prefixo:+55"
+            ]
+          }
+        },
+        {
+          "entrada": "5503002594106",
+          "saida": "5503002594106",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 77,
+            "formas": [
+              "prefixo:55"
+            ]
+          }
+        },
+        {
+          "entrada": "0900 279 5141",
+          "saida": "0900 279 5141",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-nao-geografico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 78,
+            "formas": [
+              "inserir:4: ",
+              "inserir:8: "
+            ]
+          }
+        },
+        {
+          "entrada": "03030389391",
+          "saida": "03030389391",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-0303",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico:303",
+            "semente": 79,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "03035877347",
+          "saida": "03035877347",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-0303",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico:303",
+            "semente": 80,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 0303 4934992",
+          "saida": "+55 0303 4934992",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-0303",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico:303",
+            "semente": 81,
+            "formas": [
+              "prefixo:+55 ",
+              "inserir:8: "
+            ]
+          }
+        },
+        {
+          "entrada": "0800942796",
+          "saida": "0800942796",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 82,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0303503332",
+          "saida": "0303503332",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 83,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0500842029",
+          "saida": "0500842029",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 84,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0500526663",
+          "saida": "0500526663",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 85,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0303665737",
+          "saida": "0303665737",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo:303",
+            "semente": 86,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+550900404495",
+          "saida": "+550900404495",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 87,
+            "formas": [
+              "prefixo:+55"
+            ]
+          }
+        },
+        {
+          "entrada": "550303774404",
+          "saida": "550303774404",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 88,
+            "formas": [
+              "prefixo:55"
+            ]
+          }
+        },
+        {
+          "entrada": "0800 346-873",
+          "saida": "0800 346-873",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 89,
+            "formas": [
+              "inserir:4: ",
+              "inserir:8:-"
+            ]
+          }
+        },
+        {
+          "entrada": "5930032230",
+          "saida": "5930032230",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 90,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5740042502",
+          "saida": "5740042502",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 91,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5930035824",
+          "saida": "5930035824",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 92,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3930030773",
+          "saida": "3930030773",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 93,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "30030817",
+          "saida": "30030817",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 94,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "40043561",
+          "saida": "40043561",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 95,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "23 3003-4424",
+          "saida": "23 3003-4424",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 96,
+            "formas": [
+              "inserir:2: ",
+              "inserir:7:-"
+            ]
+          }
+        },
+        {
+          "entrada": "3930029999",
+          "saida": "3942560299",
+          "desfecho": "Pseudonimizado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:30029999",
+            "semente": 97,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3930030000",
+          "saida": "3930030000",
+          "desfecho": "ServicoPreservado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:30030000",
+            "semente": 98,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3630039999",
+          "saida": "3630039999",
+          "desfecho": "ServicoPreservado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:30039999",
+            "semente": 99,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "2330040000",
+          "saida": "2322597469",
+          "desfecho": "Pseudonimizado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:30040000",
+            "semente": 100,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "2340039999",
+          "saida": "2350397927",
+          "desfecho": "Pseudonimizado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:40039999",
+            "semente": 101,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5840040000",
+          "saida": "5840040000",
+          "desfecho": "ServicoPreservado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:40040000",
+            "semente": 102,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3640049999",
+          "saida": "3640049999",
+          "desfecho": "ServicoPreservado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:40049999",
+            "semente": 103,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5940050000",
+          "saida": "5944792165",
+          "desfecho": "Pseudonimizado",
+          "ramo": "borda-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-fixo-numero:40050000",
+            "semente": 104,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5233933727",
+          "saida": "5235014451",
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada-fixo",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "telefone-caminhada-fixo",
+            "semente": 105,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5722982497",
+          "saida": "5735180084",
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada-fixo",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "telefone-caminhada-fixo",
+            "semente": 106,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5652563038",
+          "saida": "5647441510",
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada-fixo",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "telefone-caminhada-fixo",
+            "semente": 107,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0",
+          "saida": "0",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000",
+          "saida": "00000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0000000000000",
+          "saida": "0000000000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000   ",
+          "saida": "00000000   ",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "(11) 0000-0000",
+          "saida": "(11) 0000-0000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-formatado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "+55 (00) 0000-0000",
+          "saida": "+55 (00) 0000-0000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-formatado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "(21) 00000-0000",
+          "saida": "(21) 00000-0000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-formatado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "+0 (0)--0..0",
+          "saida": "+0 (0)--0..0",
+          "desfecho": "Zerado",
+          "ramo": "zerado-formatado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "1100000000",
+          "saida": "1100000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-assinante",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "11000000000",
+          "saida": "11000000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-assinante",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "02100000000",
+          "saida": "02100000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-assinante",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "021000000000",
+          "saida": "021000000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-assinante",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "551100000000",
+          "saida": "551100000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-assinante",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "5511000000000",
+          "saida": "5511000000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-assinante",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0                              0",
+          "saida": "0                              0",
+          "desfecho": "Zerado",
+          "ramo": "zerado-tamanho-maximo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0                               0",
+          "erro": "INC1003",
+          "ramo": "zerado-acima-do-maximo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000000000",
+          "erro": "INC1003",
+          "ramo": "zerado-acima-de-13-digitos",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "1100000001",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "541100000000",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "5411000000000",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0/0",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "1110000000",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "11100000000",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "121000000000",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "()-",
+          "erro": "INC1003",
+          "ramo": "sem-digitos",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "30933750118",
+          "erro": "INC1003",
+          "ramo": "ddd-com-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-ddd:30",
+            "semente": 134,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+09006690524",
+          "erro": "INC1003",
+          "ramo": "servico-com-mais",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 135,
+            "formas": [
+              "prefixo:+"
+            ]
+          }
+        },
+        {
+          "entrada": "88815336998",
+          "erro": "INC1003",
+          "ramo": "celular-sem-9",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 136,
+            "formas": [
+              "trocar:2:8"
+            ]
+          }
+        },
+        {
+          "entrada": "+55619563066621",
+          "erro": "INC1003",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 137,
+            "formas": [
+              "sufixo:1"
+            ]
+          }
+        },
+        {
+          "entrada": "7831434",
+          "erro": "INC1003",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 138,
+            "formas": [
+              "remover:0:3"
+            ]
+          }
+        },
+        {
+          "entrada": "+53970109481",
+          "erro": "INC1003",
+          "ramo": "mais-sem-55",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 139,
+            "formas": [
+              "prefixo:+"
+            ]
+          }
+        },
+        {
+          "entrada": "5 5911130121",
+          "erro": "INC1003",
+          "ramo": "separador-no-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 140,
+            "formas": [
+              "inserir:1: "
+            ]
+          }
+        },
+        {
+          "entrada": "(51 3856-7918",
+          "erro": "INC1003",
+          "ramo": "parentese-sem-par",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 141,
+            "formas": [
+              "remover:3:1"
+            ]
+          }
+        },
+        {
+          "entrada": "55302-32656",
+          "erro": "INC1003",
+          "ramo": "grupo-fora-do-lugar",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 142,
+            "formas": [
+              "inserir:5:-"
+            ]
+          }
+        },
+        {
+          "entrada": "169 86906564",
+          "erro": "INC1003",
+          "ramo": "grupo-fora-do-lugar",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 143,
+            "formas": [
+              "inserir:3: "
+            ]
+          }
+        },
+        {
+          "entrada": "+55              (55) 98957-6784",
+          "saida": "+55              (55) 92029-0651",
+          "desfecho": "Pseudonimizado",
+          "ramo": "tamanho-maximo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais, formatado)",
+            "semente": 144,
+            "formas": [
+              "inserir:3:             "
+            ]
+          }
+        },
+        {
+          "entrada": "+55               (27) 94277-5391",
+          "erro": "INC1003",
+          "ramo": "tamanho-acima-do-maximo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais, formatado)",
+            "semente": 145,
+            "formas": [
+              "inserir:3:              "
+            ]
+          }
+        },
+        {
+          "entrada": "55+15998326119",
+          "erro": "INC1003",
+          "ramo": "malformado-mais-no-meio",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 146,
+            "formas": [
+              "prefixo:55+"
+            ]
+          }
+        },
+        {
+          "entrada": "5448970435395",
+          "erro": "INC1003",
+          "ramo": "malformado-treze-digitos-sem-55",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 147,
+            "formas": [
+              "prefixo:54"
+            ]
+          }
+        },
+        {
+          "entrada": "542255060154",
+          "erro": "INC1003",
+          "ramo": "malformado-doze-digitos-sem-55-nem-0",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 148,
+            "formas": [
+              "prefixo:54"
+            ]
+          }
+        },
+        {
+          "entrada": "0257286955",
+          "erro": "INC1003",
+          "ramo": "malformado-ddd-com-zero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 149,
+            "formas": [
+              "trocar:0:0"
+            ]
+          }
+        },
+        {
+          "entrada": "70920393958",
+          "erro": "INC1003",
+          "ramo": "malformado-ddd-com-zero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 150,
+            "formas": [
+              "trocar:1:0"
+            ]
+          }
+        },
+        {
+          "entrada": "2112149879",
+          "erro": "INC1003",
+          "ramo": "malformado-fixo-comecando-com-1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 151,
+            "formas": [
+              "trocar:2:1"
+            ]
+          }
+        },
+        {
+          "entrada": "14 06286405",
+          "erro": "INC1003",
+          "ramo": "malformado-fixo-comecando-com-0",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 152,
+            "formas": [
+              "trocar:2:0",
+              "inserir:2: "
+            ]
+          }
+        },
+        {
+          "entrada": "32\t965621488",
+          "erro": "INC1003",
+          "ramo": "malformado-tab-no-meio",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 153,
+            "formas": [
+              "inserir:2:\t"
+            ]
+          }
+        },
+        {
+          "entrada": "16/928233413",
+          "erro": "INC1003",
+          "ramo": "malformado-barra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 154,
+            "formas": [
+              "inserir:2:/"
+            ]
+          }
+        },
+        {
+          "entrada": " 67936975427",
+          "erro": "INC1003",
+          "ramo": "malformado-espaco-a-esquerda",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 155,
+            "formas": [
+              "prefixo: "
+            ]
+          }
+        },
+        {
+          "entrada": "5 5 95936916684",
+          "erro": "INC1003",
+          "ramo": "malformado-separador-dentro-do-55",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 156,
+            "formas": [
+              "prefixo:5 5 "
+            ]
+          }
+        },
+        {
+          "entrada": "0 93 56465450",
+          "erro": "INC1003",
+          "ramo": "malformado-separador-entre-o-0-e-o-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 157,
+            "formas": [
+              "prefixo:0 ",
+              "inserir:4: "
+            ]
+          }
+        },
+        {
+          "entrada": "94 (989462819)",
+          "erro": "INC1003",
+          "ramo": "malformado-parenteses-em-volta-do-numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 158,
+            "formas": [
+              "inserir:2: (",
+              "sufixo:)"
+            ]
+          }
+        },
+        {
+          "entrada": "(55) 27904104842",
+          "erro": "INC1003",
+          "ramo": "malformado-parenteses-em-volta-do-55",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 159,
+            "formas": [
+              "prefixo:(55) "
+            ]
+          }
+        },
+        {
+          "entrada": "((28)) 93137-3988",
+          "erro": "INC1003",
+          "ramo": "malformado-dois-pares-de-parenteses",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 160,
+            "formas": [
+              "prefixo:(",
+              "inserir:4:)"
+            ]
+          }
+        },
+        {
+          "entrada": "3354-4089 12",
+          "erro": "INC1003",
+          "ramo": "malformado-ramal",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 161,
+            "formas": [
+              "remover:0:2",
+              "inserir:4:-",
+              "sufixo: 12"
+            ]
+          }
+        },
+        {
+          "entrada": "(61) 2833-7174 12",
+          "erro": "INC1003",
+          "ramo": "malformado-ramal",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 162,
+            "formas": [
+              "sufixo: 12"
+            ]
+          }
+        },
+        {
+          "entrada": "(38) 3632-9825 r. 12",
+          "erro": "INC1003",
+          "ramo": "malformado-ramal",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 163,
+            "formas": [
+              "sufixo: r. 12"
+            ]
+          }
+        },
+        {
+          "entrada": "(62) 535-0323",
+          "erro": "INC1003",
+          "ramo": "malformado-celular-de-7-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 164,
+            "formas": [
+              "remover:5:1"
+            ]
+          }
+        },
+        {
+          "entrada": "16 257-84778",
+          "erro": "INC1003",
+          "ramo": "malformado-fixo-em-grupos-de-3-e-5",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 165,
+            "formas": [
+              "inserir:2: ",
+              "inserir:6:-"
+            ]
+          }
+        },
+        {
+          "entrada": "73 9 23100403",
+          "erro": "INC1003",
+          "ramo": "malformado-celular-em-grupos-de-1-e-8",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 166,
+            "formas": [
+              "inserir:2: ",
+              "inserir:4: "
+            ]
+          }
+        },
+        {
+          "entrada": "88 9331-95697",
+          "erro": "INC1003",
+          "ramo": "malformado-celular-em-grupos-de-4-e-5",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 167,
+            "formas": [
+              "inserir:2: ",
+              "inserir:7:-"
+            ]
+          }
+        },
+        {
+          "entrada": "44 98513--6486",
+          "erro": "INC1003",
+          "ramo": "malformado-dois-separadores-dentro-do-numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 168,
+            "formas": [
+              "inserir:2: ",
+              "inserir:8:--"
+            ]
+          }
+        },
+        {
+          "entrada": "86967451318-",
+          "erro": "INC1003",
+          "ramo": "malformado-hifen-no-fim",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 169,
+            "formas": [
+              "sufixo:-"
+            ]
+          }
+        },
+        {
+          "entrada": "(55 84) 989837486",
+          "erro": "INC1003",
+          "ramo": "malformado-parentese-abrindo-antes-do-55",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 170,
+            "formas": [
+              "prefixo:(55 ",
+              "inserir:6:) "
+            ]
+          }
+        },
+        {
+          "entrada": "(83 ) 91653-7026",
+          "erro": "INC1003",
+          "ramo": "malformado-espaco-antes-de-fechar-o-parentese",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 171,
+            "formas": [
+              "inserir:3: "
+            ]
+          }
+        },
+        {
+          "entrada": "(12) (91216-1336",
+          "erro": "INC1003",
+          "ramo": "malformado-parentese-de-abrir-repetido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 172,
+            "formas": [
+              "inserir:5:("
+            ]
+          }
+        },
+        {
+          "entrada": "06 3 36299863",
+          "erro": "INC1003",
+          "ramo": "malformado-separador-dentro-do-ddd-com-o-0",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 173,
+            "formas": [
+              "prefixo:0",
+              "inserir:2: ",
+              "inserir:4: "
+            ]
+          }
+        },
+        {
+          "entrada": "0xx42966243851",
+          "erro": "INC1003",
+          "ramo": "malformado-zero-xx",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 174,
+            "formas": [
+              "prefixo:0xx"
+            ]
+          }
+        },
+        {
+          "entrada": "(0xx16) 2466-6017",
+          "erro": "INC1003",
+          "ramo": "malformado-zero-xx",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 175,
+            "formas": [
+              "trocar:0:(0xx"
+            ]
+          }
+        },
+        {
+          "entrada": "+3003-8439",
+          "erro": "INC1003",
+          "ramo": "malformado-servico-com-mais",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 176,
+            "formas": [
+              "remover:0:2",
+              "inserir:4:-",
+              "prefixo:+"
+            ]
+          }
+        },
+        {
+          "entrada": "5001756459",
+          "erro": "INC1003",
+          "ramo": "malformado-parece-0800-sem-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 177,
+            "formas": [
+              "remover:0:1"
+            ]
+          }
+        },
+        {
+          "entrada": "+0300998335",
+          "erro": "INC1003",
+          "ramo": "malformado-servico-antigo-com-mais",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 178,
+            "formas": [
+              "prefixo:+"
+            ]
+          }
+        },
+        {
+          "entrada": "080074024",
+          "erro": "INC1003",
+          "ramo": "malformado-servico-com-5-digitos",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo",
+            "semente": 179,
+            "formas": [
+              "remover:4:1"
+            ]
+          }
+        },
+        {
+          "entrada": "79498x7891",
+          "erro": "INC1003",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 180,
+            "formas": [
+              "trocar:5:x"
+            ]
+          }
+        },
+        {
+          "entrada": "14377٣4484",
+          "erro": "INC1003",
+          "ramo": "digito-nao-ascii",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 181,
+            "formas": [
+              "trocar:5:٣"
+            ]
+          }
+        },
+        {
+          "entrada": "1845307229\t",
+          "erro": "INC1003",
+          "ramo": "sufixo-nao-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 182,
+            "formas": [
+              "sufixo:\t"
+            ]
+          }
+        },
+        {
+          "entrada": 38939609982,
+          "saida": 38953333038,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 183,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 41903485159,
+          "saida": 41930709845,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 184,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 53972865800,
+          "saida": 53990756687,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 185,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 4122601793,
+          "saida": 4121087376,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 186,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 5354945685,
+          "saida": 5331020979,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 187,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 8749108231,
+          "saida": 8752370649,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 188,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 5584948839891,
+          "saida": 5584934487255,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 189,
+            "formas": [
+              "remover:0:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 5542914374574,
+          "saida": 5542966494625,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 190,
+            "formas": [
+              "remover:0:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 57780301,
+          "saida": 31474489,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 191,
+            "formas": [
+              "remover:0:2",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 38186211,
+          "saida": 43219584,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-sem-ddd",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 192,
+            "formas": [
+              "remover:0:2",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1391927004,
+          "saida": 1377662083,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-celular-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-celular-antigo",
+            "semente": 193,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 5008799630,
+          "saida": 5008799630,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 194,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 3005512092,
+          "saida": 3005512092,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 195,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 3640040990,
+          "saida": 3640040990,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 196,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 3038686536,
+          "saida": 3038686536,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico-0303",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico:303",
+            "semente": 197,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 800582082,
+          "saida": 800582082,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo:800",
+            "semente": 198,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 300314294,
+          "saida": 300314294,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo:300",
+            "semente": 199,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 303423083,
+          "saida": 303423083,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo:303",
+            "semente": 200,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 500268427,
+          "saida": 500268427,
+          "desfecho": "ServicoPreservado",
+          "ramo": "numero-servico-antigo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo:500",
+            "semente": 201,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 900769918,
+          "saida": 949995441,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-900-antigo-e-celular",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-antigo:900",
+            "semente": 202,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1100000000,
+          "saida": 1100000000,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 11000000000,
+          "saida": 11000000000,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 551100000000,
+          "saida": 551100000000,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 5511000000000,
+          "saida": 5511000000000,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1100000001,
+          "erro": "INC1003",
+          "ramo": "numero-quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1,
+          "erro": "INC1003",
+          "ramo": "numero-fora-da-forma",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "erro": "INC1003",
+          "ramo": "numero-fora-da-forma",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 99999999999999,
+          "erro": "INC1003",
+          "ramo": "numero-fora-da-forma",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio e ambiente próprios, malformado anulado",
+      "dominio": "telefone-loja",
+      "ambiente": "desenvolvimento",
+      "entradaMalformada": "anular",
+      "pares": [
+        {
+          "entrada": "61971866378",
+          "saida": "61955357466",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 212,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17962300089",
+          "saida": "17961895039",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 213,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "88925094264",
+          "saida": "88982606384",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 214,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3438389703",
+          "saida": "3434373936",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 215,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "8851645538",
+          "saida": "8854546243",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 216,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3845094251",
+          "saida": "3834628133",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 217,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3940047987",
+          "saida": "3940047987",
+          "desfecho": "ServicoPreservado",
+          "ramo": "servico-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-fixo",
+            "semente": 218,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "85525x7163",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 219,
+            "formas": [
+              "trocar:5:x"
+            ]
+          }
+        },
+        {
+          "entrada": 7,
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "numero-fora-da-forma",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "(11) 0000-0000",
+          "saida": "(11) 0000-0000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-formatado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "malformado preservado",
+      "dominio": "telefone",
+      "ambiente": "homologacao",
+      "entradaMalformada": "preservar",
+      "pares": [
+        {
+          "entrada": "+55 (38) 95059-8717",
+          "saida": "+55 (38) 93821-4949",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais, formatado)",
+            "semente": 223,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 (19) 96733-9720",
+          "saida": "+55 (19) 91573-9444",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais, formatado)",
+            "semente": 224,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53559x2285",
+          "saida": "53559x2285",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 225,
+            "formas": [
+              "trocar:5:x"
+            ]
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "numero-fora-da-forma",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "+55 (00) 0000-0000",
+          "saida": "+55 (00) 0000-0000",
+          "desfecho": "Zerado",
+          "ramo": "zerado-formatado",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio padrão em outro ambiente",
+      "dominio": "telefone",
+      "ambiente": "producao",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "27976166320",
+          "saida": "27947500749",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 228,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "37922141742",
+          "saida": "37963012315",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 229,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "19939787196",
+          "saida": "19988805539",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 230,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(41) 3950-6911",
+          "saida": "(41) 2302-5557",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 231,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(89) 2728-3511",
+          "saida": "(89) 5347-8330",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 232,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(64) 3071-1258",
+          "saida": "(64) 4671-1815",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fixo",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, formatado)",
+            "semente": 233,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5574907982592",
+          "saida": "+5574980572321",
+          "desfecho": "Pseudonimizado",
+          "ramo": "celular-com-pais",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 234,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "18274x1703",
+          "erro": "INC1003",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 235,
+            "formas": [
+              "trocar:5:x"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

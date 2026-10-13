@@ -26,6 +26,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # O primeiro pai é a base do PR (no merge ref do PR) ou a develop/main anterior (no push): a guarda dos vetores
+          # compara com ele.
+          fetch-depth: 2
+      # O piso da referência em Python.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      # Guarda dos vetores fixos: os vetores do primeiro pai continuam iguais; só entram casos novos. Roda a versão do
+      # script que está na base, para uma mudança no script não afrouxar a guarda que julga a própria PR; uma mudança
+      # neste workflow ainda pode, e fica com a revisão. Os argumentos abaixo são lidos pelo script da base: mudar a
+      # linha de comando dele exige duas PRs (a primeira aceita os dois jeitos).
+      - run: |
+          git rev-parse --verify --quiet 'HEAD^1^{commit}' > /dev/null || { echo "Sem o primeiro pai para a guarda dos vetores."; exit 1; }
+          if git cat-file -e HEAD^1:testes/referencia/conferir_vetores.py 2>/dev/null; then
+            git show HEAD^1:testes/referencia/conferir_vetores.py > "$RUNNER_TEMP/guarda.py"
+          else
+            cp testes/referencia/conferir_vetores.py "$RUNNER_TEMP/guarda.py"
+          fi
+          python -I "$RUNNER_TEMP/guarda.py" --raiz "$GITHUB_WORKSPACE" --base HEAD^1 --so-crescimento
+      # Referência independente: âncoras e vetores fixos conferidos; alterações feitas de propósito são acusadas.
+      - run: python -I testes/referencia/conferir_vetores.py --autoteste
       # Só tag de lançamento chega ao envio para o nuget.org no release.yml.
       - run: bash .github/scripts/testar-release.sh
       - run: bash .github/scripts/conferir-actions-fixadas.sh

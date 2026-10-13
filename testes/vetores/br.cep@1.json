@@ -1,0 +1,1828 @@
+{
+  "descricao": "br.cep, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige br.cep@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes.",
+  "transformador": "br.cep",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "malformado falha",
+      "dominio": "cep",
+      "ambiente": "homologacao",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "71821528",
+          "entidade": "pessoa-1",
+          "saida": "71081991",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29725517",
+          "entidade": "pessoa-2",
+          "saida": "29529377",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 2,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "72242033",
+          "entidade": "pessoa-3",
+          "saida": "71480791",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "57911530",
+          "entidade": "pessoa-4",
+          "saida": "57190672",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "57602082",
+          "entidade": "pessoa-5",
+          "saida": "57565712",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "76987969",
+          "entidade": "pessoa-6",
+          "saida": "76857326",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "70975629",
+          "entidade": "pessoa-7",
+          "saida": "72518921",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 7,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "78544243",
+          "entidade": "pessoa-8",
+          "saida": "78541504",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 8,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "05778298",
+          "entidade": "pessoa-9",
+          "saida": "05042341",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 9,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "88824642",
+          "entidade": "pessoa-10",
+          "saida": "88657182",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 10,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50610640",
+          "entidade": "pessoa-11",
+          "saida": "52734779",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "58810961",
+          "entidade": "pessoa-12",
+          "saida": "58032817",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "55479612",
+          "entidade": "pessoa-13",
+          "saida": "51473439",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "75565798",
+          "entidade": "pessoa-14",
+          "saida": "74475767",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "71418910",
+          "entidade": "pessoa-15",
+          "saida": "72723052",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "80135916",
+          "entidade": "pessoa-16",
+          "saida": "84503200",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69969051",
+          "entidade": "pessoa-17",
+          "saida": "69939056",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 17,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "72537521",
+          "entidade": "pessoa-18",
+          "saida": "73202225",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 18,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "76896650",
+          "entidade": "pessoa-19",
+          "saida": "76918759",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 19,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "74104098",
+          "entidade": "pessoa-20",
+          "saida": "75374005",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 20,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16327-731",
+          "entidade": "pessoa-21",
+          "saida": "15847-029",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-hifen",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(formatado)",
+            "semente": 21,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "91281-988",
+          "entidade": "pessoa-22",
+          "saida": "95746-108",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-hifen",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(formatado)",
+            "semente": 22,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "64399-158",
+          "entidade": "pessoa-23",
+          "saida": "64151-523",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-hifen",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(formatado)",
+            "semente": 23,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "79.818-181",
+          "entidade": "pessoa-24",
+          "saida": "79.236-388",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-ponto",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 24,
+            "formas": [
+              "mascara-cep-ponto"
+            ]
+          }
+        },
+        {
+          "entrada": "82.420-515",
+          "entidade": "pessoa-25",
+          "saida": "83.360-124",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-ponto",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 25,
+            "formas": [
+              "mascara-cep-ponto"
+            ]
+          }
+        },
+        {
+          "entrada": "53.422-667",
+          "entidade": "pessoa-26",
+          "saida": "51.271-072",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mascara-ponto",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 26,
+            "formas": [
+              "mascara-cep-ponto"
+            ]
+          }
+        },
+        {
+          "entrada": "4748514",
+          "entidade": "pessoa-96",
+          "saida": "11971907",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sete-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 96,
+            "formas": [
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "2999233",
+          "entidade": "pessoa-172",
+          "saida": "02579774",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sete-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 172,
+            "formas": [
+              "sem-zeros:1"
+            ]
+          }
+        },
+        {
+          "entrada": "6844093 ",
+          "entidade": "pessoa-220",
+          "saida": "18750544",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sete-digitos-preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 220,
+            "formas": [
+              "sem-zeros:1",
+              "espacos:1"
+            ]
+          }
+        },
+        {
+          "entrada": "4249494   ",
+          "entidade": "pessoa-300",
+          "saida": "16738226  ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "sete-digitos-preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 300,
+            "formas": [
+              "sem-zeros:1",
+              "espacos:3"
+            ]
+          }
+        },
+        {
+          "entrada": "85412-295  ",
+          "entidade": "pessoa-301",
+          "saida": "82416-110  ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(formatado)",
+            "semente": 301,
+            "formas": [
+              "espacos:2"
+            ]
+          }
+        },
+        {
+          "entrada": "01000000",
+          "entidade": "pessoa-302",
+          "saida": "09997645",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "19999999",
+          "entidade": "pessoa-303",
+          "saida": "14570734",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "68899999",
+          "entidade": "pessoa-304",
+          "saida": "67029477",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "68900000",
+          "entidade": "pessoa-305",
+          "saida": "68948982",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69299999",
+          "entidade": "pessoa-306",
+          "saida": "69271484",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69300000",
+          "entidade": "pessoa-307",
+          "saida": "69356058",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69399999",
+          "entidade": "pessoa-308",
+          "saida": "69345088",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69400000",
+          "entidade": "pessoa-309",
+          "saida": "69632748",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69899999",
+          "entidade": "pessoa-310",
+          "saida": "69160984",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69900000",
+          "entidade": "pessoa-311",
+          "saida": "69968547",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "72799999",
+          "entidade": "pessoa-312",
+          "saida": "70203843",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "72800000",
+          "entidade": "pessoa-313",
+          "saida": "74663967",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "73699999",
+          "entidade": "pessoa-314",
+          "saida": "70962729",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "73700000",
+          "entidade": "pessoa-315",
+          "saida": "74578718",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "76799999",
+          "entidade": "pessoa-316",
+          "saida": "76620018",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "76800000",
+          "entidade": "pessoa-317",
+          "saida": "76994767",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "78899999",
+          "entidade": "pessoa-318",
+          "saida": "78740680",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "79000000",
+          "entidade": "pessoa-319",
+          "saida": "79181688",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "99999999",
+          "entidade": "pessoa-320",
+          "saida": "90062385",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fronteira",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "78900000",
+          "entidade": "pessoa-321",
+          "saida": "76861374",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ro-antiga",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "78999999",
+          "entidade": "pessoa-322",
+          "saida": "76879144",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ro-antiga",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "78950-000",
+          "entidade": "pessoa-323",
+          "saida": "76804-535",
+          "desfecho": "Pseudonimizado",
+          "ramo": "ro-antiga",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "06317908",
+          "entidade": "pessoa-324",
+          "saida": "04378845",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-sp",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: SP)",
+            "semente": 324,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25566124",
+          "entidade": "pessoa-325",
+          "saida": "23722759",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-rj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: RJ)",
+            "semente": 325,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29723389",
+          "entidade": "pessoa-326",
+          "saida": "29805966",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-es",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: ES)",
+            "semente": 326,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "34095765",
+          "entidade": "pessoa-327",
+          "saida": "30236594",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-mg",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 327,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41498679",
+          "entidade": "pessoa-328",
+          "saida": "46584900",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ba",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: BA)",
+            "semente": 328,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "49956206",
+          "entidade": "pessoa-329",
+          "saida": "49619198",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-se",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: SE)",
+            "semente": 329,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50418043",
+          "entidade": "pessoa-330",
+          "saida": "55340632",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-pe",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: PE)",
+            "semente": 330,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "57866457",
+          "entidade": "pessoa-331",
+          "saida": "57451880",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-al",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: AL)",
+            "semente": 331,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "58452166",
+          "entidade": "pessoa-332",
+          "saida": "58796712",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-pb",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: PB)",
+            "semente": 332,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "59000170",
+          "entidade": "pessoa-333",
+          "saida": "59893066",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-rn",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: RN)",
+            "semente": 333,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "63438046",
+          "entidade": "pessoa-334",
+          "saida": "63391332",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ce",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: CE)",
+            "semente": 334,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "64614394",
+          "entidade": "pessoa-335",
+          "saida": "64436458",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-pi",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: PI)",
+            "semente": 335,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "65888838",
+          "entidade": "pessoa-336",
+          "saida": "65833189",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ma",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MA)",
+            "semente": 336,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "68525801",
+          "entidade": "pessoa-337",
+          "saida": "68856514",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-pa",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: PA)",
+            "semente": 337,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "68936952",
+          "entidade": "pessoa-338",
+          "saida": "68998733",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ap",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: AP)",
+            "semente": 338,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69632981",
+          "entidade": "pessoa-339",
+          "saida": "69091557",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-am",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: AM)",
+            "semente": 339,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69355088",
+          "entidade": "pessoa-340",
+          "saida": "69348166",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-rr",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: RR)",
+            "semente": 340,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69948311",
+          "entidade": "pessoa-341",
+          "saida": "69998379",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ac",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: AC)",
+            "semente": 341,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "73149503",
+          "entidade": "pessoa-342",
+          "saida": "70092801",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-df",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: DF)",
+            "semente": 342,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "75209159",
+          "entidade": "pessoa-343",
+          "saida": "75093091",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-go",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: GO)",
+            "semente": 343,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "76800770",
+          "entidade": "pessoa-344",
+          "saida": "76994782",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ro",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: RO)",
+            "semente": 344,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "77673197",
+          "entidade": "pessoa-345",
+          "saida": "77621484",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-to",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: TO)",
+            "semente": 345,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "78313756",
+          "entidade": "pessoa-346",
+          "saida": "78075566",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-mt",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MT)",
+            "semente": 346,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "79941172",
+          "entidade": "pessoa-347",
+          "saida": "79846108",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-ms",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MS)",
+            "semente": 347,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "82520536",
+          "entidade": "pessoa-348",
+          "saida": "85694535",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-pr",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: PR)",
+            "semente": 348,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "88985720",
+          "entidade": "pessoa-349",
+          "saida": "89742701",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-sc",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: SC)",
+            "semente": 349,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "92803351",
+          "entidade": "pessoa-350",
+          "saida": "90606174",
+          "desfecho": "Pseudonimizado",
+          "ramo": "uf-rs",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: RS)",
+            "semente": 350,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69050000",
+          "entidade": "pessoa-353",
+          "saida": "69009830",
+          "desfecho": "Pseudonimizado",
+          "ramo": "primeira-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "70100000",
+          "entidade": "pessoa-355",
+          "saida": "71465941",
+          "desfecho": "Pseudonimizado",
+          "ramo": "primeira-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "72850000",
+          "entidade": "pessoa-363",
+          "saida": "72903493",
+          "desfecho": "Pseudonimizado",
+          "ramo": "primeira-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "69050000",
+          "entidade": "pessoa-364",
+          "saida": "69473757",
+          "desfecho": "Pseudonimizado",
+          "ramo": "segunda-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "70100000",
+          "entidade": "pessoa-366",
+          "saida": "73132961",
+          "desfecho": "Pseudonimizado",
+          "ramo": "segunda-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "72850000",
+          "entidade": "pessoa-367",
+          "saida": "74215159",
+          "desfecho": "Pseudonimizado",
+          "ramo": "segunda-faixa",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "32100223",
+          "entidade": "pessoa-mesma",
+          "saida": "31882689",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mesma-entidade",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 368,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "38262589",
+          "entidade": "pessoa-mesma",
+          "saida": "31882689",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mesma-entidade",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 369,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "38799928",
+          "entidade": "pessoa-mesma",
+          "saida": "31882689",
+          "desfecho": "Pseudonimizado",
+          "ramo": "mesma-entidade",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 370,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69141302",
+          "entidade": "",
+          "saida": "69705025",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-vazia",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: AM)",
+            "semente": 371,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "69189793",
+          "entidade": "",
+          "saida": "69705025",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-vazia",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: AM)",
+            "semente": 372,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "74192101",
+          "entidade": "   ",
+          "saida": "73804861",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-vazia",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: GO)",
+            "semente": 373,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "73617812",
+          "entidade": "pessoa-aparada",
+          "saida": "71450978",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-aparada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: DF)",
+            "semente": 374,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "71417553",
+          "entidade": "  pessoa-aparada\t",
+          "saida": "71450978",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-aparada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: DF)",
+            "semente": 375,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "70910981",
+          "entidade": "\u00A0pessoa-aparada\u0085",
+          "saida": "71450978",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-aparada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: DF)",
+            "semente": 376,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "70204449",
+          "entidade": "\u001Fpessoa-aparada",
+          "saida": "71695756",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-aparada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: DF)",
+            "semente": 377,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "70403970",
+          "entidade": "\t\n\u000B\f\r \u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000pessoa-aparada\t\n\u000B\f\r \u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000",
+          "saida": "71450978",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-aparada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: DF)",
+            "semente": 378,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32482643",
+          "entidade": "Pessoa Fictícia Ação",
+          "saida": "36024198",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-acentuada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 379,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "36893291",
+          "entidade": "PESSOA FICTÍCIA AÇÃO",
+          "saida": "30178631",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-caixa",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 380,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32698063",
+          "entidadeUtf16": "0070D800",
+          "saida": "39844614",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-surrogate-sem-par",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 381,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35112468",
+          "entidade": "p�",
+          "saida": "39844614",
+          "desfecho": "Pseudonimizado",
+          "ramo": "entidade-surrogate-sem-par",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(uf: MG)",
+            "semente": 382,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "",
+          "entidade": "pessoa-383",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000",
+          "entidade": "pessoa-384",
+          "saida": "00000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0000000",
+          "entidade": "pessoa-385",
+          "saida": "0000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000",
+          "entidade": "pessoa-386",
+          "saida": "00000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0",
+          "entidade": "pessoa-387",
+          "saida": "0",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000  ",
+          "entidade": "pessoa-388",
+          "saida": "00000000  ",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000-000",
+          "entidade": "pessoa-389",
+          "saida": "00000-000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00.000-000",
+          "entidade": "pessoa-390",
+          "saida": "00.000-000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000001",
+          "entidade": "pessoa-391",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "000000000",
+          "entidade": "pessoa-392",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0000-0000",
+          "entidade": "pessoa-393",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00.000.000",
+          "entidade": "pessoa-394",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00-000-000",
+          "entidade": "pessoa-395",
+          "erro": "INC1003",
+          "ramo": "quase-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00100000",
+          "entidade": "pessoa-396",
+          "erro": "INC1003",
+          "ramo": "fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00999999",
+          "entidade": "pessoa-397",
+          "erro": "INC1003",
+          "ramo": "fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0999999",
+          "entidade": "pessoa-398",
+          "erro": "INC1003",
+          "ramo": "fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "01310",
+          "entidade": "pessoa-399",
+          "erro": "INC1003",
+          "ramo": "cinco-digitos",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "90010-",
+          "entidade": "pessoa-400",
+          "erro": "INC1003",
+          "ramo": "cinco-digitos",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "613A5733",
+          "entidade": "pessoa-401",
+          "erro": "INC1003",
+          "ramo": "malformado-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 401,
+            "formas": [
+              "trocar:3:A"
+            ]
+          }
+        },
+        {
+          "entrada": "296522750",
+          "entidade": "pessoa-402",
+          "erro": "INC1003",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 402,
+            "formas": [
+              "sufixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "407883",
+          "entidade": "pessoa-403",
+          "erro": "INC1003",
+          "ramo": "malformado-tamanho",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 403,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "76934.671",
+          "entidade": "pessoa-404",
+          "erro": "INC1003",
+          "ramo": "mascara-errada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep(formatado)",
+            "semente": 404,
+            "formas": [
+              "trocar:5:."
+            ]
+          }
+        },
+        {
+          "entrada": "32-349-668",
+          "entidade": "pessoa-405",
+          "erro": "INC1003",
+          "ramo": "mascara-errada",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 405,
+            "formas": [
+              "mascara-cep-ponto",
+              "trocar:2:-"
+            ]
+          }
+        },
+        {
+          "entrada": "68٣17489",
+          "entidade": "pessoa-406",
+          "erro": "INC1003",
+          "ramo": "digito-nao-ascii",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 406,
+            "formas": [
+              "trocar:2:٣"
+            ]
+          }
+        },
+        {
+          "entrada": "49313074\t",
+          "entidade": "pessoa-407",
+          "erro": "INC1003",
+          "ramo": "sufixo-nao-espaco",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 407,
+            "formas": [
+              "sufixo:\t"
+            ]
+          }
+        },
+        {
+          "entrada": 68933921,
+          "entidade": "pessoa-408",
+          "saida": 68915568,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 408,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 69694744,
+          "entidade": "pessoa-409",
+          "saida": 69691602,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 409,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 76794744,
+          "entidade": "pessoa-410",
+          "saida": 76283600,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 410,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 64497396,
+          "entidade": "pessoa-411",
+          "saida": 64478639,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 411,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 4568187,
+          "entidade": "pessoa-425",
+          "saida": 15247059,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-sete-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 425,
+            "formas": [
+              "sem-zeros:1",
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 78950000,
+          "entidade": "pessoa-426",
+          "saida": 76830675,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-ro-antiga",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 99999999,
+          "entidade": "pessoa-427",
+          "saida": 92939833,
+          "desfecho": "Pseudonimizado",
+          "ramo": "numero-maximo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 0,
+          "entidade": "pessoa-428",
+          "saida": 0,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1,
+          "entidade": "pessoa-429",
+          "erro": "INC1003",
+          "ramo": "numero-fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 999999,
+          "entidade": "pessoa-430",
+          "erro": "INC1003",
+          "ramo": "numero-fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "entidade": "pessoa-431",
+          "erro": "INC1003",
+          "ramo": "numero-fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 100000000,
+          "entidade": "pessoa-432",
+          "erro": "INC1003",
+          "ramo": "numero-fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio e ambiente próprios, malformado anulado",
+      "dominio": "cep-entrega",
+      "ambiente": "desenvolvimento",
+      "entradaMalformada": "anular",
+      "pares": [
+        {
+          "entrada": "57261407",
+          "entidade": "pessoa-433",
+          "saida": "57320268",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 433,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "58010813",
+          "entidade": "pessoa-434",
+          "saida": "58435996",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 434,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "64298390",
+          "entidade": "pessoa-435",
+          "saida": "64304064",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 435,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "84574696",
+          "entidade": "pessoa-436",
+          "saida": "81133034",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 436,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "00100000",
+          "entidade": "pessoa-437",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000-000",
+          "entidade": "pessoa-438",
+          "saida": "00000-000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "malformado preservado",
+      "dominio": "cep",
+      "ambiente": "homologacao",
+      "entradaMalformada": "preservar",
+      "pares": [
+        {
+          "entrada": "68948825",
+          "entidade": "pessoa-439",
+          "saida": "68936288",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 439,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "58342484",
+          "entidade": "pessoa-440",
+          "saida": "58713983",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cep()",
+            "semente": 440,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "00100000",
+          "entidade": "pessoa-441",
+          "saida": "00100000",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1,
+          "entidade": "pessoa-442",
+          "saida": 1,
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "numero-fora-das-faixas",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "00000000",
+          "entidade": "pessoa-443",
+          "saida": "00000000",
+          "desfecho": "Zerado",
+          "ramo": "zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 0,
+          "entidade": "pessoa-444",
+          "saida": 0,
+          "desfecho": "Zerado",
+          "ramo": "numero-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    }
+  ]
+}

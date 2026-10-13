@@ -1,0 +1,1135 @@
+{
+  "descricao": "email, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige email@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes.",
+  "transformador": "email",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "malformado falha",
+      "dominio": "email",
+      "ambiente": "homologacao",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "zsuozfcn5t78@example.org",
+          "saida": "wxip4jkmfsiny222yd5m@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "d0g0yixhv00m@example.org",
+          "saida": "7dp3k3isma6oll2g5yn4@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 2,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "yxhtpohz7h7y@example.org",
+          "saida": "s6br3tqpv25mhb7efxek@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "j6p9iwr0bmb8@example.org",
+          "saida": "m64dbjronvarscnmqvmu@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "kvx3s2s3nn9j@example.org",
+          "saida": "y4ldqrg44qoe4mewbzwf@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "175fgbb387kj@example.org",
+          "saida": "76qq6aj2nsr2xmjn4ejn@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "zk4995cdoft0@example.org",
+          "saida": "tfn3ncshidtf4tz43cec@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 7,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3vv7ohqv745s@example.org",
+          "saida": "6hy7r45jgczddbsav55r@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 8,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "aje070ysfq19@example.org",
+          "saida": "txvjkqvsdttltnyxg3xw@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 9,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "8oecpi4f2x0e@example.org",
+          "saida": "r6vjd32drlzfb5kg6dl6@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 10,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "idipdls9wicm@example.org",
+          "saida": "56dei6vbtracaohh7wnr@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "l367kj03uy7f@example.org",
+          "saida": "lhh7cvqyjbueehplamlz@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "i28dxpeuvpur@example.org",
+          "saida": "qzm4fjuspppqinbs6hg4@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "zw77k1h1s044@example.org",
+          "saida": "bqioivwdroylhv7re7f6@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "yokevh76s5wr@example.org",
+          "saida": "jrzguv3lqau7qayjl23t@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "6a7b2z9oanuf@example.org",
+          "saida": "55ymt3rtq6ollhdc64uv@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "xy78x755txa8@example.org",
+          "saida": "dh6j5wsyrbctlnptyyvk@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 17,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "y0n9qs808nud@example.org",
+          "saida": "ilbyefwnyzfhwway2wdd@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 18,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "1rfm1wo2oivk@example.org",
+          "saida": "boxjiagrp6wj7g5iykiw@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 19,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0gsmhc9tbsty@example.org",
+          "saida": "b32tvp5lnvlko2beeqbi@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 20,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "B3YL1A8P8GMX@EXAMPLE.ORG",
+          "saida": "zpz3pag6sujum7vhgydc@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 21,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "9ECEALETUP7U@EXAMPLE.ORG",
+          "saida": "x572z5hbvbacgmfbgv3b@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 22,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "POIHC64Y57GH@EXAMPLE.ORG",
+          "saida": "dudvyafwq2vrtcwdoo7n@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 23,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "ÀÉÞ43v99gdbbr5d@example.org",
+          "saida": "bjvyxy5p57dfr6twifne@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "latin1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 24,
+            "formas": [
+              "prefixo:ÀÉÞ"
+            ]
+          }
+        },
+        {
+          "entrada": "àéþ6kkdoyldvbtq@example.org",
+          "saida": "mwfg3st5zwbq3a7yc4m6@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "latin1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 25,
+            "formas": [
+              "prefixo:àéþ"
+            ]
+          }
+        },
+        {
+          "entrada": "×irigav8gmh64@example.org",
+          "saida": "lpdzgxiawz342fqiouts@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fora-da-regra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 26,
+            "formas": [
+              "prefixo:×"
+            ]
+          }
+        },
+        {
+          "entrada": "ßk2q04hkttaeg@example.org",
+          "saida": "lcciiuv3fibzi2w66fir@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fora-da-regra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 27,
+            "formas": [
+              "prefixo:ß"
+            ]
+          }
+        },
+        {
+          "entrada": "Ÿhtemwkrx5zzu@example.org",
+          "saida": "4gmazqcp5cey6oo7kajk@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fora-da-regra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 28,
+            "formas": [
+              "prefixo:Ÿ"
+            ]
+          }
+        },
+        {
+          "entrada": "İze2wyumq7dzy@example.org",
+          "saida": "d5hoz53n7d7f5hg7jmsu@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fora-da-regra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 29,
+            "formas": [
+              "prefixo:İ"
+            ]
+          }
+        },
+        {
+          "entrada": "Kdgj25fm5hf8a@example.org",
+          "saida": "7ocyhju6lqkzhunznpcz@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "fora-da-regra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 30,
+            "formas": [
+              "prefixo:K"
+            ]
+          }
+        },
+        {
+          "entrada": "ézsrr6sxstiz5@example.org",
+          "saida": "p6nyn2np7ala5z445lu3@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "composicao",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 31,
+            "formas": [
+              "prefixo:é"
+            ]
+          }
+        },
+        {
+          "entrada": "éwnlgaco1ycjp@example.org",
+          "saida": "ekaroet7bsxkki6x4mha@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "composicao",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 32,
+            "formas": [
+              "prefixo:é"
+            ]
+          }
+        },
+        {
+          "entrada": "\uD83D\uDE00mxe8fy5ucoez@example.org",
+          "saida": "cvf46d53uqmtcqgk262i@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "par-substituto",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 33,
+            "formas": [
+              "prefixo:\uD83D\uDE00"
+            ]
+          }
+        },
+        {
+          "entrada": "  0qr3ype8qqm3@example.org",
+          "saida": "leaffbj34bfofvjtjh3m@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-nas-pontas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 34,
+            "formas": [
+              "prefixo:  "
+            ]
+          }
+        },
+        {
+          "entrada": "\u00A0lvxxfbwhjjgh@example.org",
+          "saida": "t4xy7le5q4a3dqaenvvf@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-nas-pontas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 35,
+            "formas": [
+              "prefixo:\u00A0"
+            ]
+          }
+        },
+        {
+          "entrada": "\u0085y9valr0z7lxr@example.org",
+          "saida": "76dfm2w7qfyszklqob6w@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-nas-pontas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 36,
+            "formas": [
+              "prefixo:\u0085"
+            ]
+          }
+        },
+        {
+          "entrada": "es132j4d4if1@example.org\t",
+          "saida": "hhx3azaguq5vz5axyrtl@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-nas-pontas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 37,
+            "formas": [
+              "sufixo:\t"
+            ]
+          }
+        },
+        {
+          "entrada": "deg1jbjxbwvz@example.org\u3000",
+          "saida": "r5rydtbukejpj4mimgu7@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-nas-pontas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 38,
+            "formas": [
+              "sufixo:\u3000"
+            ]
+          }
+        },
+        {
+          "entrada": "\t\n\u000B\f\r \u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000brnwgmdzp954@example.org\t\n\u000B\f\r \u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000",
+          "saida": "bxpfxpeznni52q7kmvg5@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-nas-pontas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 39,
+            "formas": [
+              "prefixo:\t\n\u000B\f\r \u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000",
+              "sufixo:\t\n\u000B\f\r \u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000"
+            ]
+          }
+        },
+        {
+          "entrada": "bbbhq3dkvnbm@example.org  ",
+          "saida": "36xt24hbctsrhhe5di47@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento-menor-que-excesso",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 40,
+            "formas": [
+              "espacos:2"
+            ]
+          }
+        },
+        {
+          "entrada": "zdwzpj00n9g4@example.org                                        ",
+          "saida": "pehwzzl7cvbctf5uovds@example.com                                ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento-maior-que-excesso",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 41,
+            "formas": [
+              "espacos:40"
+            ]
+          }
+        },
+        {
+          "entrada": "   dny791z41vyk@example.org          ",
+          "saida": "gcxutvphyeyd2p43oqlc@example.com     ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "espacos-a-esquerda-e-preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 42,
+            "formas": [
+              "prefixo:   ",
+              "espacos:10"
+            ]
+          }
+        },
+        {
+          "entrada": "u8ycfk3cdedge0u3d7iwe197mmsrrk9icvk72dyj@example.org   ",
+          "saida": "rpp62chnrpd4stjenfak@example.com   ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento-sem-excesso",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:40",
+            "semente": 43,
+            "formas": [
+              "espacos:3"
+            ]
+          }
+        },
+        {
+          "entrada": "3y3mhw2phx6h3qsnto8f5d0z254ubw17oq7f0ffgkhknr0hxd25mw6pnuwkg0sbe@example.org",
+          "saida": "ej6kiz2scjhdaa5x2ubd@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "parte-local-64",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:64",
+            "semente": 44,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "\uD83D\uDE00fahwn0t8k1jbuadrotmp8cuqbsareraphwapqn389bzpym66recpopelbu6kdo@example.org",
+          "saida": "nkq52sv34hvlhttfdic4@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "parte-local-64",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:62",
+            "semente": 45,
+            "formas": [
+              "prefixo:\uD83D\uDE00"
+            ]
+          }
+        },
+        {
+          "entrada": "ywjyx5a70o3g5on6iade9o485nrhm61foz1dd2lyxjfei0dakjowx8t9to8l2zva@example.org.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "saida": "5azpipax6azbnomavnnc@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "endereco-254",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:64",
+            "semente": 46,
+            "formas": [
+              "sufixo:.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "     ",
+          "saida": "     ",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "yjr60utwh8108cgd3x0inisk2g7vfp0z5iqqt6p8mdmlk4tguoup55cpx2ngztsz8@example.org",
+          "erro": "INC1003",
+          "ramo": "parte-local-65",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:65",
+            "semente": 49,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "\uD83D\uDE00glb33wb8zlo7io6nw5slbhd8xyoagx94cqx7d5ixu5d904juigv0jy0evvvvj9j@example.org",
+          "erro": "INC1003",
+          "ramo": "parte-local-65",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:63",
+            "semente": 50,
+            "formas": [
+              "prefixo:\uD83D\uDE00"
+            ]
+          }
+        },
+        {
+          "entrada": "l1tai4gda3go346etz8rpg10yw24o48rww2wnrhqywtnxnsp9ygwbqheg9jcq2es@example.org.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "erro": "INC1003",
+          "ramo": "endereco-255",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:64",
+            "semente": 51,
+            "formas": [
+              "sufixo:.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sufixo:a"
+            ]
+          }
+        },
+        {
+          "entrada": "\u001Fsrbs9og1u9a4@example.org",
+          "erro": "INC1003",
+          "ramo": "controle",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 52,
+            "formas": [
+              "prefixo:\u001F"
+            ]
+          }
+        },
+        {
+          "entrada": "9d8\u007Flbj6biv3r@example.org",
+          "erro": "INC1003",
+          "ramo": "controle",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 53,
+            "formas": [
+              "inserir:3:\u007F"
+            ]
+          }
+        },
+        {
+          "entrada": "ket\u0080x7xgvfqxt@example.org",
+          "erro": "INC1003",
+          "ramo": "controle-c1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 54,
+            "formas": [
+              "inserir:3:\u0080"
+            ]
+          }
+        },
+        {
+          "entrada": "no6\u009Fevicx23bd@example.org",
+          "erro": "INC1003",
+          "ramo": "controle-c1",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 55,
+            "formas": [
+              "inserir:3:\u009F"
+            ]
+          }
+        },
+        {
+          "entrada": "a@sxp7mu8g3wyg@example.org",
+          "erro": "INC1003",
+          "ramo": "duas-arrobas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 56,
+            "formas": [
+              "prefixo:a@"
+            ]
+          }
+        },
+        {
+          "entrada": "i52za7fd5bexample.org",
+          "erro": "INC1003",
+          "ramo": "sem-arroba",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 57,
+            "formas": [
+              "remover:10:1"
+            ]
+          }
+        },
+        {
+          "entrada": "@example.org",
+          "erro": "INC1003",
+          "ramo": "parte-local-vazia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 58,
+            "formas": [
+              "remover:0:10"
+            ]
+          }
+        },
+        {
+          "entrada": "ymcp38uxni@exampleorg",
+          "erro": "INC1003",
+          "ramo": "dominio-sem-ponto",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 59,
+            "formas": [
+              "remover:18:1"
+            ]
+          }
+        },
+        {
+          "entrada": "rvfgij021w@.example.org",
+          "erro": "INC1003",
+          "ramo": "rotulo-vazio",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 60,
+            "formas": [
+              "inserir:11:."
+            ]
+          }
+        },
+        {
+          "entrada": "9s1juv6c4p@example.org.",
+          "erro": "INC1003",
+          "ramo": "rotulo-vazio",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 61,
+            "formas": [
+              "sufixo:."
+            ]
+          }
+        },
+        {
+          "entrada": "k6r1bf72yn@example..org",
+          "erro": "INC1003",
+          "ramo": "rotulo-vazio",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 62,
+            "formas": [
+              "inserir:18:."
+            ]
+          }
+        },
+        {
+          "entrada": "x31 ya6omcznv@example.org",
+          "erro": "INC1003",
+          "ramo": "espaco-no-meio",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 63,
+            "formas": [
+              "inserir:3: "
+            ]
+          }
+        },
+        {
+          "entrada": "b3j\u2009zipfpssic@example.org",
+          "erro": "INC1003",
+          "ramo": "espaco-no-meio",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 64,
+            "formas": [
+              "inserir:3:\u2009"
+            ]
+          }
+        },
+        {
+          "entradaUtf16": "D80000750036003300790075003600390061007300700040006500780061006D0070006C0065002E006F00720067",
+          "erro": "INC1003",
+          "ramo": "surrogate-sem-par",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 65,
+            "formas": [
+              "prefixo-utf16:D800"
+            ]
+          }
+        },
+        {
+          "entradaUtf16": "00750072003200350034DC00006800650038007000770040006500780061006D0070006C0065002E006F00720067",
+          "erro": "INC1003",
+          "ramo": "surrogate-sem-par",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 66,
+            "formas": [
+              "inserir:5:x",
+              "trocar-utf16:5:DC00"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio e ambiente próprios, malformado anulado",
+      "dominio": "email-cliente",
+      "ambiente": "desenvolvimento",
+      "entradaMalformada": "anular",
+      "pares": [
+        {
+          "entrada": "t5hh0w38bmov@example.org",
+          "saida": "sy7zthactchcgkhqyi2c@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 67,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "y4hjo1z73qkm@example.org",
+          "saida": "aiegntbelx4luenick3z@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 68,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "9ct8jake5pbh@example.org",
+          "saida": "dudw3l7u535l7g6mnbkj@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 69,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "o6wvx5s5udo6@example.org",
+          "saida": "helreau5v2xht4qojzph@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 70,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "2dx4mdwzoldt@example.org",
+          "saida": "nkwgp22zlaa5z7mnz6yp@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 71,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "a@0mhxq8dilr9i@example.org",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "duas-arrobas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 72,
+            "formas": [
+              "prefixo:a@"
+            ]
+          }
+        },
+        {
+          "entradaUtf16": "DBFF0039006200370079006900650033006A006800310040006500780061006D0070006C0065002E006F00720067",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "surrogate-sem-par",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 73,
+            "formas": [
+              "prefixo-utf16:DBFF"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "malformado preservado",
+      "dominio": "email",
+      "ambiente": "homologacao",
+      "entradaMalformada": "preservar",
+      "pares": [
+        {
+          "entrada": "i0ncjt7o6aqa@example.org",
+          "saida": "te76vylwwl6q6ga46cuz@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 74,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7g17q43yemo4@example.org",
+          "saida": "3enlrciid7j2edt2lyad@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 75,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "ssmppjnh7b1o@example.org",
+          "saida": "2w5rvtumwz3bldentflc@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 76,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "a@piu8rgcxto8e@example.org",
+          "saida": "a@piu8rgcxto8e@example.org",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "duas-arrobas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 77,
+            "formas": [
+              "prefixo:a@"
+            ]
+          }
+        },
+        {
+          "entrada": "9i27ufqeg3@exampleorg",
+          "saida": "9i27ufqeg3@exampleorg",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "dominio-sem-ponto",
+          "origem": {
+            "tipo": "construido",
+            "regra": "email-parte-local:10",
+            "semente": 78,
+            "formas": [
+              "remover:18:1"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio padrão em outro ambiente",
+      "dominio": "email",
+      "ambiente": "producao",
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": "cl67l7hs4d3g@example.org",
+          "saida": "x5ydjhwce5exwem6vdpa@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 79,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "s221mr0qzgc5@example.org",
+          "saida": "7gmwp4ugfnuoo6jvbkoi@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 80,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "r9nr78hip8m5@example.org",
+          "saida": "ohzshrvk4b6k3ozjblht@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 81,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "g9oh08xf8b6u@example.org",
+          "saida": "j43fqsi2xqjrn3h52w7p@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 82,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "qsdlnnj845yi@example.org",
+          "saida": "o5ami2luqthiixxmouba@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "pseudonimizado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 83,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "W3PKAI9EH9IS@EXAMPLE.ORG",
+          "saida": "rd3jlji35qgpgbemitd5@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 84,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "a@wtkxxwn4teyj@example.org",
+          "erro": "INC1003",
+          "ramo": "duas-arrobas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 85,
+            "formas": [
+              "prefixo:a@"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1290 @@
+{
+  "descricao": "id.permutar, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige id.permutar@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes.",
+  "transformador": "id.permutar",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "N = 10^4",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 10000,
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": 7029,
+          "saida": 5963,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 1,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1022,
+          "saida": 8618,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 2,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 6906,
+          "saida": 9362,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 3,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 2635,
+          "saida": 5640,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 4,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 2884,
+          "saida": 4866,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 5,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 7670,
+          "saida": 3963,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 6,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 7006,
+          "saida": 8753,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 7,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 8210,
+          "saida": 3649,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 8,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1,
+          "saida": 6857,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9999,
+          "saida": 1730,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 2297,
+          "saida": 2599,
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "id-caminhada",
+            "semente": 11,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "saida": -9223372036854775808,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 10000,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9223372036854775807,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "N = 10^5",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 100000,
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": 65799,
+          "saida": 63732,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 17,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 66925,
+          "saida": 21790,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 18,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 77544,
+          "saida": 75334,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 19,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 72696,
+          "saida": 40580,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 20,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 3097,
+          "saida": 67870,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 21,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 99257,
+          "saida": 76912,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 22,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 42767,
+          "saida": 46723,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 23,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 85642,
+          "saida": 36458,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 24,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1,
+          "saida": 407,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 99999,
+          "saida": 65893,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 97228,
+          "saida": 46107,
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "id-caminhada",
+            "semente": 27,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "saida": -9223372036854775808,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 100000,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9223372036854775807,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "N = 10^9",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 1000000000,
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": 336644514,
+          "saida": 935806472,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 33,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 723447208,
+          "saida": 872057703,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 34,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 332273274,
+          "saida": 451576532,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 35,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 680352453,
+          "saida": 741123301,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 36,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 116253920,
+          "saida": 165723548,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 37,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 83770926,
+          "saida": 402469378,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 38,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 30442315,
+          "saida": 515878520,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 39,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 53551735,
+          "saida": 797982143,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 40,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1,
+          "saida": 398363084,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 999999999,
+          "saida": 344689059,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 232067225,
+          "saida": 294743322,
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "id-caminhada",
+            "semente": 43,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "saida": -9223372036854775808,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1000000000,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9223372036854775807,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "N = 10^12",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 1000000000000,
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": 675185699346,
+          "saida": 894488809665,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 49,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 186922562949,
+          "saida": 699929507063,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 50,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 328457601167,
+          "saida": 640925687872,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 51,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 507465058543,
+          "saida": 826422755334,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 52,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 973707835574,
+          "saida": 349158341446,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 53,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 294452591124,
+          "saida": 648819109734,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 54,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 384908956802,
+          "saida": 78336675377,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 55,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 524587780717,
+          "saida": 9257774264,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 56,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1,
+          "saida": 22917583844,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 999999999999,
+          "saida": 794511983878,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 17930340514,
+          "saida": 783347285320,
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "id-caminhada",
+            "semente": 59,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "saida": -9223372036854775808,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1000000000000,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9223372036854775807,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "N = 10^17",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 100000000000000000,
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": 57068056133083582,
+          "saida": 39988387091093277,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 65,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 55631671115183488,
+          "saida": 56613449870942549,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 66,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 55032143685100368,
+          "saida": 44095073924954108,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 67,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 67942241989311833,
+          "saida": 97216960038328004,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 68,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 99804452448994448,
+          "saida": 15498110583601266,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 69,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 39515614138122935,
+          "saida": 57975284353781589,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 70,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 78809312244646859,
+          "saida": 73857172465809091,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 71,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 73079599578035548,
+          "saida": 73222471705382322,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 72,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1,
+          "saida": 12864631013039053,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 99999999999999999,
+          "saida": 83579844194381253,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 69689129234024509,
+          "saida": 85694340152242848,
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "id-caminhada",
+            "semente": 75,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "saida": -9223372036854775808,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 100000000000000000,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9223372036854775807,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "N = 10^18",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 1000000000000000000,
+      "entradaMalformada": "falhar",
+      "pares": [
+        {
+          "entrada": 489373788758836931,
+          "saida": 116301528972387825,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 81,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 189340249671095931,
+          "saida": 44402335180635850,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 82,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 448770472058699735,
+          "saida": 105920270672536310,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 83,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 626215558701021261,
+          "saida": 378419850758059081,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 84,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 626039485891339590,
+          "saida": 473877748652853414,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 85,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 649556374689358536,
+          "saida": 604572238106113005,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 86,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 952810553134296773,
+          "saida": 776484821044113345,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 87,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 458136489842528744,
+          "saida": 750602436718258083,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 88,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1,
+          "saida": 769491491679453821,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 999999999999999999,
+          "saida": 717974809536170226,
+          "desfecho": "Pseudonimizado",
+          "ramo": "extremo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 649554732605702436,
+          "saida": 438382911078356643,
+          "desfecho": "Pseudonimizado",
+          "ramo": "caminhada",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "id-caminhada",
+            "semente": 91,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 0,
+          "saida": 0,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -1,
+          "saida": -1,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": -9223372036854775808,
+          "saida": -9223372036854775808,
+          "desfecho": "PontoFixo",
+          "ramo": "zero-ou-negativo",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 1000000000000000000,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": 9223372036854775807,
+          "erro": "INC1003",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínio e ambiente próprios, malformado anulado",
+      "dominio": "cliente-id",
+      "ambiente": "desenvolvimento",
+      "n": 1000000,
+      "entradaMalformada": "anular",
+      "pares": [
+        {
+          "entrada": 406393,
+          "saida": 191863,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 97,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 415883,
+          "saida": 252341,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 98,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 348704,
+          "saida": 931696,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 99,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 1000000,
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "malformado preservado",
+      "dominio": "pedido-id",
+      "ambiente": "homologacao",
+      "n": 10000000,
+      "entradaMalformada": "preservar",
+      "pares": [
+        {
+          "entrada": 224584,
+          "saida": 3689252,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 101,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 6673440,
+          "saida": 4671965,
+          "desfecho": "Pseudonimizado",
+          "ramo": "uniforme",
+          "origem": {
+            "tipo": "construido",
+            "regra": "id-uniforme",
+            "semente": 102,
+            "formas": [
+              "numero"
+            ]
+          }
+        },
+        {
+          "entrada": 10000005,
+          "saida": 10000005,
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "a-partir-de-n",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    }
+  ]
+}

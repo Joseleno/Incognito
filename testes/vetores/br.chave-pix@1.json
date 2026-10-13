@@ -1,0 +1,1433 @@
+{
+  "descricao": "br.chave-pix, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige br.chave-pix@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes. Os números de serviço (0800, 0300, 0303, 0500 e 0900 com 7 dígitos sorteados, ou 6 no formato antigo; DDD inexistente com 3003 ou 4004 e 4 sorteados) podem coincidir com números de empresas: são necessários para provar a preservação e nunca são de pessoa.",
+  "transformador": "br.chave-pix",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "domínios padrão, malformado falha",
+      "dominio": "chave-pix",
+      "ambiente": "homologacao",
+      "entradaMalformada": "falhar",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1,
+          "entradaInvalida": "preservar"
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false,
+          "entradaInvalida": "preservar"
+        },
+        "email": {
+          "dominio": "email",
+          "versao": 1
+        },
+        "telefone": {
+          "dominio": "telefone",
+          "versao": 1
+        }
+      },
+      "pares": [
+        {
+          "entrada": "75536103806",
+          "saida": "50957195257",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17176262624",
+          "saida": "87812667073",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 2,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "66254327929",
+          "saida": "85238564201",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29492647001",
+          "saida": "38829690830",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26685758341",
+          "saida": "27253782810",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "XV5611TY000169",
+          "saida": "NN59UUAT000170",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "AUZZV23E000176",
+          "saida": "XSV14NEZ000107",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 7,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "LLXE7GLX000114",
+          "saida": "ZRJV4JN8000182",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 8,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21797651000124",
+          "saida": "45623456000146",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 9,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "E42F8U5S000160",
+          "saida": "TTX4UHMY000122",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 10,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "02403596000104",
+          "saida": "66487743000146",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "l367kj03uy7f@example.org",
+          "saida": "lhh7cvqyjbueehplamlz@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "i28dxpeuvpur@example.org",
+          "saida": "qzm4fjuspppqinbs6hg4@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "zw77k1h1s044@example.org",
+          "saida": "bqioivwdroylhv7re7f6@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "yokevh76s5wr@example.org",
+          "saida": "jrzguv3lqau7qayjl23t@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5594909087940",
+          "saida": "+5594951857633",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5573969969885",
+          "saida": "+5573924103247",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 17,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5573973945979",
+          "saida": "+5573907784723",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 18,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5583941376373",
+          "saida": "+5583913923630",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 19,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "ba1a7ec3-c555-40ec-aedd-086ea110540e",
+          "saida": "16f65e07-7716-46b0-a35c-7b13cd300273",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 20,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "07ed1dd6-e5c9-4c11-8e85-619758d07de3",
+          "saida": "59830997-7c3e-42d9-9478-e4cb441779d7",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 21,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "fe19944a-02ad-4e06-a0d1-a45faefa7592",
+          "saida": "713a1122-61d4-4c1e-b90c-adc02e472980",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 22,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "6d7bcbb9-9936-49f7-a62f-3981bd7ad2d6",
+          "saida": "b1ce7559-e092-43b7-9c7a-28cc1c8fc655",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 23,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "db3e47ad-ea66-4885-9174-594e1985f73d",
+          "saida": "b891ea31-738a-4ed1-8ed3-2238292ca08e",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 24,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "e44fb3eb-00aa-46eb-8d74-dbe6b4ff2695",
+          "saida": "4445c05c-3e2c-44da-9b83-1a8e234a0c7d",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 25,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "242.105.913-51",
+          "saida": "537.668.138-62",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf-mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf(formatado)",
+            "semente": 26,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27.478.225/0001-04",
+          "saida": "54.456.136/0001-30",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj-mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(formatado)",
+            "semente": 27,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7J.4CM.AHN/0001-08",
+          "saida": "IX.P23.QMG/0001-48",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj-mascara",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico, formatado)",
+            "semente": 28,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "p4smokcg000140",
+          "saida": "A8FY5NQA000163",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj-minusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 29,
+            "formas": [
+              "minusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "369sv5cv000106",
+          "saida": "SXGC34JV000100",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj-minusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 30,
+            "formas": [
+              "minusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "pihhwini000155",
+          "saida": "KAHD8BNV000185",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj-minusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 31,
+            "formas": [
+              "minusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "md.b60.2er/0001-01",
+          "saida": "DQ.69Y.WNL/0001-29",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj-minusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico, formatado)",
+            "semente": 32,
+            "formas": [
+              "minusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "00000000361982",
+          "saida": "00000000361982",
+          "desfecho": "PontoFixo",
+          "ramo": "cnpj-raiz-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cnpj-raiz-zero",
+            "semente": 33,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "74486419000135",
+          "saida": "35293083000143",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "cnpj-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj()",
+            "semente": 34,
+            "formas": [
+              "dv:4"
+            ]
+          }
+        },
+        {
+          "entrada": "35661062258",
+          "saida": "03187200010",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "cpf-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 35,
+            "formas": [
+              "dv:9"
+            ]
+          }
+        },
+        {
+          "entrada": "66666666666",
+          "saida": "66666666666",
+          "desfecho": "PontoFixo",
+          "ramo": "cpf-repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "cpf-repdigito",
+            "semente": 36,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "1DC2D11D-728C-4388-86C2-13B01DC3FFE5",
+          "saida": "d1fa025b-164d-4e32-a5f7-4c11a9077f3e",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 37,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "157202E7-C5C5-4B24-9DCE-22F46AC354DC",
+          "saida": "ded59ae1-7bfb-45b5-bc11-73ff335b7274",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 38,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "0769251b-6fdd-0d64-7e3c-9f2bfe42cd67",
+          "saida": "a900342f-0737-4e37-a021-9ddca388ba84",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-sem-versao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "uuid-sem-versao",
+            "semente": 39,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "00037d14-9505-96cd-4b6b-28f344613150",
+          "saida": "0639613b-bb97-466b-9bbd-d9981a1612a7",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-sem-versao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "uuid-sem-versao",
+            "semente": 40,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "B19B64BB-6F3D-4631-4344-9E44E182D568",
+          "saida": "1ebbc494-9ffc-448c-992a-816a0ba89996",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-sem-versao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "uuid-sem-versao",
+            "semente": 41,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "00010203-0405-0607-0809-0a0b0c0d0e0f",
+          "saida": "7df4e436-e0e4-4e8f-ae72-3e7f50618a51",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-assimetrica",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "64996012800",
+          "saida": "39299371372",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "onze-digitos-e-cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 43,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "86968326742",
+          "saida": "28946898132",
+          "desfecho": "DvInvalidoPreservado",
+          "ramo": "onze-digitos-e-cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 44,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "2121637592",
+          "saida": "2132591182",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-dez-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 45,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7542668097",
+          "saida": "7543827506",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-dez-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo)",
+            "semente": 46,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "554540473533",
+          "saida": "554543423305",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-doze-ou-treze-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais)",
+            "semente": 47,
+            "formas": [
+              "remover:0:1"
+            ]
+          }
+        },
+        {
+          "entrada": "5597957711094",
+          "saida": "5597929072442",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-doze-ou-treze-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, comPais)",
+            "semente": 48,
+            "formas": [
+              "remover:0:1"
+            ]
+          }
+        },
+        {
+          "entrada": "924975561",
+          "saida": "911629492",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-nove-digitos",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 49,
+            "formas": [
+              "remover:0:2"
+            ]
+          }
+        },
+        {
+          "entrada": "(27) 93088-6097",
+          "saida": "(27) 92146-9965",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 50,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+55 (42) 5502-8100",
+          "saida": "+55 (42) 2754-6918",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone-formatado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(fixo, comPais, formatado)",
+            "semente": 51,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5505004059417",
+          "saida": "+5505004059417",
+          "desfecho": "ServicoPreservado",
+          "ramo": "telefone-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico",
+            "semente": 52,
+            "formas": [
+              "prefixo:+55"
+            ]
+          }
+        },
+        {
+          "entrada": "+5503039093028",
+          "saida": "+5503039093028",
+          "desfecho": "ServicoPreservado",
+          "ramo": "telefone-servico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "telefone-servico-nao-geografico:303",
+            "semente": 53,
+            "formas": [
+              "prefixo:+55"
+            ]
+          }
+        },
+        {
+          "entrada": "+5511000000000",
+          "saida": "+5511000000000",
+          "desfecho": "Zerado",
+          "ramo": "telefone-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0000000000",
+          "saida": "0000000000",
+          "desfecho": "Zerado",
+          "ramo": "telefone-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "56493591805@example.org",
+          "saida": "tcrecimab2kqzfh7cluj@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "arroba-vence",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 56,
+            "formas": [
+              "sufixo:@example.org"
+            ]
+          }
+        },
+        {
+          "entrada": "I52ZA7FD5BB7@EXAMPLE.ORG",
+          "saida": "pwa4hmmrlshjqj45bbpt@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email-maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 57,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "47257191379   ",
+          "saida": "12315758750   ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 58,
+            "formas": [
+              "espacos:3"
+            ]
+          }
+        },
+        {
+          "entrada": "afeacfef-9ed1-4b18-9b95-6777af9614d1  ",
+          "saida": "7894ec41-f317-4794-be39-c3050e6e182f  ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 59,
+            "formas": [
+              "espacos:2"
+            ]
+          }
+        },
+        {
+          "entrada": "rvfgij021wrt@example.org          ",
+          "saida": "a5fuhbipjd43vyvys3xf@example.com  ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 60,
+            "formas": [
+              "espacos:10"
+            ]
+          }
+        },
+        {
+          "entrada": "+5598957256808 ",
+          "saida": "+5598919004976 ",
+          "desfecho": "Pseudonimizado",
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 61,
+            "formas": [
+              "espacos:1"
+            ]
+          }
+        },
+        {
+          "entrada": "  ",
+          "saida": "  ",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "ntro0wec000121",
+          "erro": "INC1003",
+          "ramo": "cnpj-minusculas-dv-errado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 63,
+            "formas": [
+              "minusculas-ascii",
+              "dv:3"
+            ]
+          }
+        },
+        {
+          "entrada": "KT9P8F5F000132",
+          "erro": "INC1003",
+          "ramo": "letra-nao-ascii",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 64,
+            "formas": [
+              "trocar:0:K"
+            ]
+          }
+        },
+        {
+          "entrada": "ıWTOKWZ0000180",
+          "erro": "INC1003",
+          "ramo": "letra-nao-ascii",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 65,
+            "formas": [
+              "trocar:0:ı"
+            ]
+          }
+        },
+        {
+          "entrada": "87ced31f6918-d8d5-a2d3-40e65db938d2",
+          "erro": "INC1003",
+          "ramo": "uuid-fora-da-forma",
+          "origem": {
+            "tipo": "construido",
+            "regra": "uuid-sem-versao",
+            "semente": 66,
+            "formas": [
+              "remover:8:1"
+            ]
+          }
+        },
+        {
+          "entrada": "8d33badf_0569-457d-3af4-19427c791690",
+          "erro": "INC1003",
+          "ramo": "uuid-fora-da-forma",
+          "origem": {
+            "tipo": "construido",
+            "regra": "uuid-sem-versao",
+            "semente": 67,
+            "formas": [
+              "trocar:8:_"
+            ]
+          }
+        },
+        {
+          "entrada": "(74) 9x223-7798",
+          "erro": "INC1003",
+          "ramo": "telefone-com-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 68,
+            "formas": [
+              "trocar:6:x"
+            ]
+          }
+        },
+        {
+          "entrada": "+ 99905920218",
+          "erro": "INC1003",
+          "ramo": "mais-sem-digito",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular)",
+            "semente": 69,
+            "formas": [
+              "prefixo:+ "
+            ]
+          }
+        },
+        {
+          "entrada": " 39656858565",
+          "erro": "INC1003",
+          "ramo": "cpf-com-espaco-a-esquerda",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 70,
+            "formas": [
+              "prefixo: "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínios e ambiente próprios, ordem permutada, malformado anulado",
+      "dominio": "chave-pix-loja",
+      "ambiente": "desenvolvimento",
+      "entradaMalformada": "anular",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf-cliente",
+          "versao": 1,
+          "entradaInvalida": "anular"
+        },
+        "cnpj": {
+          "dominio": "cnpj-cliente",
+          "versao": 1,
+          "permutarOrdem": true,
+          "entradaInvalida": "falhar"
+        },
+        "email": {
+          "dominio": "email-cliente",
+          "versao": 1
+        },
+        "telefone": {
+          "dominio": "telefone-cliente",
+          "versao": 1
+        }
+      },
+      "pares": [
+        {
+          "entrada": "70683167359",
+          "saida": "23059702349",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 71,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "73164902336",
+          "saida": "04423575833",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 72,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "1XO84T97000104",
+          "saida": "FI02HDRDAG4580",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 73,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "73025949000110",
+          "saida": "20582860130300",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 74,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "6RXGUTO4000134",
+          "saida": "3K8BXVX067RL04",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 75,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "ssmppjnh7b1o@example.org",
+          "saida": "ghlczn6qdhxcqymiiyah@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 76,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "piu8rgcxto8e@example.org",
+          "saida": "26syxrcbvgehzib7gwel@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 77,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5599927951411",
+          "saida": "+5599905605824",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 78,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5515938939158",
+          "saida": "+5515969409454",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 79,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "828bd2b2-5a5b-49c4-8dee-2068759d950c",
+          "saida": "5ae659a9-bfee-433d-a968-b070b11e5c36",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 80,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "7d4799c2-3d23-4d40-bb1c-1d07c8cbc748",
+          "saida": "2d873be3-562e-4538-8aae-9ca8859c6a08",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 81,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "19427961976",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "cpf-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 82,
+            "formas": [
+              "dv:15"
+            ]
+          }
+        },
+        {
+          "entrada": "45033329000112",
+          "erro": "INC1004",
+          "ramo": "cnpj-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj()",
+            "semente": 83,
+            "formas": [
+              "dv:15"
+            ]
+          }
+        },
+        {
+          "entrada": "mtfa08z4000192",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "cnpj-minusculas-dv-errado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(alfanumerico)",
+            "semente": 84,
+            "formas": [
+              "minusculas-ascii",
+              "dv:3"
+            ]
+          }
+        },
+        {
+          "entrada": "(68) 9x266-6385",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ramo": "telefone-com-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 85,
+            "formas": [
+              "trocar:6:x"
+            ]
+          }
+        },
+        {
+          "entrada": "+55 (11) 00000-0000",
+          "saida": "+55 (11) 00000-0000",
+          "desfecho": "Zerado",
+          "ramo": "telefone-zerado",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "malformado preservado",
+      "dominio": "chave-pix",
+      "ambiente": "homologacao",
+      "entradaMalformada": "preservar",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1,
+          "entradaInvalida": "anular"
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false,
+          "entradaInvalida": "preservar"
+        },
+        "email": {
+          "dominio": "email",
+          "versao": 1
+        },
+        "telefone": {
+          "dominio": "telefone",
+          "versao": 1
+        }
+      },
+      "pares": [
+        {
+          "entrada": "94044956707",
+          "saida": "07261478261",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 87,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "77440411000122",
+          "saida": "47175518000120",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 88,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "gkrw40liq8le@example.org",
+          "saida": "dxw3cuobuh4j7vay4as5@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 89,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5579922230765",
+          "saida": "+5579986086979",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 90,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "97CC523F-64A2-4491-9EC9-A077AFDA8323",
+          "saida": "5d5e20b3-0552-4059-b1da-292c7509db5d",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria-maiusculas",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 91,
+            "formas": [
+              "maiusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "b79e469007a0-94e4-8cf5-6370b42ec0cc",
+          "saida": "b79e469007a0-94e4-8cf5-6370b42ec0cc",
+          "desfecho": "CopiadoEmClaro",
+          "ramo": "uuid-fora-da-forma",
+          "origem": {
+            "tipo": "construido",
+            "regra": "uuid-sem-versao",
+            "semente": 92,
+            "formas": [
+              "remover:8:1"
+            ]
+          }
+        },
+        {
+          "entrada": "41077328765",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ramo": "cpf-dv-invalido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 93,
+            "formas": [
+              "dv:77"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "nome": "domínios padrão em outro ambiente",
+      "dominio": "chave-pix",
+      "ambiente": "producao",
+      "entradaMalformada": "falhar",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1,
+          "entradaInvalida": "preservar"
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false,
+          "entradaInvalida": "preservar"
+        },
+        "email": {
+          "dominio": "email",
+          "versao": 1
+        },
+        "telefone": {
+          "dominio": "telefone",
+          "versao": 1
+        }
+      },
+      "pares": [
+        {
+          "entrada": "21081713712",
+          "saida": "31386511005",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 94,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "45356177917",
+          "saida": "95687918256",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cpf",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cpf)",
+            "semente": 95,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14424873000136",
+          "saida": "19997021000151",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 96,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "03622767000140",
+          "saida": "03569019000141",
+          "desfecho": "Pseudonimizado",
+          "ramo": "cnpj",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Cnpj)",
+            "semente": 97,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "o8o4lbt3coeo@example.org",
+          "saida": "ux56deisnr3tgepv3hph@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 98,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "mun42hkc4v0g@example.org",
+          "saida": "sr6i3jwjwwpcxs2owwgr@example.com",
+          "desfecho": "Pseudonimizado",
+          "ramo": "email",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Email)",
+            "semente": 99,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5513903523010",
+          "saida": "+5513958281761",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 100,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "+5512975839758",
+          "saida": "+5512944493609",
+          "desfecho": "Pseudonimizado",
+          "ramo": "telefone",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Telefone)",
+            "semente": 101,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "aad70ee3-df54-4a65-9068-c69a001aef16",
+          "saida": "6e0f8b54-cb36-47d4-ade2-5f7cf666761f",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 102,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "58b97d12-dc19-40d6-9ea6-bfc38356271a",
+          "saida": "ee1ceafe-a66d-4958-821d-9ea7dd7a80f4",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 103,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "c2edc168-e1d5-4542-aa32-ac3819ce8019",
+          "saida": "ceaacbd1-5788-42bc-88a2-8e7a04f780e7",
+          "desfecho": "Pseudonimizado",
+          "ramo": "aleatoria",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "ChavePix(Aleatoria)",
+            "semente": 104,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(51) 9x968-4907",
+          "erro": "INC1003",
+          "ramo": "telefone-com-letra",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 105,
+            "formas": [
+              "trocar:6:x"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
