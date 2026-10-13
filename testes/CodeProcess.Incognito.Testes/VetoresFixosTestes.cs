@@ -18,7 +18,7 @@ public sealed class VetoresFixosTestes
 
     private static readonly string[] _componentes = ["cpf", "cnpj", "email", "telefone"];
 
-    private static readonly string[] _metodosDaFachada = ["Cpf", "Cnpj", "Telefone", "Email", "ChavePix"];
+    private static readonly string[] _metodosDaFachada = ["Cpf", "Cnpj", "Telefone", "Email", "ChavePix", "ChaveDfe"];
 
     public static TheoryData<string> Arquivos => [.. ReceitasDeVetores.Todas.Select(r => r.Arquivo)];
 
@@ -123,6 +123,29 @@ public sealed class VetoresFixosTestes
                 receitaDoPar.Condicao is null || receitaDoPar.Condicao(entrada.EhNumero ? entrada.Numero : entrada.Texto!, resultado),
                 $"{onde}: o par não cumpre a condição do ramo.");
         }
+    }
+
+    [Theory]
+    [MemberData(nameof(Arquivos))]
+    public void As_sementes_crescem_em_todo_o_arquivo(string arquivo)
+    {
+        // O gerador anda a semente par a par e continua de onde o caso anterior parou: dois pares trocados de lugar, ou
+        // uma semente trocada à mão, quebram a ordem mesmo quando cada entrada ainda se refaz e cada saída confere.
+        using var documento = EsquemaDeVetores.LerDaSaida(arquivo);
+        var anterior = 0L;
+        var indice = 0;
+        foreach (var par in documento.RootElement.GetProperty("casos").EnumerateArray().SelectMany(c => c.GetProperty("pares").EnumerateArray()))
+        {
+            if (par.GetProperty("origem").TryGetProperty("semente", out var semente))
+            {
+                Assert.True(semente.GetInt64() > anterior, $"{arquivo}, par {indice}: semente fora da ordem.");
+                anterior = semente.GetInt64();
+            }
+
+            indice++;
+        }
+
+        Assert.True(anterior > 0, $"{arquivo}: nenhum par com semente.");
     }
 
     [Fact]
@@ -238,6 +261,7 @@ public sealed class VetoresFixosTestes
             "Telefone" => fachada.Telefone,
             "Email" => fachada.Email,
             "ChavePix" => fachada.ChavePix,
+            "ChaveDfe" => fachada.ChaveDfe,
             _ => throw new InvalidOperationException("Método da fachada desconhecido."),
         };
         if (par.TryGetProperty("erro", out var erro))
@@ -270,8 +294,21 @@ public sealed class VetoresFixosTestes
             ("br.telefone", "telefone") => "Telefone",
             ("email", "email") => "Email",
             ("br.chave-pix", "chave-pix") when ComponentesPadrao(caso.GetProperty("componentes")) => "ChavePix",
+            ("br.chave-dfe", "dfe-numero") when ComponentesPadraoDaChaveDfe(caso) => "ChaveDfe",
             _ => null,
         };
+    }
+
+    // A fachada aceita os nove modelos, com o CPF e o CNPJ dos domínios padrão e a ordem preservada.
+    private static bool ComponentesPadraoDaChaveDfe(JsonElement caso)
+    {
+        var componentes = caso.GetProperty("componentes");
+        return caso.GetProperty("modelos").GetArrayLength() == 9
+            && componentes.GetProperty("cpf").GetProperty("dominio").GetString() == "cpf"
+            && componentes.GetProperty("cpf").GetProperty("versao").GetInt32() == 1
+            && componentes.GetProperty("cnpj").GetProperty("dominio").GetString() == "cnpj"
+            && componentes.GetProperty("cnpj").GetProperty("versao").GetInt32() == 1
+            && !componentes.GetProperty("cnpj").GetProperty("permutarOrdem").GetBoolean();
     }
 
     private static bool ComponentesPadrao(JsonElement componentes) =>

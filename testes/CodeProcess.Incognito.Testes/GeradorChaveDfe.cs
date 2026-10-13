@@ -7,12 +7,27 @@ namespace CodeProcess.Incognito.Testes;
 /// Gerador detalhado de chaves de DF-e para os testes de propriedade e os vetores: a chave sai na forma pedida pela
 /// <see cref="EspecificacaoChaveDfe"/>, mesmo quando a combinação é anômala pela classificação do emitente (ela não é
 /// conferida), com o resto sorteado. Só dos testes, fora do pacote e do contrato de sequência do
-/// <see cref="GeradorBr"/>. Nenhum emitente forma um CNPJ de raiz <c>00000000</c> com ordem de estabelecimento (todos
+/// <see cref="GeradorBr"/>, mas a proveniência do <c>br.chave-dfe@1</c> refaz as entradas por ele: a ordem dos
+/// sorteios, os nomes dos enumerados da especificação (lidos pela regra) e a lista <see cref="CodigosProibidos"/> ficam
+/// congelados. Campo novo só com padrão que não muda os sorteios; se a sequência precisar mudar, fica uma cópia desta. Nenhum emitente forma um CNPJ de raiz <c>00000000</c> com ordem de estabelecimento (todos
 /// cadastrados): a raiz zero só sai com a ordem <c>0000</c>, e o CPF começando com <c>00000</c>, que lido como CNPJ
 /// teria essa raiz, sai sempre com o DV deslocado.
 /// </summary>
 internal static class GeradorChaveDfe
 {
+    /// <summary>
+    /// Os 20 códigos numéricos proibidos (regra B03-10), na ordem em que o gerador sorteia: cópia congelada para a
+    /// sequência não depender da ordem da lista do produto.
+    /// </summary>
+    internal static readonly int[] CodigosProibidos =
+    [
+        0, 11_111_111, 22_222_222, 33_333_333, 44_444_444, 55_555_555, 66_666_666, 77_777_777, 88_888_888, 99_999_999,
+        12_345_678, 23_456_789, 34_567_890, 45_678_901, 56_789_012, 67_890_123, 78_901_234, 89_012_345, 90_123_456, 1_234_567,
+    ];
+
+    /// <summary>Se o código está entre os 20 proibidos.</summary>
+    internal static bool EhCodigoProibido(long codigo) => Array.IndexOf(CodigosProibidos, (int)Math.Clamp(codigo, -1, int.MaxValue)) >= 0;
+
     /// <summary>Gera uma chave de 44 posições na forma pedida.</summary>
     /// <param name="fonte">A fonte dos sorteios.</param>
     /// <param name="especificacao">O que a chave tem.</param>
@@ -62,6 +77,23 @@ internal static class GeradorChaveDfe
         if (especificacao.Codigo == CodigoGerado.IgualAoNumero && especificacao.Numero != NumeroGerado.Qualquer)
         {
             throw new ArgumentException("O código igual ao número pede o número sorteado inteiro.", nameof(especificacao));
+        }
+
+        if ((especificacao.Dia is not null || especificacao.MesDoNumero is not null)
+            && especificacao.Numero is not (NumeroGerado.Nff or NumeroGerado.NffSequencialZero))
+        {
+            throw new ArgumentException("Dia e mês do número só nas partes da NFF com data pedida.", nameof(especificacao));
+        }
+
+        if (especificacao.Dia is < 0 or > 99 || especificacao.MesDoNumero is < 0 or > 99)
+        {
+            throw new ArgumentOutOfRangeException(nameof(especificacao), "Dia e mês do número têm 2 dígitos.");
+        }
+
+        if (especificacao.ValorDoCodigo is { } codigo
+            && (especificacao.Codigo != CodigoGerado.Qualquer || codigo < 0 || codigo > (especificacao.Modelo is 62 or 66 ? 9_999_999 : 99_999_999)))
+        {
+            throw new ArgumentException("O código pedido exige o código sorteado e cabe nos dígitos do modelo.", nameof(especificacao));
         }
     }
 
@@ -114,6 +146,10 @@ internal static class GeradorChaveDfe
                     "000".CopyTo(raiz);
                     GeradorBr.SortearDigitos(fonte, raiz[3..]);
                     break;
+                case EmitenteGerado.CnpjAlfanumericoComZeros:
+                    "000".CopyTo(raiz);
+                    SortearAlfanumericos(fonte, raiz[3..]);
+                    break;
                 case EmitenteGerado.CnpjRaizZero:
                     "00000000".CopyTo(raiz);
                     break;
@@ -138,6 +174,9 @@ internal static class GeradorChaveDfe
                 case EmitenteGerado.CnpjRaizZero:
                     "0000".CopyTo(ordem);
                     break;
+                case EmitenteGerado.CnpjAlfanumericoComZeros:
+                    "0001".CopyTo(ordem);
+                    break;
                 default:
                     GeradorBr.SortearDigitos(fonte, ordem);
                     break;
@@ -152,7 +191,7 @@ internal static class GeradorChaveDfe
     private static bool Coerente(EmitenteGerado emitente, ReadOnlySpan<char> raiz, ReadOnlySpan<char> ordem) => emitente switch
     {
         EmitenteGerado.CnpjRaizZero => true,
-        EmitenteGerado.CnpjAlfanumericoComOrdemAlfanumerica => GeradorBr.TemLetra(raiz),
+        EmitenteGerado.CnpjAlfanumericoComOrdemAlfanumerica or EmitenteGerado.CnpjAlfanumericoComZeros => GeradorBr.TemLetra(raiz),
         EmitenteGerado.CnpjFilial => !raiz.SequenceEqual("00000000") && !ordem.SequenceEqual("0001"),
         _ => !raiz.SequenceEqual("00000000"),
     };
@@ -201,14 +240,18 @@ internal static class GeradorChaveDfe
     }
 
     // NF-e e NFC-e (e qualquer outro modelo, na forma pedida): dia, mês, tipo, sequencial de 4; CT-e e MDF-e: mês, dia,
-    // sequencial de 5. O mês é o do AAMM; fora de 01 a 12, ele vai assim para o número e a data sai inválida.
+    // sequencial de 5. O mês é o do AAMM (ou o pedido em MesDoNumero); fora de 01 a 12, ele vai assim para o número e a
+    // data sai inválida. O dia é sorteado no mês do AAMM, ou o pedido em Dia.
     private static void EscreverNff(FonteDeSorteio fonte, in EspecificacaoChaveDfe especificacao, Span<char> destino)
     {
         var transporte = especificacao.Modelo is 57 or 58;
         var mes = especificacao.Aamm % 100;
         var ano = especificacao.Aamm / 100;
         var dias = mes is >= 1 and <= 12 ? DateTime.DaysInMonth(2000 + ano, mes) : 31;
-        var dia = 1 + (int)fonte.Uniforme((ulong)dias);
+        // Sorteia sempre e só então usa o pedido: a sequência não muda com os campos opcionais.
+        var diaSorteado = 1 + (int)fonte.Uniforme((ulong)dias);
+        var dia = especificacao.Dia ?? diaSorteado;
+        mes = especificacao.MesDoNumero ?? mes;
         if (especificacao.Numero == NumeroGerado.NffDataInvalida)
         {
             switch (fonte.Uniforme(4))
@@ -253,20 +296,33 @@ internal static class GeradorChaveDfe
         {
             destino[0] = especificacao.SiteAutorizador;
             GeradorBr.SortearDigitos(fonte, destino[1..]);
+
+            // Sorteado antes do pedido, para a sequência não mudar com o campo opcional.
+            if (especificacao.ValorDoCodigo is { } codigoDe7)
+            {
+                GeradorBr.EscreverNumero(codigoDe7, destino[1..]);
+            }
+
             return;
         }
 
         switch (especificacao.Codigo)
         {
             case CodigoGerado.Proibido:
-                var proibidos = RegrasChaveDfe.CodigosNumericosProibidos;
-                GeradorBr.EscreverNumero(proibidos[(int)fonte.Uniforme((ulong)proibidos.Length)], destino);
+                GeradorBr.EscreverNumero(CodigosProibidos[(int)fonte.Uniforme((ulong)CodigosProibidos.Length)], destino);
                 break;
             case CodigoGerado.IgualAoNumero:
                 GeradorBr.EscreverNumero(numero, destino);
                 break;
             default:
                 GeradorBr.SortearDigitos(fonte, destino);
+
+                // Sorteado antes do pedido, para a sequência não mudar com o campo opcional.
+                if (especificacao.ValorDoCodigo is { } codigo)
+                {
+                    GeradorBr.EscreverNumero(codigo, destino);
+                }
+
                 break;
         }
     }

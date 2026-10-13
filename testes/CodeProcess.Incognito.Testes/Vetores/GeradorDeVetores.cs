@@ -190,6 +190,13 @@ internal static class GeradorDeVetores
                 continue;
             }
 
+            // Nenhuma saída da chave de DF-e traz emitente de raiz baixa com DV certo (as entradas já são conferidas na origem).
+            if (transformador == "br.chave-dfe" && OrigensChaveDfe.ChaveDaForma(resultado.Saida as string) is { } chaveDaSaida
+                && OrigensChaveDfe.RaizBaixaComDvCerto(chaveDaSaida.AsSpan(6, 14)))
+            {
+                continue;
+            }
+
             if (resultado.Saida is string saida && EntradaDoPar.TemUtf16Invalido(saida))
             {
                 throw new InvalidDataException($"{onde}: saída com UTF-16 inválido não cabe no vetor.");
@@ -241,6 +248,16 @@ internal static class GeradorDeVetores
                 }
 
                 escritor.WriteString("desfecho", resultado.Desfecho);
+                if (resultado.Ocorrencias is { } ocorrencias)
+                {
+                    escritor.WriteStartArray("ocorrencias");
+                    foreach (var ocorrencia in ocorrencias)
+                    {
+                        escritor.WriteStringValue(ocorrencia);
+                    }
+
+                    escritor.WriteEndArray();
+                }
             }
 
             escritor.WriteString("ramo", receita.Ramo);
@@ -306,6 +323,15 @@ internal static class GeradorDeVetores
                     break;
                 case long inteiro:
                     escritor.WriteNumber(nome, inteiro);
+                    break;
+                case long[] inteiros:
+                    escritor.WriteStartArray(nome);
+                    foreach (var item in inteiros)
+                    {
+                        escritor.WriteNumberValue(item);
+                    }
+
+                    escritor.WriteEndArray();
                     break;
                 case KeyValuePair<string, object>[] objeto:
                     escritor.WritePropertyName(nome);

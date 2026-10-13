@@ -1,6 +1,9 @@
 namespace CodeProcess.Incognito.Testes;
 
-/// <summary>O emitente de uma chave do <see cref="GeradorChaveDfe"/>, escrito nas posições 7 a 20.</summary>
+/// <summary>
+/// O emitente de uma chave do <see cref="GeradorChaveDfe"/>, escrito nas posições 7 a 20. Os nomes são lidos pelas regras
+/// dos vetores fixos: não renomear.
+/// </summary>
 internal enum EmitenteGerado
 {
     /// <summary>CNPJ de matriz de raiz numérica, como o do <see cref="GeradorBr.Cnpj(bool, bool)"/>.</summary>
@@ -8,6 +11,12 @@ internal enum EmitenteGerado
 
     /// <summary>CNPJ de matriz de raiz alfanumérica (ao menos uma letra na raiz).</summary>
     CnpjAlfanumerico,
+
+    /// <summary>
+    /// CNPJ de matriz de raiz alfanumérica que começa com <c>000</c> (ao menos uma letra nas outras 5 posições da raiz):
+    /// na regra dos zeros, a letra decide CNPJ antes dos zeros.
+    /// </summary>
+    CnpjAlfanumericoComZeros,
 
     /// <summary>CNPJ de raiz numérica e ordem com letra (filial nova de raiz antiga).</summary>
     CnpjNumericoComOrdemAlfanumerica,
@@ -49,7 +58,10 @@ internal enum EmitenteGerado
     CpfRepdigito,
 }
 
-/// <summary>O número (posições 26 a 34) de uma chave do <see cref="GeradorChaveDfe"/>.</summary>
+/// <summary>
+/// O número (posições 26 a 34) de uma chave do <see cref="GeradorChaveDfe"/>. Os nomes são lidos pelas regras dos vetores
+/// fixos: não renomear.
+/// </summary>
 internal enum NumeroGerado
 {
     /// <summary>De 1 a 999.999.999.</summary>
@@ -71,7 +83,10 @@ internal enum NumeroGerado
     NffSequencialZero,
 }
 
-/// <summary>O código numérico de uma chave do <see cref="GeradorChaveDfe"/>.</summary>
+/// <summary>
+/// O código numérico de uma chave do <see cref="GeradorChaveDfe"/>. Os nomes são lidos pelas regras dos vetores fixos: não
+/// renomear.
+/// </summary>
 internal enum CodigoGerado
 {
     /// <summary>Sorteado (8 dígitos; na NF3e e na NFCom, 7 depois do <c>nSiteAutoriz</c>).</summary>
@@ -102,6 +117,16 @@ internal enum CodigoGerado
 /// <param name="DeslocamentoCdv">Quanto somar ao cDV certo, de 0 a 9.</param>
 /// <param name="DeslocamentoDvEmitente">Quanto somar ao DV certo do emitente, de 0 a 99.</param>
 /// <param name="SiteAutorizador">A posição 36 na NF3e e na NFCom.</param>
+/// <param name="Dia">
+/// O dia nas partes da NFF (<see cref="NumeroGerado.Nff"/> e <see cref="NumeroGerado.NffSequencialZero"/>), de 0 a 99,
+/// mesmo fora do mês; nulo para sortear um dia do mês do AAMM (mesmo com outro <paramref name="MesDoNumero"/>).
+/// </param>
+/// <param name="MesDoNumero">
+/// O mês nas partes da NFF, de 0 a 99, mesmo diferente do mês do AAMM; nulo para o mês do AAMM.
+/// </param>
+/// <param name="ValorDoCodigo">
+/// O código numérico (8 dígitos, ou 7 na NF3e e na NFCom), com <see cref="CodigoGerado.Qualquer"/>; nulo para sortear.
+/// </param>
 internal readonly record struct EspecificacaoChaveDfe(
     int Aamm,
     int Modelo,
@@ -113,4 +138,7 @@ internal readonly record struct EspecificacaoChaveDfe(
     char TipoDoEmissorNff = '1',
     int DeslocamentoCdv = 0,
     int DeslocamentoDvEmitente = 0,
-    char SiteAutorizador = '0');
+    char SiteAutorizador = '0',
+    int? Dia = null,
+    int? MesDoNumero = null,
+    long? ValorDoCodigo = null);

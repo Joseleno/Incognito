@@ -9,7 +9,7 @@ namespace CodeProcess.Incognito.Testes.Vetores;
 /// ramos que cada um precisa cobrir. O gerador transforma as receitas em arquivos; depois de gravado, um arquivo só
 /// cresce (casos novos), nunca muda.
 /// </summary>
-internal static class ReceitasDeVetores
+internal static partial class ReceitasDeVetores
 {
     private const string Pseudonimizado = "Pseudonimizado";
     private const string DvInvalidoPreservado = "DvInvalidoPreservado";
@@ -36,10 +36,12 @@ internal static class ReceitasDeVetores
         Cep(),
         Identificador(),
         ChavePix(),
+        ChaveDfe(),
     ];
 
-    private static string Descricao(string transformador, int versao) =>
-        $"{transformador}, versão {versao}. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um "
+    private static string Descricao(string transformador, int versao) => transformador == "br.chave-dfe"
+        ? DescricaoDaChaveDfe(versao)
+        : $"{transformador}, versão {versao}. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um "
         + $"par existente que mudar exige {transformador}@{versao + 1}; casos novos só se acrescentam. Cada entrada vem do "
         + "GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa "
         + "com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um "
@@ -49,6 +51,17 @@ internal static class ReceitasDeVetores
                 + "inexistente com 3003 ou 4004 e 4 sorteados) podem coincidir com números de empresas: são necessários para "
                 + "provar a preservação e nunca são de pessoa."
             : "");
+
+    private static string DescricaoDaChaveDfe(int versao) =>
+        $"br.chave-dfe, versão {versao}. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um "
+        + $"par existente que mudar exige br.chave-dfe@{versao + 1}; casos novos só se acrescentam. Cada chave de entrada sai "
+        + "do gerador detalhado de chaves de DF-e do projeto de testes (regra chave-dfe com a especificação e a semente), de "
+        + "uma regra de construção sobre ela ou da permutação inversa com esta chave, ou é uma borda literal: a chave de 44 "
+        + "zeros (valor de preenchimento, com cDV válido, de ninguém) ou texto vazio; a de 50 posições da NFS-e é sorteada. "
+        + "Nenhuma foi copiada de um documento autorizado, mas os emitentes (CPF e CNPJ válidos gerados) podem coincidir com "
+        + "o de alguém: não use estes valores fora dos testes. Nenhum par, de entrada ou de saída, traz um emitente de raiz "
+        + "numérica começando com 00, ordem de estabelecimento e DV certo: nas entradas, esses emitentes saem com o DV "
+        + "deslocado.";
 
     private static KeyValuePair<string, object>[] Parametros(string dominio, string ambiente, params (string Nome, object Valor)[] outros) =>
         [new("dominio", dominio), new("ambiente", ambiente), .. outros.Select(p => new KeyValuePair<string, object>(p.Nome, p.Valor))];

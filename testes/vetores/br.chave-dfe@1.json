@@ -1,0 +1,4591 @@
+{
+  "descricao": "br.chave-dfe, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige br.chave-dfe@2; casos novos só se acrescentam. Cada chave de entrada sai do gerador detalhado de chaves de DF-e do projeto de testes (regra chave-dfe com a especificação e a semente), de uma regra de construção sobre ela ou da permutação inversa com esta chave, ou é uma borda literal: a chave de 44 zeros (valor de preenchimento, com cDV válido, de ninguém) ou texto vazio; a de 50 posições da NFS-e é sorteada. Nenhuma foi copiada de um documento autorizado, mas os emitentes (CPF e CNPJ válidos gerados) podem coincidir com o de alguém: não use estes valores fora dos testes. Nenhum par, de entrada ou de saída, traz um emitente de raiz numérica começando com 00, ordem de estabelecimento e DV certo: nas entradas, esses emitentes saem com o DV deslocado.",
+  "transformador": "br.chave-dfe",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "componentes padrão, malformado falha",
+      "dominio": "dfe-numero",
+      "ambiente": "homologacao",
+      "modelos": [
+        55,
+        65,
+        57,
+        58,
+        67,
+        64,
+        63,
+        66,
+        62
+      ],
+      "entradaInvalida": "preservar",
+      "entradaMalformada": "falhar",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false
+        }
+      },
+      "pares": [
+        {
+          "entrada": "33240555361038000181550015517098631999658047",
+          "saida": "33240586998807000180550015625830621642649437",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=55,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240562543279000107550011951036621966761111",
+          "saida": "33240565740267000160550010052638871791321848",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=55,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21240594926470000124650013373827991094673410",
+          "saida": "21240599207638000165650012026161121354256005",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=65,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21240566857583000180650013809429911923758681",
+          "saida": "21240578380540000135650012748561331489299854",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=65,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240598110089000143570019419177221227791918",
+          "saida": "41240523793308000137570016361873661712273601",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=57,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240528998014000165570011518161081579845245",
+          "saida": "33240567603309000147570018729966981594449100",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=57,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 7,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240565932469000104580018404500811851789353",
+          "saida": "43240560906694000152580015607259631929750794",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=58,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 8,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240521797651000124580014538172381791799047",
+          "saida": "11240545623456000146580014109661831791984050",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=58,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 9,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240541042817000100670016618114911712585790",
+          "saida": "52240549195148000118670019272635811030368917",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=67,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 10,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240502403596000104670012291122801038038006",
+          "saida": "17240566487743000146670015475085881803673388",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=67,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240588922785000109640016875148721917063715",
+          "saida": "22240571215369000160640018582679171748182694",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=64,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240579164155000113640014422226891548226783",
+          "saida": "17240589695553000110640016106539971719595399",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=64,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240569927275000171630017320406411886817537",
+          "saida": "35240582004161000118630010354918741775629944",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=63,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240543152985000183630018819535131645393410",
+          "saida": "33240536215294000116630012227200731494523970",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=63,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "51240509087940000134660013766772031051778670",
+          "saida": "51240544136365000113660015299056861077955825",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=66,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32240569969885000138660016618975731009423103",
+          "saida": "32240560551330000105660012371404411058316979",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=66,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 17,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240573945979000144620013770253391051781012",
+          "saida": "33240534231715000177620015694898321084993880",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=62,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 18,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240541376373000149620012352073621052504311",
+          "saida": "41240565573755000120620018367060911027462622",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=62,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 19,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3526076IC72ZJ1000135550015060378441569977696",
+          "saida": "3526073423PC8R000134550010551010871002255698",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=55,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 20,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "112607TOBR0YFY000106650011670804741365915756",
+          "saida": "1126070O8P5CIC000146650019533593171700335794",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=65,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 21,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "5326074240B4JK000130570014264218601952110335",
+          "saida": "532607Q0VRDC0G000168570011466661961052576064",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=57,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 22,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "252607E872WUOV000199580019251472081127961570",
+          "saida": "2526070D790G1S000168580017405588961256807717",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=58,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 23,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "502607TLZZ6311000108670014850458661817443354",
+          "saida": "502607LH9L9265000150670011768551951457387855",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=67,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 24,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "512607AA3EOB3L000173640010383499481542909007",
+          "saida": "512607OHK2Y9Q6000100640014355119101252479102",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=64,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 25,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "172607H860LY6C000159630012171335881988231986",
+          "saida": "172607YJSN3XT8000101630011441017881579764750",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=63,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 26,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "222607SGQU7AJJ000105660010162002861011078320",
+          "saida": "222607ZIRLGB6S000150660016322589961043193425",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=66,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 27,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "162607J4CMAHNV000102620017137804591075665849",
+          "saida": "162607LCX76775000197620019391686901068136690",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=62,aamm=2607,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 28,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35260718665349C76399550012439284821551357174",
+          "saida": "35260732814698C76356550013298931251750091116",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-ordem-alfanumerica",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=1,tpemis=1,emitente=CnpjNumericoComOrdemAlfanumerica",
+            "semente": 29,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13260712881382D90660570016173754101025088177",
+          "saida": "13260721740126D90644570013717855371587259480",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-ordem-alfanumerica",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=57,serie=1,tpemis=1,emitente=CnpjNumericoComOrdemAlfanumerica",
+            "semente": 30,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "352607IHHWINIJ8PVU64580012516599881562673676",
+          "saida": "352607UD3WM98E8PVU98580015074500021279313543",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-raiz-e-ordem-alfanumericas",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=58,serie=1,tpemis=1,emitente=CnpjAlfanumericoComOrdemAlfanumerica",
+            "semente": 31,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32240533100476024257550014797221311328865614",
+          "saida": "32240503015736024225550014975266201988369804",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-filial",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjFilial",
+            "semente": 32,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240561916850316436630019066007661951067254",
+          "saida": "23240519310822316404630016597167591465251167",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-filial",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=63,serie=1,tpemis=1,emitente=CnpjFilial",
+            "semente": 33,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240544864194000149550004619509741389161419",
+          "saida": "35240564685124000130550006407189281625171171",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=0,tpemis=1,emitente=CnpjNumerico",
+            "semente": 34,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240556610622000196558892550639131112813100",
+          "saida": "22240557063118000186558897382963561917229517",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=889,tpemis=1,emitente=CnpjNumerico",
+            "semente": 35,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240595034769000137558903112527601643282015",
+          "saida": "33240517018708000172558907526251221917338624",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=890,tpemis=1,emitente=CnpjNumerico",
+            "semente": 36,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14240557872818000111558992222242291177858220",
+          "saida": "14240527592203000170558993328404571741684005",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=899,tpemis=1,emitente=CnpjNumerico",
+            "semente": 37,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240511720260000158559006317693521574741868",
+          "saida": "13240537529027000186559004959773551128625908",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=900,tpemis=1,emitente=CnpjNumerico",
+            "semente": 38,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240543613174000132559099756433781880842495",
+          "saida": "11240528904873000148559091376371381036466982",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=909,tpemis=1,emitente=CnpjNumerico",
+            "semente": 39,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240500016742773936559101938549851824103221",
+          "saida": "35240500080596380259559106109868771523904442",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=910,tpemis=1,emitente=Cpf",
+            "semente": 41,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240500036997787541559196824528691283786876",
+          "saida": "13240500087027188635559199050949201494542873",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=919,tpemis=1,emitente=Cpf",
+            "semente": 42,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29240500096012800142559201035471081117580921",
+          "saida": "29240500040599630973559204271320141055672898",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=Cpf",
+            "semente": 43,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240500068326742600559698975645531284535398",
+          "saida": "43240500043400711616559693851954291234226015",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=969,tpemis=1,emitente=Cpf",
+            "semente": 44,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14240500001637592787559702535515881050144533",
+          "saida": "14240500052572402033559703960529021167142928",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-paa-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=970,tpemis=1,emitente=Cpf",
+            "semente": 45,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240500062668097371559798075509811183392019",
+          "saida": "33240500054537319666559793546948041648263828",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-paa-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=979,tpemis=1,emitente=Cpf",
+            "semente": 46,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240560473533000112559805113429071828940837",
+          "saida": "24240566601590000116559807329003531489299162",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-paa-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=980,tpemis=1,emitente=CnpjNumerico",
+            "semente": 47,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240557711094000124559899472845731005331860",
+          "saida": "52240516253176000195559896501862441403026280",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-paa-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=989,tpemis=1,emitente=CnpjNumerico",
+            "semente": 48,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240524975561000174559909553572411779011865",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=990,tpemis=1,emitente=CnpjNumerico",
+            "semente": 49,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240530886097000142559993121948971392493687",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=999,tpemis=1,emitente=CnpjNumerico",
+            "semente": 50,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240575028100000125659098200981291148881573",
+          "saida": "22240582338298000109659092911425311220332104",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=909,tpemis=1,emitente=CnpjNumerico",
+            "semente": 51,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240500040594175992659100149175841834921997",
+          "saida": "27240500017480289871659101029964831702744340",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=910,tpemis=1,emitente=Cpf",
+            "semente": 52,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53240500009302802531659698328886331467934988",
+          "saida": "53240500046437020016659695711196841751343874",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=969,tpemis=1,emitente=Cpf",
+            "semente": 53,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21240500015696151442659706584013041534801407",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=970,tpemis=1,emitente=Cpf",
+            "semente": 54,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240500049152068820659790341580781007663534",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=979,tpemis=1,emitente=Cpf",
+            "semente": 55,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28240564935918000105659806263639231618499140",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=980,tpemis=1,emitente=CnpjNumerico",
+            "semente": 56,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240587709118000171659890431221601091401663",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=989,tpemis=1,emitente=CnpjNumerico",
+            "semente": 57,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240572571913000179659900156548641660131745",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=990,tpemis=1,emitente=CnpjNumerico",
+            "semente": 58,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240530489563000156659992497213631167680684",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=999,tpemis=1,emitente=CnpjNumerico",
+            "semente": 59,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240551122777000160559206121037251454229087",
+          "erro": "INC1003",
+          "ramo": "cpf-sem-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=CnpjNumerico",
+            "semente": 60,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53240557256808000151559754250051391968270367",
+          "erro": "INC1003",
+          "ramo": "cpf-sem-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=975,tpemis=1,emitente=CnpjNumerico",
+            "semente": 61,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240594701976000135659203618694961838924600",
+          "erro": "INC1003",
+          "ramo": "cpf-sem-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=920,tpemis=1,emitente=CnpjNumerico",
+            "semente": 62,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32240510008430000179559206980822011368612009",
+          "erro": "INC1003",
+          "ramo": "cpf-sem-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=CnpjNumerico",
+            "semente": 63,
+            "formas": [
+              "trocar:6:1",
+              "trocar:7:0",
+              "trocar:8:0",
+              "recalcular-cdv"
+            ]
+          }
+        },
+        {
+          "entrada": "12180782624145000128559205154349591200378190",
+          "saida": "12180725902938000128559209335288291118586855",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "aamm-antes-do-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=1807,modelo=55,serie=920,tpemis=1,emitente=CnpjNumerico",
+            "semente": 64,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29180700098659905474659304895645571798039804",
+          "saida": "29180770159666905424659308067897031337546077",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "aamm-antes-do-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=1807,modelo=65,serie=930,tpemis=1,emitente=Cpf",
+            "semente": 65,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29180800047882194689559200915809231585836181",
+          "saida": "29180800003777615757559206006499901805795396",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "aamm-primeiro-com-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=1808,modelo=55,serie=920,tpemis=1,emitente=Cpf",
+            "semente": 66,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28140781276890000160559503580007873462348265",
+          "saida": "28140713465727000196559503426078363599410979",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "scan",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=1407,modelo=55,serie=950,tpemis=3,emitente=CnpjNumerico",
+            "semente": 67,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33180882237798000154550014676797163337050773",
+          "erro": "INC1003",
+          "ramo": "tpemis3-fora-do-periodo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=1808,modelo=55,serie=1,tpemis=3,emitente=CnpjNumerico",
+            "semente": 68,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53210300005920218401650010203221043666994458",
+          "erro": "INC1003",
+          "ramo": "tpemis3-fora-do-periodo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2103,modelo=65,serie=1,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 69,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240500096568585068559753949789983931562967",
+          "saida": "24240500050957345917559750680636643843252761",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "tpemis3-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=975,tpemis=3,emitente=Cpf",
+            "semente": 70,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240506831673000170559853172097163050011015",
+          "saida": "42240520594559000102559852299673103172686219",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "tpemis3-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=985,tpemis=3,emitente=CnpjNumerico",
+            "semente": 71,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240500031649023448659759879498783263671060",
+          "erro": "INC1003",
+          "ramo": "tpemis3-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=975,tpemis=3,emitente=Cpf",
+            "semente": 72,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53240500009621822734559705917877603400987177",
+          "saida": "53240500050095787003559704883496793924977486",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "tpemis3-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=970,tpemis=3,emitente=Cpf",
+            "semente": 73,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240573025949000110559890197949723407282253",
+          "saida": "17240550483912000130559893824665913819059020",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "tpemis3-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=989,tpemis=3,emitente=CnpjNumerico",
+            "semente": 74,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240500017948861335559901305284103850154000",
+          "saida": "52240500029421140109559900305233623305958809",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "tpemis3-fora-do-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=990,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 75,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240500053442329000559692405241103726679479",
+          "saida": "27240500007786903690559691805296623233919540",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "tpemis3-fora-do-paa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=969,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 76,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240525941065000162550014085997706912064134",
+          "saida": "25240557160480000175550015138310726956386111",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "outros-tpemis",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=6,emitente=CnpjNumerico",
+            "semente": 77,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53240500027951411833559206751343349275117599",
+          "saida": "53240500087585688326559207668621219248268365",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "outros-tpemis",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=9,emitente=Cpf",
+            "semente": 78,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240538939158000102650010874075319817421197",
+          "saida": "12240520625438000172650013434455709103418426",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "outros-tpemis",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=1,tpemis=9,emitente=CnpjNumerico",
+            "semente": 79,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27210487734747000151550210604105783825035682",
+          "saida": "27210409514696000149550210304144623438235955",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2104,modelo=55,serie=21,tpemis=3,emitente=CnpjNumerico,numero=Nff,nff=1",
+            "semente": 80,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27210400093499224950551211104287273540397191",
+          "saida": "27210400081002937752551211804291793236453737",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2104,modelo=55,serie=121,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 81,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240500094279619026650242905258183133032491",
+          "saida": "16240500069307052255650240105207873582154951",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 82,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240500050333298802550242105322283442394633",
+          "erro": "INC1003",
+          "ramo": "nff-sem-tipo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=3",
+            "semente": 83,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240584202912000136650243105024783524541440",
+          "erro": "INC1003",
+          "ramo": "nff-sem-tipo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=24,tpemis=3,emitente=CnpjNumerico,numero=Nff,nff=0",
+            "semente": 84,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240552666385000124550240405267943226556279",
+          "erro": "INC1003",
+          "ramo": "nff-cpf-sem-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=CnpjNumerico,numero=Nff,nff=2",
+            "semente": 85,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240500000657375135550241405149633940850265",
+          "saida": "31240560382477375187550241605119783521010350",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "nff-cnpj-com-zeros-do-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=CpfComZeros,numero=Nff,nff=1,dv=7",
+            "semente": 86,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240200040449567664550252902249113390705525",
+          "saida": "52240200045393756011550252302216973718033916",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ano-do-aamm",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2402,modelo=55,serie=25,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=29",
+            "semente": 87,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26250200077440411510550242902228073626123361",
+          "saida": "26250200089753660227550242902202513101755550",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-ano-do-aamm",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2502,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=29",
+            "semente": 88,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "152607AHMUQB8G000108559209677645981312163701",
+          "saida": "152607ISJR98PR000147559203883073831042325029",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "letra-vence-serie",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=920,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 89,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "352607A99B2QMI000141559957356708001425179691",
+          "saida": "352607QDCQVHZE000170559955432572421337458651",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "letra-vence-serie",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=995,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 90,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31260782502471V74762659757825699471035567120",
+          "saida": "31260724475637V74700659757692363321690030609",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "letra-vence-serie",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=65,serie=975,tpemis=1,emitente=CnpjNumericoComOrdemAlfanumerica",
+            "semente": 91,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "351905FKWAFM01000170550014892773433606282570",
+          "saida": "35190523U53LSE000137550016212102903916335673",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "letra-vence-tpemis3",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=1905,modelo=55,serie=1,tpemis=3,emitente=CnpjAlfanumerico",
+            "semente": 92,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25260762SSB8UP000102550260207229843191375822",
+          "saida": "252607WQHHDHY4000114550262707209353651490783",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "letra-vence-nff",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=26,tpemis=3,emitente=CnpjAlfanumerico,numero=Nff,nff=2",
+            "semente": 93,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17260731W6R3BR158S80651262707711623428192884",
+          "saida": "172607XRA9NBWW158S72651263007725193953758098",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "letra-vence-nff",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=65,serie=126,tpemis=3,emitente=CnpjAlfanumericoComOrdemAlfanumerica,numero=Nff,nff=7",
+            "semente": 94,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240500000535617762559209738210511242894903",
+          "saida": "27240500050519879747559209491246591463073427",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "cpf-com-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=CpfComZeros,dv=7",
+            "semente": 95,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240500000000144275559204841878291873949312",
+          "saida": "11240500037867707272559201989028581845189279",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "cpf-com-cinco-zeros",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=CpfComCincoZeros",
+            "semente": 96,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240500000000000000559203473214251622767627",
+          "saida": "24240500000000000000559205378449771294352153",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "EmitentePontoFixo"
+          ],
+          "ramo": "cpf-repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=CpfRepdigito",
+            "semente": 97,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240500085788967694559201273170311404148845",
+          "saida": "25240500012889177408559200537346741829807621",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-cpf",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-cpf:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=Cpf",
+            "semente": 98,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240500000000000000550015640000251387220857",
+          "saida": "23240500000000000000550012046887061063112815",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "EmitentePontoFixo"
+          ],
+          "ramo": "cnpj-raiz-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjRaizZero",
+            "semente": 99,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240500003523010751550016640701841502548443",
+          "saida": "12240588802253010799550019339294801303042810",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "cnpj-raiz-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=11",
+            "semente": 100,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240500075839758866670012299448871384455007",
+          "saida": "11240517262094758837670019996666821204762961",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "so-cnpj-raiz-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=67,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=17",
+            "semente": 101,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240500087244641629640017103525891636747495",
+          "saida": "33240530586576641619640012187521681204008883",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "so-cnpj-raiz-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=64,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=17",
+            "semente": 102,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240500082105442597630013601118451536521501",
+          "saida": "23240556683665442561630013173706161065695924",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "so-cnpj-raiz-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=63,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=17",
+            "semente": 103,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240500067510488880660016605939711036074993",
+          "saida": "41240553420523488847660012714270231095820805",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "so-cnpj-raiz-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=66,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=17",
+            "semente": 104,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240500089684907828620016565507771050505620",
+          "saida": "26240575998390907818620012356287461015181265",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "so-cnpj-raiz-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=62,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=17",
+            "semente": 105,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29240538624167000141550013062531781069420893",
+          "saida": "29240509965615000164550011063705691576100213",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "dv-emitente-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,dv=37",
+            "semente": 106,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240500001809852061570018447539471376224890",
+          "saida": "27240500014136768483570018780801941647320417",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "dv-emitente-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf,dv=5",
+            "semente": 107,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240500071896638279570014286733971389529381",
+          "saida": "23240500034452638503570010085381701319705247",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 108,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240500089632028104570010073596161835211833",
+          "saida": "35240500030165298405570017969963031393393644",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 109,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240500001676906126589202935282621014896469",
+          "saida": "31240500085030607285589204869504381051460820",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=920,tpemis=1,emitente=Cpf",
+            "semente": 110,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240594416873000123579753477185091144554534",
+          "saida": "41240553321908000163579758476949661112279042",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=975,tpemis=1,emitente=CnpjNumerico",
+            "semente": 111,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240575625395998754580015259702891921673286",
+          "saida": "52240512018327998707580019431935981648161080",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjFilial",
+            "semente": 112,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240500084992824147570019215764711407917067",
+          "saida": "16240500094240171379570013757413961674811719",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "zeros-raiz-000-e-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjRaizComZeros,dv=13",
+            "semente": 113,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42260700039565F91571580011350707811907825764",
+          "saida": "42260758357913F91529580015304894731598440228",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "zeros-raiz-000-com-letra",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=58,serie=1,tpemis=1,emitente=CnpjRaizComZerosEOrdemAlfanumerica,dv=19",
+            "semente": 114,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15260700062RGV000123570018682427651927995950",
+          "saida": "1526075HU3R5TA000188570012224426471591031690",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "zeros-alfanumerico-000",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=57,serie=1,tpemis=1,emitente=CnpjAlfanumericoComZeros,dv=23",
+            "semente": 115,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240500000000000000580017462396181860511732",
+          "saida": "41240500000000000000580016672422801294829014",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "EmitentePontoFixo"
+          ],
+          "ramo": "zeros-raiz-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjRaizZero",
+            "semente": 116,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240510077160000165570017212364151194379600",
+          "saida": "26240592488872000142570019507440041933723843",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "zeros-quase-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 117,
+            "formas": [
+              "trocar:6:1",
+              "trocar:7:0",
+              "trocar:8:0",
+              "recalcular-cdv"
+            ]
+          }
+        },
+        {
+          "entrada": "14240518087049000128570013388011661707759880",
+          "saida": "14240500225560000173570013808086191900142620",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "saida-raiz-00",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-saida-raiz-00:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico,dv=29",
+            "semente": 118,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "51240591457564000132580012723556161763079649",
+          "saida": "51240500829782000105580011117165781684711390",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "saida-raiz-00",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-saida-raiz-00:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjNumerico,dv=29",
+            "semente": 119,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240500066666666666570014160004331645967955",
+          "saida": "16240500066666666666570010863068301777599973",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "EmitentePontoFixo"
+          ],
+          "ramo": "zeros-cpf-repdigito",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CpfRepdigito",
+            "semente": 120,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21240545093219000110570017240408231821145714",
+          "saida": "21240595274327000168570017311211801453094789",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-raiz-000",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-raiz-000:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 121,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240554576800000184570019839111921910772378",
+          "saida": "27240582943936000110570014886261621909831154",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-raiz-000",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-raiz-000:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 122,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240588429850000150580014354031981670361370",
+          "saida": "16240537419078000155580014930303121141304412",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-raiz-000",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-raiz-000:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 123,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50200500076135953400570206766073793596630257",
+          "saida": "50200500014205614993570208794733773428785190",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "transporte-antes-da-nff",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2005,modelo=57,serie=20,tpemis=3,emitente=Cpf",
+            "semente": 124,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26200500064783613818580203150326803365774258",
+          "saida": "26200500034427984770580206981956963424129195",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "transporte-antes-da-nff",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2005,modelo=58,serie=20,tpemis=3,emitente=Cpf",
+            "semente": 125,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33200600025312108499570200602054323300872790",
+          "saida": "33200600003763233458570200608890823318413292",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2006,modelo=57,serie=20,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 126,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23200600090551163780580200614164993398499856",
+          "saida": "23200600075233557223580200602790183554513597",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2006,modelo=58,serie=20,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 127,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240500024543330404581240529124783281389282",
+          "saida": "43240500038109208002581240506011353063041869",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=124,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 128,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240536411515000121570240521463783491191672",
+          "saida": "41240565073694000132570240526245853478144599",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=24,tpemis=3,emitente=CnpjNumerico,numero=Nff",
+            "semente": 129,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14240500095093998508579758521666303678845583",
+          "saida": "14240500087202413132579752284143893795848908",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "paa-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=975,tpemis=3,emitente=Cpf",
+            "semente": 130,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240584917420000127589855909778373419735607",
+          "saida": "16240581352439000185589850705811513469752970",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "paa-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=985,tpemis=3,emitente=CnpjNumerico",
+            "semente": 131,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240500005585544314579703259551443727186150",
+          "saida": "43240500076845391408579703859505093431188815",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "paa-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=970,tpemis=3,emitente=Cpf",
+            "semente": 132,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240582809143000103589899055622413013722282",
+          "saida": "12240529950858000107589898242727493844794599",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "paa-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=989,tpemis=3,emitente=CnpjNumerico",
+            "semente": 133,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240500037501187363579900525179073258520053",
+          "saida": "24240500068445052489579900521482103821270752",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=990,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 134,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240500066905246395589690522158563854456345",
+          "saida": "43240500023729038702589690521684043169368187",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=969,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 135,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27250200056306662405550252802205003942009079",
+          "saida": "27250200025593402248550251702203363432725924",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2502,modelo=55,serie=25,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=28",
+            "semente": 137,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29250200007831434941550252902296133076339374",
+          "saida": "29250200077253432100550252902210953846596423",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2502,modelo=55,serie=25,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=29",
+            "semente": 138,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240200070109481356550242902252083495289434",
+          "saida": "26240200005491675288550242302276803300688526",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2402,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=29",
+            "semente": 139,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240200011130121887550243002277953034667708",
+          "saida": "27240200093888069130550243002239353368277884",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2402,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=30",
+            "semente": 140,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240400048567918855550243004286273115654705",
+          "saida": "26240400008853661909550240104252953770869690",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2404,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=30",
+            "semente": 141,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240400040232656088550243104221103138317210",
+          "saida": "27240400064330046520550243104261533490886312",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2404,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=31",
+            "semente": 142,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240100086906564641550243101220943751296730",
+          "saida": "13240100045164486296550241501270473015702266",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2401,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=31",
+            "semente": 143,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240100089576784689550243201201253623707327",
+          "saida": "27240100038725497154550243201256183320462334",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2401,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=32",
+            "semente": 144,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16250200042775391141570250228738803013263324",
+          "saida": "16250200091049037146570250226176063151525818",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2502,modelo=57,serie=25,tpemis=3,emitente=Cpf,numero=Nff,dia=28",
+            "semente": 145,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12250200098326119890570250229914883267398765",
+          "saida": "12250200084964919005570250229311923931870117",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2502,modelo=57,serie=25,tpemis=3,emitente=Cpf,numero=Nff,dia=29",
+            "semente": 146,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240200070435395106570240229201653893550760",
+          "saida": "25240200066245287880570240218512833934602746",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2402,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=29",
+            "semente": 147,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15240200085060154211570240230973023269150658",
+          "saida": "15240200082707281875570240230031973211815372",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2402,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=30",
+            "semente": 148,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28240400097286955780570240430483853523798901",
+          "saida": "28240400099114082055570240415771163860708300",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2404,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=30",
+            "semente": 149,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240400020393958302570240431952193759785358",
+          "saida": "33240400014311899360570240431748833062860700",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2404,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=31",
+            "semente": 150,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14240100042149879344570240131491503122476847",
+          "saida": "14240100014929451531570240103790693143293018",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-ultimo-dia",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2401,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=31",
+            "semente": 151,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240100066286405585570240132748323985399715",
+          "saida": "12240100056348386309570240132579183120089039",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-depois-do-ultimo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2401,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=32",
+            "semente": 152,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240500065621488636550240005258783328060885",
+          "saida": "17240500053126233341550240005250113333616510",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,dia=0",
+            "semente": 153,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240500028233413232580240500887133971262971",
+          "saida": "13240500037401286408580240500476563749397709",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-dia-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=24,tpemis=3,emitente=Cpf,numero=Nff,dia=0",
+            "semente": 154,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240500036975427534550242400232003824868648",
+          "saida": "31240500054267249628550242400247873001894898",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-mes-do-numero-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,mes=0",
+            "semente": 155,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240500036916684968570241312495243509933148",
+          "saida": "52240500037713635432570241312789613873288809",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-mes-do-numero-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,mes=13",
+            "semente": 156,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "51250000076465450070550251001285213363653170",
+          "saida": "51250000090408066164550251001262113886829495",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-mes-do-aamm-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2500,modelo=55,serie=25,tpemis=3,emitente=Cpf,numero=Nff,nff=2,mes=1,dia=10",
+            "semente": 157,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "51251300089462819106580250110612223928483803",
+          "saida": "51251300052311121278580250110565053108034194",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-mes-do-aamm-invalido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2513,modelo=58,serie=25,tpemis=3,emitente=Cpf,numero=Nff,mes=1,dia=10",
+            "semente": 158,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240100004104842702550242902242713263019060",
+          "saida": "16240100072251981900550242902240273225843932",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-mes-diferente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2401,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,mes=2,dia=29",
+            "semente": 159,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240100031373988940550243002210093700288655",
+          "saida": "16240100054442710449550243002246953261255125",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-mes-diferente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2401,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2,mes=2,dia=30",
+            "semente": 160,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240200023544089785570240130562123419335327",
+          "saida": "50240200060139704752570240130259893344970770",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-mes-diferente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2402,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff,mes=1,dia=30",
+            "semente": 161,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28240500008337174218550240405200003532831305",
+          "saida": "28240500055880612767550241805200003097555178",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "SequencialZero"
+          ],
+          "ramo": "nff-sequencial-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=NffSequencialZero,nff=2",
+            "semente": 162,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240500036329825971570240504000003346883570",
+          "saida": "22240500026952953248570240528000003441722860",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "SequencialZero"
+          ],
+          "ramo": "nff-sequencial-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=NffSequencialZero",
+            "semente": 163,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28240500055350323601570240000000003116402766",
+          "saida": "28240500001997381737570240000000003433801220",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "SequencialZero",
+            "DataNffInvalida"
+          ],
+          "ramo": "nff-numero-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Zero",
+            "semente": 164,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240500005784778668550240000000003925650847",
+          "erro": "INC1003",
+          "ramo": "nff-numero-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Zero",
+            "semente": 165,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240200023100403800550242302261583344286733",
+          "saida": "33240200096414264350550240802226223342191854",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-dia",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-dia:aamm=2402,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 166,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240200033195697912550242202248303648072279",
+          "saida": "43240200078149555722550240602286253698991988",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-dia",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-dia:aamm=2402,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 167,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240400067451318389570240412372053402306233",
+          "saida": "42240400033528364777570240429324983513461891",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-dia",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-dia:aamm=2404,modelo=57,serie=24,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 169,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240500089837486309650240205287143696764515",
+          "saida": "42240500005468787415650240505284023233640551",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-sequencial",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-sequencial:aamm=2405,modelo=65,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 170,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240516537026000103580240529958163438294186",
+          "saida": "41240539650416000190580240518291613625142928",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-sequencial",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-sequencial:aamm=2405,modelo=58,serie=24,tpemis=3,emitente=CnpjNumerico,numero=Nff",
+            "semente": 171,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240512161336000115550010000000001096590659",
+          "saida": "11240503745481000152550010000000001976705599",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "NumeroZero"
+          ],
+          "ramo": "numero-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,numero=Zero",
+            "semente": 172,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28240546299863000102670010000000001345126909",
+          "saida": "28240566532412000180670010000000001216114399",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "NumeroZero"
+          ],
+          "ramo": "numero-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=67,serie=1,tpemis=1,emitente=CnpjNumerico,numero=Zero",
+            "semente": 173,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240566243851000173550016888922081067429530",
+          "saida": "22240534130358000150550010777191901031574787",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-numero-zero",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-numero-zero:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 174,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240500024666017020570018699274071050916153",
+          "saida": "13240500090733608620570019379430811984878036",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-numero-zero",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-numero-zero:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 175,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240508439303000117550016630109331012345672",
+          "saida": "23240504041801000156550016014748311012345678",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo=Proibido",
+            "semente": 176,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240517564590000188550015383546791222222224",
+          "saida": "33240585873302000127550014103731681222222225",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo=Proibido",
+            "semente": 177,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240599833581000100630011630337201789012348",
+          "saida": "17240550152687000159630016206825851789012345",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=63,serie=1,tpemis=1,emitente=CnpjNumerico,codigo=Proibido",
+            "semente": 178,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15240557402402000130550016758421071012345670",
+          "saida": "15240552301971000175550010209168371012345679",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-com-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=1234567",
+            "semente": 179,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240559897891000173550017892529641000000004",
+          "saida": "35240555449446000190550011139608001000000004",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=0",
+            "semente": 180,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240547794484000151550019255330881111111110",
+          "saida": "12240501620714000165550019300258681111111113",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=11111111",
+            "semente": 181,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14240555307229000165550011527844591222222225",
+          "saida": "14240506484547000196550015662458711222222225",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=22222222",
+            "semente": 182,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240539609982000159550014106339201333333330",
+          "saida": "22240554163647000163550016497730481333333339",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=33333333",
+            "semente": 183,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240503485159000131550017993906461444444442",
+          "saida": "22240553619571000175550016553723321444444446",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=44444444",
+            "semente": 184,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240572865800000186550018248672541555555550",
+          "saida": "26240569289486000126550017449890051555555553",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=55555555",
+            "semente": 185,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240512601793000183550019594218181666666668",
+          "saida": "22240518239724000158550016013842091666666665",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=66666666",
+            "semente": 186,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240574945685000185550017403361091777777770",
+          "saida": "26240572727921000161550011744677201777777775",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=77777777",
+            "semente": 187,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240569108231000110550010353870161888888888",
+          "saida": "43240558776741000149550016464832491888888883",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=88888888",
+            "semente": 188,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240548839891000109550013320937411999999990",
+          "saida": "42240569696427000172550017532474991999999998",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=99999999",
+            "semente": 189,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240514374574000134550014050783531123456782",
+          "saida": "23240559190764000130550019829546591123456786",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=12345678",
+            "semente": 190,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15240597780301000117550015654541331234567897",
+          "saida": "15240510546065000190550017817209701234567898",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=23456789",
+            "semente": 191,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240548186211000197550016549234491345678900",
+          "saida": "35240515801048000176550011305343801345678909",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=34567890",
+            "semente": 192,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240538192700000106550014778448391456789011",
+          "saida": "12240554603030000111550015392531991456789019",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=45678901",
+            "semente": 193,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240587996302000140550011064353951567890127",
+          "saida": "31240518419605000187550010221216441567890126",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=56789012",
+            "semente": 194,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240555120928000100550012916397911678901236",
+          "saida": "24240571778425000174550018103271621678901239",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=67890123",
+            "semente": 195,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240570990257000113550016003178361789012348",
+          "saida": "22240543743775000160550012372066421789012342",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=78901234",
+            "semente": 196,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240568653672000130550018813661001890123451",
+          "saida": "50240565726340000140550018307864001890123453",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=89012345",
+            "semente": 197,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "29240582082564000185550016747011101901234560",
+          "saida": "29240580336602000153550011611591371901234567",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=90123456",
+            "semente": 198,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240514294802000166550012731434831012345673",
+          "saida": "22240505922383000179550013708935081012345671",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-cada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=1234567",
+            "semente": 199,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240523083246000170550010000000001000000000",
+          "saida": "24240555534574000131550010000000001000000003",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "NumeroZero",
+            "CodigoProibido"
+          ],
+          "ramo": "codigo-proibido-antes-do-igual",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,numero=Zero,codigo-fixo=0",
+            "semente": 200,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240575094251000181550016010766491715596950",
+          "saida": "22240572170778000150550010715596951715596953",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoIgualAoNumero"
+          ],
+          "ramo": "codigo-igual-ao-numero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe-codigo-igual-ao-numero:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 217,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240500007982592562570011472547661174411763",
+          "saida": "33240500031847016200570010174411761174411766",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "CodigoIgualAoNumero"
+          ],
+          "ramo": "codigo-igual-ao-numero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe-codigo-igual-ao-numero:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 234,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240517461703000110550010354844471354844470",
+          "saida": "13240571158377000111550014725463431390461014",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "codigo-igual-ao-numero-de-entrada",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,codigo=IgualAoNumero",
+            "semente": 235,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240505755980000156550016006521921680165125",
+          "saida": "16240582924271000106550019162432671913256296",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-codigo-proibido",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-codigo-proibido:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 236,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240519682039000164550016242897121013735597",
+          "saida": "50240528660604000183550014358718561615274953",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-codigo-proibido",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-codigo-proibido:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 237,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240500060264493451580016149556091959723598",
+          "saida": "23240500054810404501580010306482441501757278",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-codigo-numero",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-codigo-numero:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 256,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240580101732000107550011286748071897167568",
+          "saida": "35240508659749000157550013865576701494663598",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "numero-pseudonimizado-acima-de-10-8",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 257,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240577008693000193550014213310761543094941",
+          "saida": "50240553623812000150550010177726121106193462",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "numero-pseudonimizado-abaixo-de-10-8",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 258,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240599267009000120660014086875041324676966",
+          "saida": "16240560608700000195660019140988701301801190",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nsiteautoriz",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=66,serie=1,tpemis=1,emitente=CnpjNumerico,site=3",
+            "semente": 259,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240506889782000148620011283224151924346146",
+          "saida": "52240504119397000196620012140502441965651432",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nsiteautoriz",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=62,serie=1,tpemis=1,emitente=CnpjNumerico,site=9",
+            "semente": 260,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32240519291528000195660016596218181011111118",
+          "saida": "32240586583137000131660014466782861074392651",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "codigo-7-com-cara-de-proibido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=66,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=1111111",
+            "semente": 261,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240532890976000173620018141183581000000002",
+          "saida": "33240502589424000169620018235052361081531929",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "codigo-7-com-cara-de-proibido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=62,serie=1,tpemis=1,emitente=CnpjNumerico,codigo-fixo=0",
+            "semente": 262,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240500000000000000550010000000001567890122",
+          "saida": "11240500000000000000550010000000001567890122",
+          "desfecho": "PontoFixo",
+          "ocorrencias": [
+            "NumeroZero",
+            "CodigoProibido",
+            "EmitentePontoFixo"
+          ],
+          "ramo": "ponto-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjRaizZero,numero=Zero,codigo=Proibido",
+            "semente": 263,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15240500022222222222570010000000001567890127",
+          "saida": "15240500022222222222570010000000001567890127",
+          "desfecho": "PontoFixo",
+          "ocorrencias": [
+            "NumeroZero",
+            "CodigoProibido",
+            "EmitentePontoFixo"
+          ],
+          "ramo": "ponto-fixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CpfRepdigito,numero=Zero,codigo=Proibido,cdv=4",
+            "semente": 264,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240524984276000110550017632888231489384302",
+          "saida": "42240596972860000166550018013197701865882889",
+          "desfecho": "DvInvalidoPreservado",
+          "ocorrencias": [],
+          "ramo": "cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,cdv=3",
+            "semente": 265,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "51240500034887426950570019401897681638137631",
+          "saida": "51240500019618042987570014422532411717152261",
+          "desfecho": "DvInvalidoPreservado",
+          "ocorrencias": [],
+          "ramo": "cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf,cdv=9",
+            "semente": 266,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "NFe52240514532423000167550013464686631155418565",
+          "saida": "NFe52240568179327000106550011719644991946474822",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 267,
+            "formas": [
+              "prefixo:NFe"
+            ]
+          }
+        },
+        {
+          "entrada": "NFe41240547084360000182650010420512771637418578",
+          "saida": "NFe41240509127164000159650014109678061822256640",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 269,
+            "formas": [
+              "prefixo:NFe"
+            ]
+          }
+        },
+        {
+          "entrada": "CTe16240500080766054314570012072667241795102913",
+          "saida": "CTe16240500064250165400570018303108641079651596",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 270,
+            "formas": [
+              "prefixo:CTe"
+            ]
+          }
+        },
+        {
+          "entrada": "CTe41240511075611000115640013515636361313196160",
+          "saida": "CTe41240558213486000126640014885197261707743913",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=64,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 271,
+            "formas": [
+              "prefixo:CTe"
+            ]
+          }
+        },
+        {
+          "entrada": "CTe29240519736635000180670016189496051856433110",
+          "saida": "CTe29240548920782000103670018781701211719659815",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=67,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 272,
+            "formas": [
+              "prefixo:CTe"
+            ]
+          }
+        },
+        {
+          "entrada": "MDFe15240550336870000104580013016758831018685630",
+          "saida": "MDFe15240566508243000143580013224975051295230380",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 273,
+            "formas": [
+              "prefixo:MDFe"
+            ]
+          }
+        },
+        {
+          "entrada": "BPe28240596965886000187630017562510941872333290",
+          "saida": "BPe28240574513230000190630012693207401881546520",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=63,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 274,
+            "formas": [
+              "prefixo:BPe"
+            ]
+          }
+        },
+        {
+          "entrada": "NF3e22240585409682000143660015809053261000680860",
+          "saida": "NF3e22240503053585000104660012741532391053489685",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=66,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 275,
+            "formas": [
+              "prefixo:NF3e"
+            ]
+          }
+        },
+        {
+          "entrada": "NFCom26240508712714000134620018434524091050452214",
+          "saida": "NFCom26240582899990000106620018869176921038607842",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=62,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 276,
+            "formas": [
+              "prefixo:NFCom"
+            ]
+          }
+        },
+        {
+          "entrada": "nfe25240515126338000161550013699795831411732518",
+          "saida": "nfe25240583642965000105550014875803931909968370",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo-em-outra-caixa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 277,
+            "formas": [
+              "prefixo:nfe"
+            ]
+          }
+        },
+        {
+          "entrada": "MDFE12240500017528784931580011356967061835986942",
+          "saida": "MDFE12240500048648404665580013041259221573116562",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo-em-outra-caixa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 278,
+            "formas": [
+              "prefixo:MDFE"
+            ]
+          }
+        },
+        {
+          "entrada": "nfCOM22240539322961000158620018386732991090693979",
+          "saida": "nfCOM22240587001141000107620019024130741074509761",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "prefixo-em-outra-caixa",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=62,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 279,
+            "formas": [
+              "prefixo:nfCOM"
+            ]
+          }
+        },
+        {
+          "entrada": "CTe43240593276820000191550017873700201520768047",
+          "erro": "INC1003",
+          "ramo": "prefixo-de-outro-modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 280,
+            "formas": [
+              "prefixo:CTe"
+            ]
+          }
+        },
+        {
+          "entrada": "MDFe31240591439995000147670014094342731291511402",
+          "erro": "INC1003",
+          "ramo": "prefixo-de-outro-modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=67,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 281,
+            "formas": [
+              "prefixo:MDFe"
+            ]
+          }
+        },
+        {
+          "entrada": "NFC12240568245276000173550013311797781040446544",
+          "erro": "INC1003",
+          "ramo": "prefixo-desconhecido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 282,
+            "formas": [
+              "prefixo:NFC"
+            ]
+          }
+        },
+        {
+          "entrada": "Id33240566254383000132550015877263751469795239",
+          "erro": "INC1003",
+          "ramo": "prefixo-desconhecido",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 283,
+            "formas": [
+              "prefixo:Id"
+            ]
+          }
+        },
+        {
+          "entrada": "3224 0510 1183 0000 0123 5500 1292 4038 3714 5374 8244",
+          "saida": "3224 0588 3769 5900 0177 5500 1546 0088 0815 4216 0659",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "grupos",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 284,
+            "formas": [
+              "grupos"
+            ]
+          }
+        },
+        {
+          "entrada": "5124 0500 0945 4680 6922 5700 1426 8924 8214 7869 4573",
+          "saida": "5124 0500 0734 0868 4537 5700 1132 8487 0113 7489 5511",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "grupos",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 285,
+            "formas": [
+              "grupos"
+            ]
+          }
+        },
+        {
+          "entrada": "3326 07R8 IOE5 KP00 0160 6600 1922 8635 6510 7597 4992  ",
+          "saida": "3326 079T FX8K E700 0103 6600 1114 3347 0210 0407 4880  ",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "grupos",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=66,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 286,
+            "formas": [
+              "grupos",
+              "espacos:2"
+            ]
+          }
+        },
+        {
+          "entrada": "35240540983644000161550010194178251352206675   ",
+          "saida": "35240524748896000150550011103875661799776552   ",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 287,
+            "formas": [
+              "espacos:3"
+            ]
+          }
+        },
+        {
+          "entrada": "MDFe21240500088634562590580019769173501083026858 ",
+          "saida": "MDFe21240500033897493578580010862681001234762756 ",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "preenchimento",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 288,
+            "formas": [
+              "prefixo:MDFe",
+              "espacos:1"
+            ]
+          }
+        },
+        {
+          "entrada": "2324-0544 3387 1100 0146 5500 1246 5180 3814 5428 6528",
+          "erro": "INC1003",
+          "ramo": "grupos-com-outro-separador",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 289,
+            "formas": [
+              "grupos",
+              "trocar:4:-"
+            ]
+          }
+        },
+        {
+          "entrada": "4224  0548 7159 3400 0136 5500 1579 0916 6918 6880 7263",
+          "erro": "INC1003",
+          "ramo": "grupos-com-espaco-duplo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 290,
+            "formas": [
+              "grupos",
+              "inserir:4: "
+            ]
+          }
+        },
+        {
+          "entrada": "NFe1724 0553 5103 4800 0195 5500 1575 4676 5217 3074 1848",
+          "erro": "INC1003",
+          "ramo": "grupos-com-prefixo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 291,
+            "formas": [
+              "grupos",
+              "prefixo:NFe"
+            ]
+          }
+        },
+        {
+          "entrada": " 31240574255859000188550016269079631107010022",
+          "erro": "INC1003",
+          "ramo": "espaco-a-esquerda",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 292,
+            "formas": [
+              "prefixo: "
+            ]
+          }
+        },
+        {
+          "entrada": "3224058807369400013855001228085776186643116",
+          "erro": "INC1003",
+          "ramo": "tamanho",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 293,
+            "formas": [
+              "remover:43:1"
+            ]
+          }
+        },
+        {
+          "entrada": "432405609601210001075500198832491817693683090",
+          "erro": "INC1003",
+          "ramo": "tamanho",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 294,
+            "formas": [
+              "sufixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "232405766472230001075500111371202316441072771234567890",
+          "erro": "INC1003",
+          "ramo": "tamanho",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 295,
+            "formas": [
+              "sufixo:1234567890"
+            ]
+          }
+        },
+        {
+          "entrada": "3224053369515500014955001413598386117333833212345678901",
+          "erro": "INC1003",
+          "ramo": "tamanho",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 296,
+            "formas": [
+              "sufixo:12345678901"
+            ]
+          }
+        },
+        {
+          "entrada": "332607k1dldxi4000114550018560893131296018002",
+          "erro": "INC1003",
+          "ramo": "minuscula-no-emitente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 297,
+            "formas": [
+              "minusculas-ascii"
+            ]
+          }
+        },
+        {
+          "entrada": "152405056128200001585500196999A7631041013687",
+          "erro": "INC1003",
+          "ramo": "letra-fora-do-emitente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 298,
+            "formas": [
+              "trocar:30:A"
+            ]
+          }
+        },
+        {
+          "entrada": "1224055485779500018B550013189777541612497611",
+          "erro": "INC1003",
+          "ramo": "letra-fora-do-emitente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 299,
+            "formas": [
+              "trocar:19:B"
+            ]
+          }
+        },
+        {
+          "entrada": "112405106451620001B0550013780170191410095829",
+          "erro": "INC1003",
+          "ramo": "letra-fora-do-emitente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 300,
+            "formas": [
+              "trocar:18:B"
+            ]
+          }
+        },
+        {
+          "entrada": "51240B62693065000117550014111328791108527230",
+          "erro": "INC1003",
+          "ramo": "letra-fora-do-emitente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 301,
+            "formas": [
+              "trocar:5:B"
+            ]
+          }
+        },
+        {
+          "entrada": "31240546267044000183590013236084991731026223",
+          "erro": "INC1003",
+          "ramo": "modelo-fora-da-tabela",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=59,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 302,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240514781691000112000012299239051546047282",
+          "erro": "INC1003",
+          "ramo": "modelo-fora-da-tabela",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=0,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 303,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "118IMW82DN0O2QWAELPU9OKH3Y3Y9PDU84HPDZDJN69Q7PLWGB",
+          "erro": "INC1003",
+          "ramo": "chave-da-nfse",
+          "origem": {
+            "tipo": "construido",
+            "regra": "nfse-50",
+            "semente": 304,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "NFSZUHQHBVK6GGSEQTWHW9SKRJSI1X4Z58DNGR3DTR2CIATK1PSZ5",
+          "erro": "INC1003",
+          "ramo": "chave-da-nfse",
+          "origem": {
+            "tipo": "construido",
+            "regra": "nfse-50",
+            "semente": 305,
+            "formas": [
+              "prefixo:NFS"
+            ]
+          }
+        },
+        {
+          "entrada": "00000000000000000000000000000000000000000000",
+          "saida": "00000000000000000000000000000000000000000000",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "NFe00000000000000000000000000000000000000000000",
+          "saida": "NFe00000000000000000000000000000000000000000000",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "MDFe00000000000000000000000000000000000000000000  ",
+          "saida": "MDFe00000000000000000000000000000000000000000000  ",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000",
+          "saida": "0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "Id00000000000000000000000000000000000000000000",
+          "erro": "INC1003",
+          "ramo": "zerada-com-prefixo-desconhecido",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ocorrencias": [],
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "   ",
+          "saida": "   ",
+          "desfecho": "Vazio",
+          "ocorrencias": [],
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "componentes e ambiente próprios, ordem permutada, anulando",
+      "dominio": "dfe-numero",
+      "ambiente": "desenvolvimento",
+      "modelos": [
+        55,
+        65,
+        57,
+        58,
+        67,
+        64,
+        63,
+        66,
+        62
+      ],
+      "entradaInvalida": "anular",
+      "entradaMalformada": "anular",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf-cliente",
+          "versao": 1
+        },
+        "cnpj": {
+          "dominio": "cnpj-cliente",
+          "versao": 1,
+          "permutarOrdem": true
+        }
+      },
+      "pares": [
+        {
+          "entrada": "43240521297582000190550014902511551464778319",
+          "saida": "43240516239274910123550013222286711453022803",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=55,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 313,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240545814603000165650016554056671879316074",
+          "saida": "25240513390702039204650017223598791470414386",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=65,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 314,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240527893438000100570015602968301268836171",
+          "saida": "17240575916577405473570018322655511617180451",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=57,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 315,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240587251940000131580018667882281258862494",
+          "saida": "31240559356774180249580019061138631981700233",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=58,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 316,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240533531929000104670011443452621861298551",
+          "saida": "23240522912124427724670014984746211745815691",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=67,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 317,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240552193065000102640019385786021150428544",
+          "saida": "25240589968690376636640013224077751025140180",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=64,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 318,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240586639850000150630016769703891484930565",
+          "saida": "12240595340167738085630014110004471644311148",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=63,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 319,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240573093295000161660014214808331093829310",
+          "saida": "16240504439662490706660019484386201084246232",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=66,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 320,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240598361249000127620013180987391068219048",
+          "saida": "24240591379317930389620014905755481006031210",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=62,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 321,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35240594152044000180570012643966221628662017",
+          "saida": "35240583618459336928570019034128131972956386",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cnpj",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 322,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26260744567643B45516570014139291611395240595",
+          "saida": "2626076DTT0ZTEX5BX62570015209336511007619660",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-ordem-alfanumerica",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=57,serie=1,tpemis=1,emitente=CnpjNumericoComOrdemAlfanumerica",
+            "semente": 323,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21260702939815B96238550018526550861072766765",
+          "saida": "212607HM6TFRVT731Q33550015265797381263857987",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-ordem-alfanumerica",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=1,tpemis=1,emitente=CnpjNumericoComOrdemAlfanumerica",
+            "semente": 324,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "312607F1AC2KIECRZE71580012380964461511235511",
+          "saida": "312607X28CQ55TOP9C40580012133264171531485523",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-raiz-e-ordem-alfanumericas",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=58,serie=1,tpemis=1,emitente=CnpjAlfanumericoComOrdemAlfanumerica",
+            "semente": 325,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "35260700033512H11206570017375726041848349948",
+          "saida": "352607203OG95U2PND85570011926306631853586036",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "zeros-raiz-000-com-letra",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=57,serie=1,tpemis=1,emitente=CnpjRaizComZerosEOrdemAlfanumerica,dv=19",
+            "semente": 326,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240599905378634532570017434734431161387746",
+          "saida": "25240518264663438257570015123236631322650384",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-raiz-000",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-raiz-000:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 327,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15240552821697917204570016101096531510480587",
+          "saida": "15240504169331559663570016178892241195793620",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-raiz-000",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-raiz-000:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 328,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240581427896786624580013550085901867455909",
+          "saida": "52240537520620913213580017790111691418519400",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-raiz-000",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-raiz-000:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 329,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240500010956329730570011449906861589846013",
+          "saida": "12240500006503198507570012173284151457339862",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "caminhada-cpf",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-caminhada-cpf:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 330,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240547919791901377570010879788671561517982",
+          "saida": "50240500234300783762570017658876111312958575",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "DvDoEmitenteInvalido"
+          ],
+          "ramo": "saida-raiz-00",
+          "origem": {
+            "tipo": "inversa",
+            "regra": "chave-dfe-saida-raiz-00:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=CnpjNumerico,dv=29",
+            "semente": 331,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240500000000000000550015485513011646225837",
+          "saida": "26240500000000000000550016718970791205334605",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [
+            "EmitentePontoFixo"
+          ],
+          "ramo": "cnpj-raiz-zero",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjRaizZero",
+            "semente": 332,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240500007782178762550240605229553270803964",
+          "saida": "11240500092376496810550240905227983137204146",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 333,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240560728136000144570240513428573902738033",
+          "saida": "50240548973556353271570240514778443381052783",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=24,tpemis=3,emitente=CnpjNumerico,numero=Nff",
+            "semente": 334,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "31240511656620000108550017680506601600592172",
+          "saida": null,
+          "desfecho": "AnuladoDvInvalido",
+          "ocorrencias": [],
+          "ramo": "cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,cdv=2",
+            "semente": 335,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240595883629000133559955224478081128548915",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ocorrencias": [
+            "Anomalia"
+          ],
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=995,tpemis=1,emitente=CnpjNumerico",
+            "semente": 336,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "NFe50240500002632585210570015377753031863526020",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ocorrencias": [],
+          "ramo": "prefixo-de-outro-modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 337,
+            "formas": [
+              "prefixo:NFe"
+            ]
+          }
+        },
+        {
+          "entrada": "00000000000000000000000000000000000000000000",
+          "saida": "00000000000000000000000000000000000000000000",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "malformado preservado, cDV errado falha",
+      "dominio": "dfe-numero",
+      "ambiente": "homologacao",
+      "modelos": [
+        55,
+        65,
+        57,
+        58
+      ],
+      "entradaInvalida": "falhar",
+      "entradaMalformada": "preservar",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false
+        }
+      },
+      "pares": [
+        {
+          "entrada": "32240540143480000164550011603442851027194742",
+          "saida": "32240513821228000194550019756610101967846084",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 339,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "28240500026102115465570012472566271221082412",
+          "saida": "28240500072855413893570013786845961828686292",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 340,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240528768464000161550013187579531332494804",
+          "erro": "INC1004",
+          "ramo": "cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,cdv=1",
+            "semente": 341,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240517275596000135559902244718591538181330",
+          "saida": "43240517275596000135559902244718591538181330",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [
+            "Anomalia"
+          ],
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=990,tpemis=1,emitente=CnpjNumerico",
+            "semente": 342,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240500015149142042659750510940731282967476",
+          "saida": "27240500015149142042659750510940731282967476",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [
+            "Anomalia"
+          ],
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=65,serie=975,tpemis=1,emitente=Cpf",
+            "semente": 343,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "11240591626288000160559903425068641537442012",
+          "saida": "11240591626288000160559903425068641537442012",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [
+            "Anomalia"
+          ],
+          "ramo": "anomalia-com-cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=990,tpemis=1,emitente=CnpjNumerico,cdv=3",
+            "semente": 344,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "CTe33240545041379000116559905772936271086142007",
+          "saida": "CTe33240545041379000116559905772936271086142007",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [
+            "Anomalia"
+          ],
+          "ramo": "anomalia-com-prefixo-de-outro-modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=990,tpemis=1,emitente=CnpjNumerico",
+            "semente": 345,
+            "formas": [
+              "prefixo:CTe"
+            ]
+          }
+        },
+        {
+          "entrada": "23240542319986000107630019152609271612208400",
+          "saida": "23240542319986000107630019152609271612208400",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "modelo-fora-da-coluna",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=63,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 346,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240504738790000168660019612603521059329512",
+          "saida": "52240504738790000168660019612603521059329512",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "modelo-fora-da-coluna",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=66,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 347,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240598719546000100630010194841011037869530",
+          "saida": "22240598719546000100630010194841011037869530",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "modelo-fora-da-coluna-com-cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=63,serie=1,tpemis=1,emitente=CnpjNumerico,cdv=3",
+            "semente": 348,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "CTe27240503197016000124550011323547811531910557",
+          "saida": "CTe27240503197016000124550011323547811531910557",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "prefixo-de-outro-modelo-com-cdv-errado",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico,cdv=3",
+            "semente": 349,
+            "formas": [
+              "prefixo:CTe"
+            ]
+          }
+        },
+        {
+          "entrada": "212405389949530001955500130740769116417224400",
+          "saida": "212405389949530001955500130740769116417224400",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "tamanho",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 350,
+            "formas": [
+              "sufixo:0"
+            ]
+          }
+        },
+        {
+          "entrada": "43240575631944000166590015436904911315231455",
+          "saida": "43240575631944000166590015436904911315231455",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "modelo-fora-da-tabela",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=59,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 351,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "272405123531360001645500172570A6651174813527",
+          "saida": "272405123531360001645500172570A6651174813527",
+          "desfecho": "CopiadoEmClaro",
+          "ocorrencias": [],
+          "ramo": "letra-fora-do-emitente",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 352,
+            "formas": [
+              "trocar:30:A"
+            ]
+          }
+        },
+        {
+          "entrada": "CTe00000000000000000000000000000000000000000000",
+          "saida": "CTe00000000000000000000000000000000000000000000",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "só alguns modelos, malformado anulado",
+      "dominio": "dfe-numero",
+      "ambiente": "producao",
+      "modelos": [
+        57,
+        58,
+        66
+      ],
+      "entradaInvalida": "preservar",
+      "entradaMalformada": "anular",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false
+        }
+      },
+      "pares": [
+        {
+          "entrada": "42240500085990188765570014371886411556358418",
+          "saida": "42240500081020743379570012019440121507505751",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 354,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41240552211259000185580018695554801730700522",
+          "saida": "41240501377477000153580014341992871811996980",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 355,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240552431373000110660016154716461030313711",
+          "saida": "17240575069756000196660017763629431086684801",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=66,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 356,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32240542046345000126550013621606941255389945",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ocorrencias": [],
+          "ramo": "modelo-fora-da-coluna",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 357,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "26240597210711000122559951219048891827174121",
+          "saida": null,
+          "desfecho": "AnuladoMalformado",
+          "ocorrencias": [
+            "Anomalia"
+          ],
+          "ramo": "anomalia-com-modelo-fora-da-coluna",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=995,tpemis=1,emitente=CnpjNumerico",
+            "semente": 358,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "NFe00000000000000000000000000000000000000000000",
+          "saida": "NFe00000000000000000000000000000000000000000000",
+          "desfecho": "Zerado",
+          "ocorrencias": [],
+          "ramo": "zerada",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "componentes padrão em outro ambiente",
+      "dominio": "dfe-numero",
+      "ambiente": "producao",
+      "modelos": [
+        55,
+        65,
+        57,
+        58,
+        67,
+        64,
+        63,
+        66,
+        62
+      ],
+      "entradaInvalida": "preservar",
+      "entradaMalformada": "falhar",
+      "componentes": {
+        "cpf": {
+          "dominio": "cpf",
+          "versao": 1
+        },
+        "cnpj": {
+          "dominio": "cnpj",
+          "versao": 1,
+          "permutarOrdem": false
+        }
+      },
+      "pares": [
+        {
+          "entrada": "16240511147458000194550013209258561910854913",
+          "saida": "16240579290262000198550014212986301304913530",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=55,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 360,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "23240578368791000102550015468528481157039158",
+          "saida": "23240543973122000177550011481990851644909390",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=55,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 361,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240514545754000131650013718428521202505081",
+          "saida": "42240536663779000172650017236591351316208200",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=65,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 362,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "13240510153689000148650016261366671967564730",
+          "saida": "13240593605857000116650017555361111421138952",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=65,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 363,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "42240534496092000164570010259567071489248552",
+          "saida": "42240574612985000142570018465956861173033180",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=57,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 364,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "32240543247691000135570019877905991050168817",
+          "saida": "32240542957077000102570015972312231742541154",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=57,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 365,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240573544942000104580017380175321103535279",
+          "saida": "52240553585380000130580018782517461297812548",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=58,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 366,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240516178407000143580016854239901223672184",
+          "saida": "25240562510216000154580015269896091959447488",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=58,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 367,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240566028405000146670014766397321340467020",
+          "saida": "16240524119842000125670014155875981399305055",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=67,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 368,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43240553560585000160670018320981851843605778",
+          "saida": "43240528931821000160670015900289131807875925",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=67,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 369,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "50240550105741000105640017468102561166207968",
+          "saida": "50240599662708000175640015151617941766791637",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=64,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 370,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "15240575306495000180640011363529081069039106",
+          "saida": "15240565366097000104640019985417451866651052",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=64,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 371,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17240567297933000163630019201274091269213325",
+          "saida": "17240508564571000160630017529470081555338849",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=63,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 372,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "16240518324369000115630010244303701398123911",
+          "saida": "16240560389124000132630010992122591220526970",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=63,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 373,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "53240565397675000161660016939689291063642046",
+          "saida": "53240573515805000141660012096811551023229689",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=66,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 374,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "24240518018017000131660012140522351099617725",
+          "saida": "24240503363790000168660017144408021085607493",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=66,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 375,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21240534677803000105620018807405841023040180",
+          "saida": "21240572907181000145620017275170971089085770",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=62,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 376,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "12240511842043000130620012842035981093034024",
+          "saida": "12240568025419000131620011146925901091223848",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "modelo",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:modelo=62,aamm=2405,serie=1,tpemis=1,emitente=CnpjNumerico",
+            "semente": 377,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "14240500023587001936559203401181301302839864",
+          "saida": "14240500078131126366559207372060871400292170",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=Cpf",
+            "semente": 378,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "33240500018130702967559201604830171251060035",
+          "saida": "33240500064388357499559207633966581790600674",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "serie-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=920,tpemis=1,emitente=Cpf",
+            "semente": 380,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "21240500066366464707570012721189301292376454",
+          "saida": "21240500020144042754570013275383381704488139",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 381,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27240500046630326482570019182323031667743897",
+          "saida": "27240500035321547149570012083505061813045990",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "zeros-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=57,serie=1,tpemis=1,emitente=Cpf",
+            "semente": 382,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "25240500012195859040550242505232503438150102",
+          "saida": "25240500011374502820550241605250483601062126",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-cpf",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=24,tpemis=3,emitente=Cpf,numero=Nff,nff=2",
+            "semente": 383,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "52240500055194334532580240512999553826719170",
+          "saida": "52240500051220229415580240521131713926862473",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "nff-transporte",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=58,serie=24,tpemis=3,emitente=Cpf,numero=Nff",
+            "semente": 384,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "41260779SXE4UA000171550019314106041725600830",
+          "saida": "412607JK819B44000170550017234064851876680858",
+          "desfecho": "Pseudonimizado",
+          "ocorrencias": [],
+          "ramo": "cnpj-alfanumerico",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2607,modelo=55,serie=1,tpemis=1,emitente=CnpjAlfanumerico",
+            "semente": 385,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "22240566600802000140559994009795301662018373",
+          "erro": "INC1003",
+          "ramo": "serie-sem-emissao",
+          "origem": {
+            "tipo": "construido",
+            "regra": "chave-dfe:aamm=2405,modelo=55,serie=999,tpemis=1,emitente=CnpjNumerico",
+            "semente": 386,
+            "formas": []
+          }
+        }
+      ]
+    }
+  ]
+}

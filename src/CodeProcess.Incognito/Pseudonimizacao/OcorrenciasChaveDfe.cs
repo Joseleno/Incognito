@@ -3,7 +3,8 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// <summary>
 /// O que a chave de DF-e teve de fora do comum: partes que ficaram como vieram, DV interno do emitente errado ou
 /// emitente sem classificação. Uma chave pode ter mais de uma ocorrência; o relatório conta cada uma à parte. As do
-/// número e do código saem do domínio <c>dfe-numero</c>; as do emitente e a anomalia, do <c>br.chave-dfe</c>.
+/// número e do código saem do domínio <c>dfe-numero</c>; as do emitente e a anomalia, do <c>br.chave-dfe</c>. Os nomes e a
+/// ordem dos valores estão nos vetores fixos do <c>br.chave-dfe</c>: não renomear nem reordenar.
 /// </summary>
 [Flags]
 internal enum OcorrenciasChaveDfe
