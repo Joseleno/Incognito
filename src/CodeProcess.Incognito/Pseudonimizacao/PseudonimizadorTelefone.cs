@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
+using CodeProcess.Incognito.Documentos;
 
 namespace CodeProcess.Incognito.Pseudonimizacao;
 
@@ -22,11 +23,17 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// <c>5512-3456 1234</c> é lido como 55, DDD 12 e número: a forma é a mesma de <c>55 12 3456-1234</c>.
 /// </para>
 /// <para>
-/// Números de serviço (0800, 0300, 0500 e 0900 com 11 dígitos, com o 55 opcional; fixos que começam com 3003 ou 4004)
-/// não são de pessoa e voltam como vieram (<see cref="Desfecho.ServicoPreservado"/>). Espaços à direita voltam como
-/// estavam; texto vazio ou só com espaços volta como veio. Em coluna numérica valem as mesmas formas sem formatação e
-/// sem o 0 de tronco; um número de 10 dígitos que começa com 800, 300, 500 ou 900 é um 0800 e afins que perdeu o
-/// zero. O resto segue <c>entradaMalformada</c>; telefone não tem DV. Nenhuma exceção traz o valor.
+/// Números de serviço não são de pessoa e voltam como vieram (<see cref="Desfecho.ServicoPreservado"/>): os códigos
+/// não geográficos 0800, 0300, 0303, 0500 e 0900, que a Anatel só atribui a pessoa jurídica, com 11 dígitos (10 nos
+/// anteriores à padronização em 7 dígitos), com o 55 opcional; e os fixos que começam com 3003 ou 4004, de tarifa única,
+/// que não têm reserva em norma mas são vendidos a empresas. Espaços à direita voltam como estavam; texto vazio ou só
+/// com espaços volta como veio. Valor de preenchimento volta como veio (<see cref="Desfecho.Zerado"/>), antes da
+/// política: só zeros (de 1 a 13 dígitos) ou o número do assinante zerado depois do 55, do 0 de tronco e do DDD (como
+/// <c>(11) 0000-0000</c> e <c>+55 (00) 0000-0000</c>), só com os separadores de telefone, em qualquer arranjo, até 32
+/// caracteres. Em coluna numérica valem as mesmas formas sem formatação e sem o 0 de tronco; um número de 10 dígitos que
+/// começa com 800, 300, 303, 500 ou 900 é um 0800 e afins que perdeu o zero (e um de 9 dígitos que começa com 800, 300,
+/// 303 ou 500, um dos antigos; com 900 seria celular sem DDD). O resto segue <c>entradaMalformada</c>; telefone não tem
+/// DV. Nenhuma exceção traz o valor.
 /// </para>
 /// <para>
 /// Pode ser usado por várias threads ao mesmo tempo. O descarte é do dono, depois de todo uso.
@@ -111,7 +118,7 @@ internal sealed class PseudonimizadorTelefone : IDisposable
         // Fixo com prefixo 3003 ou 4004.
         ServicoFixo,
 
-        // 0800, 0300, 0500 ou 0900 com 11 dígitos.
+        // 0800, 0300, 0303, 0500 ou 0900 com 11 dígitos (10 nos antigos).
         ServicoNaoGeografico,
     }
 
@@ -134,6 +141,12 @@ internal sealed class PseudonimizadorTelefone : IDisposable
         {
             saida = entrada;
             return Desfecho.Vazio;
+        }
+
+        if (EhZerado(corpo))
+        {
+            saida = entrada;
+            return Desfecho.Zerado;
         }
 
         Span<char> digitos = stackalloc char[MaximoDeDigitos];
@@ -180,6 +193,12 @@ internal sealed class PseudonimizadorTelefone : IDisposable
     internal Desfecho Pseudonimizar(long entrada, out long? saida)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _descartado) != 0, this);
+        if (entrada == 0)
+        {
+            saida = entrada;
+            return Desfecho.Zerado;
+        }
+
         var quantidade = 0;
         for (var restante = entrada; restante > 0; restante /= 10)
         {
@@ -199,8 +218,16 @@ internal sealed class PseudonimizadorTelefone : IDisposable
             resto /= 10;
         }
 
-        // Um 0800 e afins guardado como número perde o zero; 80, 30, 50 e 90 nunca são DDD aceito.
-        if (quantidade == 10 && EhPrefixoNaoGeografico(digitos[..3]))
+        if (TemNumeroZerado(digitos))
+        {
+            saida = entrada;
+            return Desfecho.Zerado;
+        }
+
+        // Um 0800 e afins guardado como número perde o zero; 80, 30, 50 e 90 nunca são DDD aceito. Com 9 dígitos, um dos
+        // antigos, de 6 depois do prefixo; com 900 seria um celular sem DDD.
+        if ((quantidade == 10 && EhPrefixoNaoGeografico(digitos[..3]))
+            || (quantidade == 9 && digitos[..3] is "800" or "300" or "303" or "500"))
         {
             saida = entrada;
             return Desfecho.ServicoPreservado;
@@ -287,12 +314,13 @@ internal sealed class PseudonimizadorTelefone : IDisposable
             : quantidade is 11 or 12 && digitos[0] == '0' ? 1
             : 0;
 
-        // 0800 e afins, com o 55 opcional: não se confunde com o 0 de tronco, porque o DDD nunca tem zero.
+        // 0800 e afins, com o 55 opcional e 7 ou 6 dígitos depois do prefixo: não se confunde com o 0 de tronco, porque o
+        // DDD nunca tem zero.
         var semPais = prefixo == 2 ? digitos[2..] : digitos;
-        if (semPais.Length == 11 && semPais[0] == '0' && EhPrefixoNaoGeografico(semPais[1..4]))
+        if (semPais.Length is 10 or 11 && semPais[0] == '0' && EhPrefixoNaoGeografico(semPais[1..4]))
         {
             classe = Classe.ServicoNaoGeografico;
-            prefixo = quantidade - 11;
+            prefixo = quantidade - semPais.Length;
             return true;
         }
 
@@ -422,8 +450,53 @@ internal sealed class PseudonimizadorTelefone : IDisposable
         }
     }
 
+    // Códigos não geográficos (CNG) da Res. Anatel 749/2022, art. 18: 300, 303, 500, 800 e 900.
     private static bool EhPrefixoNaoGeografico(ReadOnlySpan<char> tresDigitos) =>
-        tresDigitos is "800" or "300" or "500" or "900";
+        tresDigitos is "800" or "300" or "303" or "500" or "900";
+
+    // Valor de preenchimento: dígitos com o número zerado (ver TemNumeroZerado), só com os separadores de telefone, em
+    // qualquer arranjo, até 32 caracteres.
+    private static bool EhZerado(ReadOnlySpan<char> corpo)
+    {
+        if (corpo.Length > MaximoDeCaracteres)
+        {
+            return false;
+        }
+
+        Span<char> digitos = stackalloc char[MaximoDeDigitos];
+        var quantidade = 0;
+        foreach (var caractere in corpo)
+        {
+            if (char.IsAsciiDigit(caractere))
+            {
+                if (quantidade == MaximoDeDigitos)
+                {
+                    return false;
+                }
+
+                digitos[quantidade++] = caractere;
+            }
+            else if (caractere is not (' ' or '(' or ')' or '-' or '.' or '+'))
+            {
+                return false;
+            }
+        }
+
+        return quantidade > 0 && TemNumeroZerado(digitos[..quantidade]);
+    }
+
+    // Só zeros, ou o número do assinante (8 ou 9 dígitos) zerado depois do DDD, do 0 de tronco e do DDD, do 55 e do DDD;
+    // esses podem ter quaisquer dígitos, que sozinhos não identificam ninguém.
+    private static bool TemNumeroZerado(ReadOnlySpan<char> digitos) =>
+        Caracteres.SoZeros(digitos) || digitos.Length switch
+        {
+            10 => Caracteres.SoZeros(digitos[2..]),
+            11 => Caracteres.SoZeros(digitos[2..]) || (digitos[0] == '0' && Caracteres.SoZeros(digitos[3..])),
+            12 => (digitos[..2] is "55" && Caracteres.SoZeros(digitos[4..]))
+                || (digitos[0] == '0' && Caracteres.SoZeros(digitos[3..])),
+            13 => digitos[..2] is "55" && Caracteres.SoZeros(digitos[4..]),
+            _ => false,
+        };
 
     // Subtração sem sinal: um valor abaixo do início da faixa dá a volta e fica enorme, fora dela.
     private static bool EhServico(ulong valorDoFixo) =>

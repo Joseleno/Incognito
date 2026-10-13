@@ -26,7 +26,7 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// Seguem a política de entrada malformada: forma fora dessas (inclusive espaço à esquerda, outro separador e prefixo
 /// de outro modelo), modelo fora dos nove ou dos aceitos pela coluna, chave sem emitente classificável (contada como
 /// <see cref="OcorrenciasChaveDfe.Anomalia"/>) e a chave de 50 posições da NFS-e Padrão Nacional, com a dica do
-/// <c>br.chave-nfse</c>. A chave de 44 zeros volta como veio (<see cref="Desfecho.ChaveZerada"/>), antes da política,
+/// <c>br.chave-nfse</c>. A chave de 44 zeros volta como veio (<see cref="Desfecho.Zerado"/>), antes da política,
 /// com qualquer prefixo de <c>Id</c> e qualquer que seja o parâmetro <c>modelos</c>: não tem modelo nem dado pessoal.
 /// cDV errado segue a política de entrada inválida; o DV interno do emitente errado é sempre mantido pelo deslocamento
 /// (δ mod 100) e contado, sem a política da coluna. Chave que sai igual à entrada (emitente, número e código em ponto
@@ -183,7 +183,7 @@ internal sealed class PseudonimizadorChaveDfe : IDisposable
         if (classificacao.EhChaveZerada)
         {
             saida = entrada;
-            return Desfecho.ChaveZerada;
+            return Desfecho.Zerado;
         }
 
         // Estrutura e modelo fora da tabela não têm leiaute; as outras anomalias são contadas mesmo com o modelo ou o

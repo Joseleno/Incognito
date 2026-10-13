@@ -33,8 +33,9 @@ internal enum Desfecho
     Vazio,
 
     /// <summary>
-    /// Chave de DF-e com as 44 posições em zero (valor de preenchimento do sistema, sem dado pessoal): volta como veio,
-    /// com prefixo, grupos e preenchimento, antes da política de entrada malformada.
+    /// Valor de preenchimento só com zeros, sem dado pessoal: a chave de DF-e com as 44 posições em zero, o CEP só com
+    /// zeros e o telefone só com zeros. Volta como veio, com prefixo, máscara, separadores e preenchimento, antes da
+    /// política de entrada malformada.
     /// </summary>
-    ChaveZerada,
+    Zerado,
 }

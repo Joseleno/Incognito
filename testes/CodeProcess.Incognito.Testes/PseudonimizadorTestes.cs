@@ -207,9 +207,15 @@ public sealed class PseudonimizadorTestes : IDisposable
         Assert.Equal(cpfRepdigito, pseudonimizador.Cpf(cpfRepdigito));
         Assert.Equal(cnpjRaizZero, pseudonimizador.Cnpj(cnpjRaizZero));
         Assert.Same(zerada, pseudonimizador.ChaveDfe(zerada));
-        foreach (var servico in new[] { "08001234567", "0300 123 4567", "4004-1234", "30031234" })
+        foreach (var servico in new[] { "08001234567", "0300 123 4567", "0303 123 4567", "+55 0303 1234567", "4004-1234", "30031234", "(00) 0000-0000" })
         {
             Assert.Equal(servico, pseudonimizador.Telefone(servico));
+        }
+
+        // Na chave Pix, 11 dígitos colados são sempre CPF; com separador ou +, é telefone.
+        foreach (var telefone in new[] { "+55 0303 1234567", "0800 123 4567", "+5508001234567", "(00) 0000-0000", "+0000000000" })
+        {
+            Assert.Equal(telefone, pseudonimizador.ChavePix(telefone));
         }
     }
 

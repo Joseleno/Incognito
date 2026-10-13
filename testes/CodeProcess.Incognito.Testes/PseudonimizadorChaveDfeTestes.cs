@@ -570,7 +570,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
 
                 var desfecho = chaveDfe.Pseudonimizar(entrada, out var saida, out var ocorrencias);
 
-                Assert.Equal(Desfecho.ChaveZerada, desfecho);
+                Assert.Equal(Desfecho.Zerado, desfecho);
                 Assert.Same(entrada, saida);
                 Assert.Equal(OcorrenciasChaveDfe.Nenhuma, ocorrencias);
             }
@@ -578,7 +578,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
 
         // Também numa coluna que só aceita NF-e: a chave zerada não tem modelo.
         using var soNfe = Criar(modelos: [55], malformada: PoliticaEntradaMalformada.Falhar);
-        Assert.Equal(Desfecho.ChaveZerada, soNfe.Pseudonimizar(entrada, out _, out _));
+        Assert.Equal(Desfecho.Zerado, soNfe.Pseudonimizar(entrada, out _, out _));
     }
 
     [Theory]
@@ -909,7 +909,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
         Assert.Equal(Desfecho.AnuladoMalformado, anular.Inverter(anomala, out var anulada, out var ocorrencias));
         Assert.Null(anulada);
         Assert.Equal(OcorrenciasChaveDfe.Anomalia, ocorrencias);
-        Assert.Equal(Desfecho.ChaveZerada, falhar.Inverter(zerada, out var zeradaDeVolta, out _));
+        Assert.Equal(Desfecho.Zerado, falhar.Inverter(zerada, out var zeradaDeVolta, out _));
         Assert.Same(zerada, zeradaDeVolta);
     }
 

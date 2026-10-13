@@ -653,7 +653,7 @@ public sealed class PropriedadeChaveDfeTestes
             if (esperada is "anomalia" or "zerada")
             {
                 Assert.Same(chave, saida);
-                Assert.Equal(esperada == "zerada" ? Desfecho.ChaveZerada : Desfecho.CopiadoEmClaro, desfecho);
+                Assert.Equal(esperada == "zerada" ? Desfecho.Zerado : Desfecho.CopiadoEmClaro, desfecho);
                 Assert.Equal(esperada == "zerada" ? OcorrenciasChaveDfe.Nenhuma : OcorrenciasChaveDfe.Anomalia, ocorrencias);
                 _inversa.Inverter(chave, out var anomalaDeVolta, out _);
                 Assert.Same(chave, anomalaDeVolta);

@@ -24,9 +24,7 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
         "123456789012345",
         "()- .",
         "1 1 9 1 2 3 4 5 6 7 8 9 0 1 2 3 4",
-        "0800123456",
         "08001234",
-        "+55 0800123456",
         "07001234567",
     ];
 
@@ -224,7 +222,7 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
     {
         using var telefone = Criar();
         var sorteio = new Random(1608);
-        foreach (var prefixo in new[] { "0800", "0300", "0500", "0900" })
+        foreach (var prefixo in new[] { "0800", "0300", "0303", "0500", "0900" })
         {
             var numero = prefixo + Digitos(sorteio, 7);
             foreach (var entrada in new[] { numero, prefixo + " " + numero[4..7] + " " + numero[7..], prefixo + "-" + numero[4..7] + "-" + numero[7..], "55" + numero, "+55 " + numero })
@@ -321,8 +319,120 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
     }
 
     [Theory]
+    [InlineData("0")]
+    [InlineData("00")]
+    [InlineData("0000000")]
+    [InlineData("00000000")]
+    [InlineData("0000000000000")]
+    [InlineData("+55 (00) 0000-0000")]
+    [InlineData("55 00 00000-0000")]
+    [InlineData("(11) 0000-0000")]
+    [InlineData("(21) 00000-0000")]
+    [InlineData("0 11 0000-0000")]
+    [InlineData("(011) 00000-0000")]
+    [InlineData("+55 11 00000-0000")]
+    [InlineData("00                     0000-0000")]
+    [InlineData("(00) 0000-0000")]
+    [InlineData("(00) 00000-0000")]
+    [InlineData("0000-0000")]
+    [InlineData("00.0000.0000")]
+    [InlineData("000 000 000 000")]
+    [InlineData("()0000+0000")]
+    public void Telefone_so_com_zeros_volta_como_veio_em_toda_politica(string zerado)
+    {
+        foreach (var politica in Enum.GetValues<PoliticaEntradaMalformada>())
+        {
+            using var telefone = Criar(politica);
+            foreach (var entrada in new[] { zerado, zerado + "   " })
+            {
+                Assert.Equal(Desfecho.Zerado, telefone.Pseudonimizar(entrada, out var saida));
+                Assert.Equal(entrada, saida);
+            }
+
+            Assert.Equal(Desfecho.Zerado, telefone.Pseudonimizar(0L, out var numero));
+            Assert.Equal(0L, numero);
+        }
+    }
+
+    [Theory]
+    [InlineData("00000000000000")]
+    [InlineData("0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0")]
+    [InlineData("1 0000-0000")]
+    [InlineData("12 0000-000")]
+    [InlineData("56 11 0000-0000")]
+    [InlineData("56 11 00000-0000")]
+    [InlineData("00                      0000-0000")]
+    [InlineData("0000000x")]
+    [InlineData("0000\t0000")]
+    [InlineData("0000/0000")]
+    [InlineData("000000001")]
+    [InlineData("(00) 0000-0001")]
+    public void Zeros_fora_do_tamanho_com_outro_caractere_ou_com_outro_digito_nao_sao_zerado(string entrada)
+    {
+        using var telefone = Criar();
+
+        Assert.Equal("INC1003", Assert.Throws<IncognitoException>(() => telefone.Pseudonimizar(entrada, out _)).Codigo);
+    }
+
+    [Theory]
+    [InlineData("(11) 90000-0000")]
+    [InlineData("(11) 3000-0000")]
+    [InlineData("+55 11 90000-0000")]
+    public void Numero_com_um_digito_diferente_de_zero_e_pseudonimizado(string entrada)
+    {
+        using var telefone = Criar();
+
+        Assert.Equal(Desfecho.Pseudonimizado, telefone.Pseudonimizar(entrada, out var saida));
+        Assert.NotEqual(entrada, saida);
+    }
+
+    [Theory]
+    [InlineData(1_100_000_000L)]
+    [InlineData(11_000_000_000L)]
+    [InlineData(5_511_000_000_000L)]
+    [InlineData(5_500_000_000_000L)]
+    public void Numero_com_o_numero_do_assinante_zerado_volta_como_veio(long numero)
+    {
+        using var telefone = Criar();
+
+        Assert.Equal(Desfecho.Zerado, telefone.Pseudonimizar(numero, out var saida));
+        Assert.Equal(numero, saida);
+    }
+
+    [Theory]
+    [InlineData("0800 123456")]
+    [InlineData("0800123456")]
+    [InlineData("0300-123456")]
+    [InlineData("+55 0500 123456")]
+    [InlineData("550900123456")]
+    public void Codigo_nao_geografico_antigo_de_10_digitos_volta_como_veio(string entrada)
+    {
+        using var telefone = Criar();
+
+        Assert.Equal(Desfecho.ServicoPreservado, telefone.Pseudonimizar(entrada, out var saida));
+        Assert.Equal(entrada, saida);
+    }
+
+    [Theory]
+    [InlineData(800_123_456L, true)]
+    [InlineData(300_123_456L, true)]
+    [InlineData(303_123_456L, true)]
+    [InlineData(500_123_456L, true)]
+    [InlineData(900_123_456L, false)]
+    [InlineData(55_0303_123_4567L, true)]
+    public void Codigo_nao_geografico_numerico_antigo_e_com_55(long numero, bool servico)
+    {
+        // Com 9 dígitos, 900 seria um celular sem DDD.
+        using var telefone = Criar();
+
+        Assert.Equal(servico ? Desfecho.ServicoPreservado : Desfecho.Pseudonimizado, telefone.Pseudonimizar(numero, out var saida));
+        Assert.Equal(servico, saida == numero);
+    }
+
+    [Theory]
     [InlineData("800")]
     [InlineData("300")]
+    [InlineData("303")]
     [InlineData("500")]
     [InlineData("900")]
     public void Servico_numerico_que_perdeu_o_zero_volta_como_veio(string prefixo)
@@ -338,7 +448,6 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
 
     [Theory]
     [InlineData(-1L)]
-    [InlineData(0L)]
     [InlineData(1_234_567L)]
     [InlineData(12_345_678_901_234L)]
     [InlineData(7_001_234_567L)]
