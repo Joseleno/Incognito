@@ -24,8 +24,8 @@ namespace CodeProcess.Incognito.Pseudonimizacao;
 /// </para>
 /// <para>
 /// Números de serviço não são de pessoa e voltam como vieram (<see cref="Desfecho.ServicoPreservado"/>): os códigos
-/// não geográficos 0800, 0300, 0303, 0500 e 0900, que a Anatel só atribui a pessoa jurídica, com 11 dígitos (10 nos
-/// anteriores à padronização em 7 dígitos), com o 55 opcional; e os fixos que começam com 3003 ou 4004, de tarifa única,
+/// não geográficos 0800, 0300, 0303, 0500 e 0900, cujo assinante a Anatel registra com razão social e CNPJ, com 11
+/// dígitos (10 nos anteriores à padronização em 7 dígitos), com o 55 opcional; e os fixos que começam com 3003 ou 4004, de tarifa única,
 /// que não têm reserva em norma mas são vendidos a empresas. Espaços à direita voltam como estavam; texto vazio ou só
 /// com espaços volta como veio. Valor de preenchimento volta como veio (<see cref="Desfecho.Zerado"/>), antes da
 /// política: só zeros (de 1 a 13 dígitos) ou o número do assinante zerado depois do 55, do 0 de tronco e do DDD (como

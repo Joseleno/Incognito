@@ -34,3 +34,11 @@ CodeProcess.Incognito.Pseudonimizador.Dispose() -> void
 CodeProcess.Incognito.Pseudonimizador.Email(string! email) -> string!
 CodeProcess.Incognito.Pseudonimizador.Pseudonimizador(CodeProcess.Incognito.ChaveIncognito! chave, string! ambiente) -> void
 CodeProcess.Incognito.Pseudonimizador.Telefone(string! telefone) -> string!
+CodeProcess.Incognito.Normas.CatalogoNormativo
+CodeProcess.Incognito.Normas.ReferenciaNormativa
+CodeProcess.Incognito.Normas.ReferenciaNormativa.Fonte.get -> System.Uri!
+CodeProcess.Incognito.Normas.ReferenciaNormativa.Identificador.get -> string!
+CodeProcess.Incognito.Normas.ReferenciaNormativa.RevisadaEm.get -> System.DateOnly
+CodeProcess.Incognito.Normas.ReferenciaNormativa.Titulo.get -> string!
+static CodeProcess.Incognito.Normas.CatalogoNormativo.Referencias.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Normas.ReferenciaNormativa!>!
+static CodeProcess.Incognito.Normas.CatalogoNormativo.RevisaoMaisAntiga.get -> System.DateOnly
