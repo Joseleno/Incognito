@@ -413,7 +413,8 @@ public sealed class PermutacaoFeistelTestes
     [Fact]
     public void Uso_concorrente_da_os_mesmos_resultados_que_o_sequencial()
     {
-        using var permutacao = new PermutacaoFeistel(ChaveAleatoria(), 10, 100, 100);
+        // Sob a mutação, 10 × 100 em vez de 100 × 100.
+        using var permutacao = new PermutacaoFeistel(ChaveAleatoria(), 10, (ulong)Mutacao.Tamanho(100, 10), 100);
         var ajustes = Enumerable.Range(0, 8).Select(indice => new[] { (byte)indice }).ToArray();
         var esperados = ajustes.Select(ajuste => Imagem(permutacao, ajuste)).ToArray();
         var cancelamento = TestContext.Current.CancellationToken;

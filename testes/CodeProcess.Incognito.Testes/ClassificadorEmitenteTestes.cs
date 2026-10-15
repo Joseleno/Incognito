@@ -359,6 +359,7 @@ public sealed class ClassificadorEmitenteTestes
         }
 
         Assert.Throws<ArgumentOutOfRangeException>(() => LeiautesDfe.Obter((ModeloDfe)59));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LeiautesDfe.Obter((ModeloDfe)100));
         Assert.Throws<ArgumentOutOfRangeException>(() => LeiautesDfe.Obter((ModeloDfe)200));
     }
 

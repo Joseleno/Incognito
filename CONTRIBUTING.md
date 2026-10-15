@@ -56,6 +56,14 @@ dotnet run -c Release --project benchmarks/CodeProcess.Incognito.Benchmarks -- -
 
 O CI só compila, confere a formatação e roda uma iteração de cada (`--job Dry`); o programa sai com erro se algum benchmark falhar ou se o filtro não achar nenhum. Os números de referência ficam em `benchmarks/resultados/`, com a máquina declarada: só o relatório `*-report-github.md` e o CSV, nunca o `.log`, que traz caminhos da máquina. O workflow `benchmark`, manual, mede no runner do GitHub, como número informativo.
 
+### Mutação noturna
+
+O workflow `noturno` roda o Stryker.NET no núcleo todo dia, em fatias, com limite de 80% de mutantes detectados por fatia, e guarda o relatório como artefato. Ele roda a suíte com `INCOGNITO_MUTACAO=1`, que encolhe os testes pesados e pula os estatísticos pesados e os de alocação (`Mutacao.cs`): o Stryker captura a cobertura teste a teste com o código instrumentado, um teste lento demais quebra a captura, e o código instrumentado aloca. Um teste novo que passe de ~1 s com a variável ligada precisa de `Mutacao.Tamanho(normal, sobMutacao)` (ou, se o tamanho não puder mudar, `SkipWhen = nameof(Mutacao.Ativa)`); fora do noturno, o CI recusa a variável. Para medir uma parte do núcleo na sua máquina, a partir de `testes/CodeProcess.Incognito.Testes`, depois de um `dotnet build -c Debug --no-incremental` (o Stryker deixa a dll mutada no `bin`):
+
+```
+INCOGNITO_MUTACAO=1 dotnet stryker -m "**/Pseudonimizacao/PseudonimizadorCep.cs"
+```
+
 ## Branches
 
 - `main` guarda apenas o código lançado; cada versão é uma tag na `main`.

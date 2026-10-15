@@ -5,8 +5,8 @@ namespace CodeProcess.Incognito.Testes;
 
 /// <summary>
 /// Gerador dos vetores fixos, pulado salvo com <c>INCOGNITO_GERAR_VETORES</c> com os arquivos separados por vírgula
-/// (<c>br.cpf@1.json</c>), e recusado no CI. Grava em <c>testes/vetores/</c> do repositório; arquivo existente só ganha
-/// casos novos, depois de reconferido. A contagem de casos acrescentados sai com <c>--output Detailed</c>. Depois de
+/// (<c>br.cpf@1.json</c>), e recusado no CI e sob a mutação noturna. Grava em <c>testes/vetores/</c> do repositório;
+/// arquivo existente só ganha casos novos, depois de reconferido. A contagem de casos acrescentados sai com <c>--output Detailed</c>. Depois de
 /// gerar: rodar a referência em Python (<c>py -3 -I testes/referencia/conferir_vetores.py</c> no Windows) e só então
 /// fazer o commit.
 /// </summary>
@@ -24,6 +24,7 @@ public sealed class GeracaoDeVetoresTestes
         }
 
         Assert.True(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")), "Os vetores nunca são gerados no CI.");
+        Assert.False(Mutacao.Ativa, "Os vetores nunca são gerados sob a mutação: o código mutado calcularia os casos.");
         var pasta = Path.Combine(RaizDoRepositorio(), "testes", "vetores");
         using var documento = ArquivosDeTeste.Ler("vetores", "derivacao@1.json");
         var textoDaChave = ArquivosDeTeste.Texto(ArquivosDeTeste.Caso(documento, "chaves", "aleatoria"), "texto");

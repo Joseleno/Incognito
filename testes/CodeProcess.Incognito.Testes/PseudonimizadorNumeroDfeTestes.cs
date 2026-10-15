@@ -242,7 +242,10 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
         var codigo = Digitos(sorteio, 8);
         var tamanho = transporte ? 100_000 : 10_000;
         var vistos = new bool[tamanho];
-        for (var sequencial = 1; sequencial < tamanho; sequencial++)
+
+        // Sob a mutação, só os primeiros sequenciais: injetiva e sem o zero, sem fechar a bijeção.
+        var limite = Mutacao.Tamanho(tamanho, tamanho / 20);
+        for (var sequencial = 1; sequencial < limite; sequencial++)
         {
             var chave = Montar(sorteio, "2606", emitente, modelo, "126", Numero(transporte, 0, 6, transporte ? null : '2', sequencial), '3', codigo);
 
@@ -284,15 +287,16 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
         var emitente = Emitente(sorteio);
         var codigo = Oito(CodigoPermitido(sorteio, 0));
         var inicio = sorteio.NextInt64(999_000_000);
+        var quantidade = Mutacao.Tamanho(100_000, 5_000);
         var saidas = new HashSet<string>();
-        for (var numero = inicio; numero < inicio + 100_000; numero++)
+        for (var numero = inicio; numero < inicio + quantidade; numero++)
         {
             var saida = Pseudonimizar(numeroDfe, Montar(sorteio, "2601", emitente, "57", "001", Nove(numero), '1', codigo), out _);
             Assert.True(saida[25..34] != "000000000", "Um número saiu 0.");
             saidas.Add(saida[25..34]);
         }
 
-        Assert.Equal(100_000, saidas.Count);
+        Assert.Equal(quantidade, saidas.Count);
         var zero = Montar(sorteio, "2601", emitente, "57", "001", "000000000", '1', codigo);
         var saidaDoZero = Pseudonimizar(numeroDfe, zero, out var ocorrencias);
         Assert.True(ocorrencias.HasFlag(OcorrenciasChaveDfe.NumeroZero), "O número 0 não foi contado.");
@@ -561,7 +565,7 @@ public sealed class PseudonimizadorNumeroDfeTestes : IDisposable
     {
         using var numeroDfe = Criar();
         var sorteio = new Random(2714);
-        for (var vez = 0; vez < 20_000; vez++)
+        for (var vez = 0; vez < Mutacao.Tamanho(20_000, 1_000); vez++)
         {
             var chave = ChaveQualquer(sorteio, codigoDe8: sorteio.Next(4) != 0);
             var saida = Pseudonimizar(numeroDfe, chave, out var ocorrencias);

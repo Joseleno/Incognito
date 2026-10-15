@@ -324,7 +324,7 @@ public sealed class PseudonimizadorEmailTestes : IDisposable
     {
         using var email = Criar();
         var sorteio = new Random(1712);
-        var entradas = Enumerable.Range(0, 100_000).Select(_ => Endereco(sorteio)).ToArray();
+        var entradas = Enumerable.Range(0, Mutacao.Tamanho(100_000, 5_000)).Select(_ => Endereco(sorteio)).ToArray();
         var sequencial = entradas.Select(entrada => { email.Pseudonimizar(entrada, out var saida); return saida; }).ToArray();
         var paralelo = new string?[entradas.Length];
 

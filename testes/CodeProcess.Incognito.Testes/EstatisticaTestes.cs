@@ -54,7 +54,7 @@ public sealed class EstatisticaTestes
         Assert.True(Estatistica.PValorQuiQuadrado(400, 9) < 1e-50, "Cauda distante não ficou pequena.");
     }
 
-    [Theory]
+    [Theory(Skip = Mutacao.Motivo, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     [MemberData(nameof(DominiosPequenos))]
     public void Pontos_fixos_e_ciclos_seguem_os_de_uma_permutacao_aleatoria(uint radix, ulong a, ulong b, int chaves)
     {
@@ -68,7 +68,7 @@ public sealed class EstatisticaTestes
         Assert.Empty(falhas);
     }
 
-    [Fact]
+    [Fact(Skip = Mutacao.Motivo, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     [Trait("Categoria", Lento)]
     public void Pontos_fixos_e_ciclos_em_dominio_de_dez_mil()
     {
@@ -116,7 +116,7 @@ public sealed class EstatisticaTestes
         Reprova(PontosFixosECiclos(1_000, dominio, k => [.. dominio.Select(x => FeistelSemRodada(x, 10, 12, (ulong)k))]), todas);
     }
 
-    [Fact]
+    [Fact(Skip = Mutacao.Motivo, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     public void Chaves_de_dominios_variantes_ambientes_e_versoes_diferentes_concordam_como_permutacoes_independentes()
     {
         // As concordâncias entre P_A e P_B (pontos fixos de P_B⁻¹ ∘ P_A) seguem Poisson(1) por par.

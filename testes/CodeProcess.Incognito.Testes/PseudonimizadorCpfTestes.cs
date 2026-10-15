@@ -50,7 +50,7 @@ public sealed class PseudonimizadorCpfTestes : IDisposable
         using var cpf = Criar();
         var sorteio = new Random(1401);
         var bases = new HashSet<long>();
-        while (bases.Count < 1_000_000)
+        while (bases.Count < Mutacao.Tamanho(1_000_000, 20_000))
         {
             var baseCpf = sorteio.NextInt64(1_000_000_000);
             if (!EhRepdigito(baseCpf))
@@ -403,7 +403,7 @@ public sealed class PseudonimizadorCpfTestes : IDisposable
     {
         using var cpf = Criar();
         var sorteio = new Random(1414);
-        var entradas = Enumerable.Range(0, 100_000).Select(_ => CpfValido(sorteio)).ToArray();
+        var entradas = Enumerable.Range(0, Mutacao.Tamanho(100_000, 5_000)).Select(_ => CpfValido(sorteio)).ToArray();
         var sequencial = entradas.Select(entrada => { cpf.Pseudonimizar(entrada, out var saida); return saida; }).ToArray();
         var paralelo = new string?[entradas.Length];
 

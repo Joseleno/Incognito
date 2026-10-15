@@ -61,6 +61,7 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
         "fixo em grupos de 3 e 5",
         "celular em grupos de 1 e 8",
         "celular em grupos de 4 e 5",
+        "celular com separador depois do segundo digito",
         "dois separadores dentro do numero",
         "hifen no fim",
         "33 caracteres",
@@ -104,7 +105,7 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
         for (var classe = 0; classe < 3; classe++)
         {
             var numeros = new HashSet<string>();
-            while (numeros.Count < 200_000)
+            while (numeros.Count < Mutacao.Tamanho(200_000, 10_000))
             {
                 numeros.Add(Numero(sorteio, classe));
             }
@@ -546,7 +547,7 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
     {
         using var telefone = Criar();
         var sorteio = new Random(1613);
-        var entradas = Enumerable.Range(0, 100_000).Select(i => Ddd(sorteio) + Numero(sorteio, i % 3)).ToArray();
+        var entradas = Enumerable.Range(0, Mutacao.Tamanho(100_000, 5_000)).Select(i => Ddd(sorteio) + Numero(sorteio, i % 3)).ToArray();
         var sequencial = entradas.Select(entrada => { telefone.Pseudonimizar(entrada, out var saida); return saida; }).ToArray();
         var paralelo = new string?[entradas.Length];
 
@@ -641,6 +642,7 @@ public sealed class PseudonimizadorTelefoneTestes : IDisposable
             "fixo em grupos de 3 e 5" => ddd + " " + fixo[..3] + "-" + fixo[3..],
             "celular em grupos de 1 e 8" => ddd + " 9 " + celular[1..],
             "celular em grupos de 4 e 5" => ddd + " " + celular[..4] + "-" + celular[4..],
+            "celular com separador depois do segundo digito" => "(" + ddd + ") " + celular[..2] + " " + celular[2..5] + "-" + celular[5..],
             "dois separadores dentro do numero" => ddd + " " + celular[..5] + "--" + celular[5..],
             "hifen no fim" => ddd + celular + "-",
             "33 caracteres" => "(" + ddd + ")" + new string(' ', 20) + celular,

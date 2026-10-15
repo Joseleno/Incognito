@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -100,17 +101,23 @@ public sealed class HmacDeSementeTestes
         byte[] mensagem = [1, 2, 3];
         var esperado = HMACSHA256.HashData(_chave, mensagem);
         var errados = 0;
-        for (var rodada = 0; rodada < 2_000; rodada++)
+        for (var rodada = 0; rodada < Mutacao.Tamanho(2_000, 100); rodada++)
         {
             var hmac = new HmacDeSemente(_chave);
+            var recusado = false;
+            Exception? falha = null;
             using var largada = new Barrier(2);
+
+            // Em segundo plano, com prazo e com toda exceção guardada: um defeito vira falha do teste, não queda nem
+            // trava do processo.
             var calculo = new Thread(() =>
             {
                 var resultado = new byte[32];
-                largada.SignalAndWait(cancelamento);
                 try
                 {
-                    while (true)
+                    largada.SignalAndWait(cancelamento);
+                    var prazo = Stopwatch.StartNew();
+                    while (prazo.Elapsed < TimeSpan.FromSeconds(10))
                     {
                         hmac.Calcular(mensagem, resultado);
                         if (!resultado.AsSpan().SequenceEqual(esperado))
@@ -121,13 +128,22 @@ public sealed class HmacDeSementeTestes
                 }
                 catch (ObjectDisposedException)
                 {
+                    recusado = true;
                 }
-            });
+                catch (Exception excecao)
+                {
+                    falha = excecao;
+                }
+            })
+            { IsBackground = true };
             calculo.Start();
             largada.SignalAndWait(cancelamento);
             Thread.SpinWait(50);
             hmac.Dispose();
-            Assert.True(calculo.Join(TimeSpan.FromSeconds(10)), "O cálculo não terminou depois do descarte.");
+
+            Assert.True(calculo.Join(TimeSpan.FromSeconds(15)), "O cálculo não terminou depois do descarte.");
+            Assert.Null(falha);
+            Assert.True(recusado, "O cálculo seguiu depois do descarte.");
         }
 
         Assert.Equal(0, errados);

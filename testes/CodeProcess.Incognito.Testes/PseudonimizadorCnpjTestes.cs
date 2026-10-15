@@ -69,7 +69,7 @@ public sealed class PseudonimizadorCnpjTestes : IDisposable
         foreach (var alfanumerica in new[] { false, true })
         {
             var raizes = new HashSet<string>();
-            while (raizes.Count < 100_000)
+            while (raizes.Count < Mutacao.Tamanho(100_000, 5_000))
             {
                 raizes.Add(Raiz(sorteio, alfanumerica));
             }
@@ -135,7 +135,7 @@ public sealed class PseudonimizadorCnpjTestes : IDisposable
     {
         using var cnpj = Criar(permutarOrdem: permutarOrdem);
         var sorteio = new Random(1505);
-        for (var vez = 0; vez < 5_000; vez++)
+        for (var vez = 0; vez < Mutacao.Tamanho(5_000, 500); vez++)
         {
             var valido = Montar(Raiz(sorteio, alfanumerica: vez % 2 == 1), Ordem(sorteio, alfanumerica: vez % 4 >= 2));
             var deslocamento = 1 + sorteio.Next(99);
@@ -627,7 +627,7 @@ public sealed class PseudonimizadorCnpjTestes : IDisposable
     {
         using var cnpj = Criar();
         var sorteio = new Random(1525);
-        var entradas = Enumerable.Range(0, 100_000)
+        var entradas = Enumerable.Range(0, Mutacao.Tamanho(100_000, 5_000))
             .Select(i => Montar(Raiz(sorteio, alfanumerica: i % 2 == 0), Ordem(sorteio, alfanumerica: false)))
             .ToArray();
         var sequencial = entradas.Select(entrada => { cnpj.Pseudonimizar(entrada, out var saida); return saida; }).ToArray();

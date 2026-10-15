@@ -65,7 +65,8 @@ public sealed class PseudonimizadorIdentificadorTestes : IDisposable
     [InlineData(5)]
     public void Bijecao_exaustiva_sobre_1_ate_N(int digitos)
     {
-        var tamanho = Potencia(digitos);
+        // Sob a mutação, os dois casos ficam em 10⁴, o menor N aceito.
+        var tamanho = Potencia(Mutacao.Tamanho(digitos, 4));
         using var id = Criar(tamanho);
         var saidas = new HashSet<long>();
         for (long entrada = 1; entrada < tamanho; entrada++)
