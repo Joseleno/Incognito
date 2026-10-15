@@ -16,7 +16,7 @@ request que toma a decisão. Preferência de estilo sem efeito para quem usa ou 
 | [0001](0001-projeto-em-portugues.md) | Projeto inteiramente em português | aceito |
 | 0002 | Cópia com transformação, em vez de alterar o próprio banco ou copiar para arquivo | a registrar |
 | [0003](0003-permutacao-feistel-com-hmac.md) | Permutação Feistel modular com HMAC e HKDF | aceito |
-| 0004 | Modos `efemero` e `reproduzivel` | a registrar |
+| [0004](0004-modos-efemero-e-reproduzivel.md) | Modos `efemero` e `reproduzivel` | aceito |
 | 0005 | Remover e recriar chaves estrangeiras com diário, em vez de desligá-las | a registrar |
 | 0006 | Leitura em snapshot compartilhado | a registrar |
 | 0007 | EF Core como fonte de regras, não como motor de cópia | a registrar |
@@ -25,8 +25,8 @@ request que toma a decisão. Preferência de estilo sem efeito para quem usa ou 
 | 0010 | Falha segura para coluna suspeita sem regra | a registrar |
 | 0011 | Núcleo sem dependências; configuração e execução no pacote `Motor` | a registrar |
 | 0012 | Atualização normativa monitorada no repositório, sem rede em tempo de execução | a registrar |
-| 0013 | Versão do transformador fixada na configuração e vetores fixos como contrato | a registrar |
-| 0014 | Entrada inválida tratada preservando a invalidade | a registrar |
+| [0013](0013-versao-do-transformador-e-vetores-fixos.md) | Versão do transformador fixada na configuração e vetores fixos como contrato | aceito |
+| [0014](0014-entrada-invalida-preservando-a-invalidade.md) | Entrada inválida tratada preservando a invalidade | aceito |
 | [0015](0015-apenas-net10.md) | Apenas `net10.0` | aceito |
 | 0016 | Proteção do destino por marcador e recusa de origem marcada | a registrar |
 | 0017 | Contratos de extensão como classes abstratas e tipos do modelo sem construtor público | a registrar |

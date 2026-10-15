@@ -34,8 +34,9 @@ internal enum Desfecho
 
     /// <summary>
     /// Valor de preenchimento só com zeros, sem dado pessoal: a chave de DF-e com as 44 posições em zero, o CEP só com
-    /// zeros e o telefone só com zeros. Volta como veio, com prefixo, máscara, separadores e preenchimento, antes da
-    /// política de entrada malformada.
+    /// zeros e o telefone só com zeros ou com o número do assinante zerado depois do DDD (como
+    /// <c>(11) 0000-0000</c>). No CPF e no CNPJ, o zerado é ponto fixo (<see cref="PontoFixo"/>). Volta como veio, com
+    /// prefixo, máscara, separadores e preenchimento, antes da política de entrada malformada.
     /// </summary>
     Zerado,
 }
