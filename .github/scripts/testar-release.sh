@@ -57,6 +57,8 @@ valor() { yq -r "$1" "$workflow"; }
   || falhar "permissão de escrita fora de atestar, publicar e validar-publicacao"
 [[ "$(valor '[.jobs.preparar.steps[] | select(.if == "steps.classificar.outputs.tipo == '"'"'lancamento'"'"'" and (.run // "" | test("merge-base --is-ancestor \"\$GITHUB_SHA\" origin/main")))] | length')" == "1" ]] \
   || falhar "o job preparar não confere que a tag de lançamento está na main"
+[[ "$(valor '[.jobs.pacotes.steps[].run // "" | select(test("INCOGNITO_DATA_DO_RELEASE")) | select(test("--fail-skips on")) | select(test("--minimum-expected-tests 1"))] | length')" == "1" ]] \
+  || falhar "o job pacotes não exige o catálogo normativo revisto (INCOGNITO_DATA_DO_RELEASE com --fail-skips)"
 [[ "$(valor '.jobs.publicar.environment')" == "nuget" ]] \
   || falhar "o job publicar não usa o environment nuget"
 [[ "$(valor '.jobs.validar-publicacao.if')" == "github.event_name == 'workflow_dispatch'" ]] \

@@ -1,3 +1,5 @@
+# O CatalogoNormativoTestes aceita a variável INCOGNITO_DATA_DO_RELEASE no CI só neste workflow, pelo nome: renomear
+# quebra a guarda.
 name: release
 
 # Toda tag precisa ser anotada e ter assinatura verificada pelo GitHub.
@@ -85,7 +87,16 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore --locked-mode
       - run: dotnet build -c Release --no-restore
-      - run: dotnet test -c Release --no-build
+      # A data em UTC do commit da tag (nunca alterada) liga o teste que exige o catálogo normativo revisto nos 30 dias
+      # antes dela; a segunda execução reprova se esse teste for pulado ou deixar de existir.
+      - name: Testar
+        run: |
+          INCOGNITO_DATA_DO_RELEASE="$(TZ=UTC git log -1 --date=format-local:%Y-%m-%d --format=%cd "$GITHUB_SHA")"
+          test -n "$INCOGNITO_DATA_DO_RELEASE"
+          export INCOGNITO_DATA_DO_RELEASE
+          dotnet test -c Release --no-build
+          dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-build \
+            --filter-method "*.No_release_o_catalogo_foi_revisto_nos_30_dias_antes_do_commit" --fail-skips on --minimum-expected-tests 1
       - run: dotnet pack -c Release --no-build -o artifacts
 
       - name: Conferir versão, quantidade e SBOM dos pacotes

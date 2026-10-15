@@ -10,8 +10,8 @@ namespace CodeProcess.Incognito.Documentos;
 /// </summary>
 /// <remarks>
 /// <para>
-/// NF-e e NFC-e, na ordem: letra nas posições 7 a 18 ou AAMM anterior a 1808 (o emitente CPF na chave começou em
-/// 08/2018) dá CNPJ; tpEmis 3 com série fora do PAA (970 a 989) e AAMM a partir de 2104 é a Nota Fiscal Fácil,
+/// NF-e e NFC-e, na ordem: letra nas posições 7 a 18 ou AAMM anterior a 1808 (o emitente CPF na chave começou na
+/// homologação em 08/2018 e na produção em 10/2018, NT 2018.001) dá CNPJ; tpEmis 3 com série fora do PAA (970 a 989) e AAMM a partir de 2104 é a Nota Fiscal Fácil,
 /// decidida pela posição 30 (1 CNPJ, 2 CPF, outro valor anomalia), e antes disso é anomalia; depois, a série: 000 a 909
 /// CNPJ, 910 a 969 CPF e, só na NF-e, 970 a 979 CPF e 980 a 989 CNPJ (PAA); o resto é anomalia. CPF sem <c>000</c>
 /// nas posições 7 a 9 é anomalia.

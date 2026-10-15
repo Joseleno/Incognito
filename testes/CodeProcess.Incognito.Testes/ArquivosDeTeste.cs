@@ -38,4 +38,18 @@ internal static class ArquivosDeTeste
         Convert.FromHexString(caso.GetProperty(propriedade).GetString()!);
 
     public static string Texto(JsonElement caso, string propriedade) => caso.GetProperty(propriedade).GetString()!;
+
+    /// <summary>A raiz do repositório, subindo a partir da saída dos testes.</summary>
+    public static string RaizDoRepositorio()
+    {
+        for (var pasta = new DirectoryInfo(AppContext.BaseDirectory); pasta is not null; pasta = pasta.Parent)
+        {
+            if (File.Exists(Path.Combine(pasta.FullName, "Incognito.slnx")) && File.Exists(Path.Combine(pasta.FullName, "global.json")))
+            {
+                return pasta.FullName;
+            }
+        }
+
+        throw new InvalidOperationException("Raiz do repositório não encontrada.");
+    }
 }

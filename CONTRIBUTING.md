@@ -64,6 +64,12 @@ O workflow `noturno` roda o Stryker.NET no núcleo todo dia, em fatias, com limi
 INCOGNITO_MUTACAO=1 dotnet stryker -m "**/Pseudonimizacao/PseudonimizadorCep.cs"
 ```
 
+### Catálogo normativo
+
+`src/CodeProcess.Incognito/Normas/ReferenciasNormativas.cs` lista as referências normativas que o pacote considera, cada uma com a data da última revisão; a data da revisão normativa do pacote é a mais antiga delas. Para rever uma referência, abra a fonte primária, atualize a observação e a data, e diga na observação o que foi confirmado só em fonte secundária. Acrescentar ou retirar uma referência muda também a lista em `CatalogoNormativoTestes`. Nenhum transformador do núcleo lê o catálogo (um teste confere no IL): se uma mudança normativa pede outra saída, ela vira uma nova versão do transformador.
+
+O release, inclusive o ensaio `-rc.N`, exige que a revisão mais antiga tenha no máximo 30 dias em relação à data, em UTC, do commit da tag. Como vale a mais antiga, todas as referências precisam ser revistas e redatadas antes de cada release, e um catálogo vencido só aparece no job `pacotes`, depois do build.
+
 ## Branches
 
 - `main` guarda apenas o código lançado; cada versão é uma tag na `main`.

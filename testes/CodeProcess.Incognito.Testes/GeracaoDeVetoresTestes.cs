@@ -25,7 +25,7 @@ public sealed class GeracaoDeVetoresTestes
 
         Assert.True(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")), "Os vetores nunca são gerados no CI.");
         Assert.False(Mutacao.Ativa, "Os vetores nunca são gerados sob a mutação: o código mutado calcularia os casos.");
-        var pasta = Path.Combine(RaizDoRepositorio(), "testes", "vetores");
+        var pasta = Path.Combine(ArquivosDeTeste.RaizDoRepositorio(), "testes", "vetores");
         using var documento = ArquivosDeTeste.Ler("vetores", "derivacao@1.json");
         var textoDaChave = ArquivosDeTeste.Texto(ArquivosDeTeste.Caso(documento, "chaves", "aleatoria"), "texto");
         using var chave = ChaveIncognito.Ler(textoDaChave);
@@ -76,18 +76,5 @@ public sealed class GeracaoDeVetoresTestes
         {
             File.Delete(temporario);
         }
-    }
-
-    private static string RaizDoRepositorio()
-    {
-        for (var pasta = new DirectoryInfo(AppContext.BaseDirectory); pasta is not null; pasta = pasta.Parent)
-        {
-            if (File.Exists(Path.Combine(pasta.FullName, "Incognito.slnx")) && File.Exists(Path.Combine(pasta.FullName, "global.json")))
-            {
-                return pasta.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Raiz do repositório não encontrada.");
     }
 }
