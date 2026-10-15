@@ -104,6 +104,9 @@ jobs:
               **/Pseudonimizacao/PseudonimizadorNumeroDfe.cs
               **/Pseudonimizacao/PseudonimizadorCnpj.cs
           - fatia: feistel
+            # Na criptografia, 2 execuções em paralelo: com 4 nas 4 vCPU do runner, mutantes que morrem devagar passam a
+            # esgotar o tempo (27% das fatias, contra 17% medidos sem disputa) e estouram o teto da conferência.
+            concorrencia: 2
             padroes: |
               **/Criptografia/PermutacaoFeistel.cs
               **/Criptografia/HmacDeSemente.cs
@@ -111,6 +114,7 @@ jobs:
               **/Criptografia/ConjuntoExcluido.cs
               **/Criptografia/Variantes.cs
           - fatia: particionada-chave
+            concorrencia: 2
             padroes: |
               **/Criptografia/PermutacaoParticionada.cs
               **/ChaveIncognito.cs
@@ -165,6 +169,8 @@ jobs:
         timeout-minutes: 75
         env:
           PADROES: ${{ matrix.padroes }}
+          # Sem o campo na fatia, 4, como no stryker-config.json.
+          CONCORRENCIA: ${{ matrix.concorrencia || 4 }}
           INCOGNITO_MUTACAO: '1'
         run: |
           argumentos=()
@@ -172,7 +178,7 @@ jobs:
             [ -n "$padrao" ] && argumentos+=(-m "$padrao")
           done <<< "$PADROES"
           mkdir -p StrykerOutput
-          dotnet stryker "${argumentos[@]}" --output StrykerOutput --skip-version-check -L 2>&1 | tee StrykerOutput/console.log
+          dotnet stryker "${argumentos[@]}" --concurrency "$CONCORRENCIA" --output StrykerOutput --skip-version-check -L 2>&1 | tee StrykerOutput/console.log
       # O placar só vale com a cobertura teste a teste e com todo mutante executado. Sem a cobertura por teste, cada
       # mutante roda a suíte inteira, as execuções em paralelo estouram o tempo e o "Timeout" conta como detectado.
       # Conferências: o relatório existe; nenhuma mensagem de captura quebrada ou de mutante não executado; nenhum
