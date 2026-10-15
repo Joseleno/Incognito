@@ -17,7 +17,7 @@ namespace CodeProcess.Incognito;
 /// </para>
 /// <para>
 /// <see cref="GeradorBr(long)"/> é determinístico: a mesma semente dá a mesma sequência dentro da mesma versão maior
-/// do pacote, em qualquer plataforma. O sorteio é o xoshiro256** com o estado expandido da semente pelo SplitMix64, e
+/// do pacote, a partir da 1.0.0 (antes dela, a sequência pode mudar entre versões candidatas), em qualquer plataforma. O sorteio é o xoshiro256** com o estado expandido da semente pelo SplitMix64, e
 /// os inteiros saem sem viés pelo método de Lemire. <see cref="Padrao"/> sorteia de uma sequência por thread, semeada
 /// pelo <see cref="RandomNumberGenerator"/>: não é reproduzível, e cada execução dá outra sequência.
 /// </para>
@@ -78,7 +78,9 @@ public sealed class GeradorBr
     private readonly Lock _trava = new();
 
     /// <summary>Cria um gerador determinístico.</summary>
-    /// <param name="semente">A semente; a mesma semente dá a mesma sequência dentro da mesma versão maior.</param>
+    /// <param name="semente">
+    /// A semente; a mesma semente dá a mesma sequência dentro da mesma versão maior, a partir da 1.0.0.
+    /// </param>
     public GeradorBr(long semente)
         : this(SequenciaXoshiro.DaSemente(semente))
     {
