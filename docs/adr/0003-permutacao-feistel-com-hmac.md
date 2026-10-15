@@ -130,3 +130,12 @@ frequência com vários núcleos ativos.
 - A versão final da Rev. 1 da SP 800-38G trazer, para espaços pequenos, uma exigência (rodadas, tamanho mínimo, uso do
   ajuste) que esta construção não cumpra.
 - Um domínio novo com lado menor que 10, além do dia da NFF.
+
+## Atualizações
+
+- 2026-10-15: conferência de regressão na preparação da versão candidata do núcleo (`v1.0.0-rc.2`), na mesma máquina
+  de referência, em
+  `benchmarks/resultados/2026-10-15-intel-core-i9-14900hx/`. O código medido não mudou desde 13/10; mudaram o patch
+  do Windows e o do runtime (10.0.13). Com um processo por caso, 38 dos 41 casos não passaram de 10% acima de 13/10
+  (mediana, ou média quando o relatório não a traz); os três acima (e-mail, `id.permutar` e vazão do CPF com 8 threads), medidos de novo com 3 processos, ficaram
+  entre +0,9% e +5,0%. A permutação de 12 rodadas com ajuste de 20 bytes mediu 1,77 µs, longe do gatilho de 5 µs.

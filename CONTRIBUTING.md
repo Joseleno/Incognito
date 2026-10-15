@@ -4,7 +4,7 @@ Obrigado pelo interesse. O Incognito está em desenvolvimento e ainda não tem v
 
 ## Regras do projeto
 
-- **Nunca dados reais.** Testes, exemplos, issues, pull requests e documentação usam apenas dados sintéticos. Identificadores como CPF, CNPJ e chaves de acesso de documentos fiscais vêm do gerador do próprio projeto, com semente registrada. Um identificador que exista em algum cadastro não entra no repositório, nem mesmo um publicado como "de teste" ou "de homologação". A única exceção são os exemplos didáticos que a Receita Federal publica em material sobre o cálculo do dígito verificador, usados apenas como âncora em `testes/ancoras/`.
+- **Nunca dados reais.** Testes, vetores, exemplos, issues, pull requests e documentação usam apenas dados sintéticos. Identificadores como CPF, CNPJ, telefone e chaves de acesso de documentos fiscais vêm do `GeradorBr`, com semente registrada, ou, nos vetores de `testes/vetores/`, de uma regra de construção sobre a mesma sequência (a chave de acesso, pelo gerador detalhado do projeto de testes) ou da permutação inversa com a chave pública de teste, com a origem registrada em cada par; um valor literal só entra quando não é documento de ninguém (vazio, fora da forma, zerado, bordas das faixas de CEP e do `id.permutar`). Um identificador que exista em algum cadastro não entra no repositório, nem mesmo um publicado como "de teste" ou "de homologação", nem a chave de acesso de um documento autorizado, inclusive as de exemplo de manuais. A documentação não traz CPF, CNPJ nem chave de acesso válidos, nem como exemplo: gere na hora. Há duas exceções, e só estas: os exemplos didáticos do CNPJ alfanumérico que a Receita Federal publica em material sobre o cálculo do dígito verificador, usados apenas como âncora em `testes/ancoras/`; e os números de serviço dos vetores de telefone e de chave Pix (0800, 0300, 0303, 0500 e 0900 com dígitos sorteados; 3003 e 4004 com 4 dígitos sorteados ou nas bordas 0000 e 9999, sem DDD ou depois de um DDD inexistente), que podem coincidir com números de empresas, nunca de pessoas, e são necessários para provar que esses números voltam como vieram. A regra completa está no [ADR 0020](docs/adr/0020-dados-de-teste-e-identificadores.md).
 - **Nenhuma saída revela dado tratado.** Mensagens, logs, exceções, relatórios e snapshots de teste identificam apenas tabela, coluna e número da linha, nunca o valor da coluna nem a chave.
 - **Vetores fixos são contrato.** Se uma mudança altera a saída de um transformador, ela cria uma nova versão dele (por exemplo, `br.cpf@2`) e mantém a anterior. Um vetor existente em `testes/vetores/` nunca é editado para fazer um teste passar.
 - **Tudo em português**: código, testes, mensagens, exceções, documentação XML e commits, com identificadores sem acento. Inglês apenas em palavras reservadas, tipos da biblioteca base, sufixo `Async`, padrão `Add*` no ponto de entrada da injeção de dependência e nomes de produtos, formatos e siglas. As regras completas, inclusive os nomes que a API evita, estão no [ADR 0001](docs/adr/0001-projeto-em-portugues.md).
@@ -31,7 +31,7 @@ Cada projeto tem um `packages.lock.json` versionado, e o CI restaura com `dotnet
 
 ### Vetores fixos
 
-Cada arquivo de `testes/vetores/` (`transformador@versão.json`) é contrato: os casos que já estão lá nunca mudam; casos novos só se acrescentam. As receitas ficam em `testes/CodeProcess.Incognito.Testes/Vetores/ReceitasDeVetores.cs`, e cada par registra de onde veio a entrada (semente do `GeradorBr`, regra de construção ou permutação inversa). Uma referência independente em Python, só com a biblioteca padrão, confere todos os arquivos no CI, e uma guarda recusa a mudança de um caso que já existe na base do pull request.
+Cada arquivo de `testes/vetores/` (`transformador@versão.json`) é contrato: os casos que já estão lá nunca mudam; casos novos só se acrescentam. As receitas ficam em `testes/CodeProcess.Incognito.Testes/Vetores/ReceitasDeVetores.cs`, e cada par registra de onde veio a entrada (semente do `GeradorBr`, regra de construção, permutação inversa ou literal sem documento válido; ver o [ADR 0020](docs/adr/0020-dados-de-teste-e-identificadores.md)). Uma referência independente em Python, só com a biblioteca padrão, confere todos os arquivos no CI, e uma guarda recusa a mudança de um caso que já existe na base do pull request.
 
 Para acrescentar um caso, inclua-o na receita, gere a partir da raiz do repositório e confira com a referência (no Windows, `py -3 -I` no lugar de `python3 -I`):
 
@@ -72,15 +72,17 @@ O release, inclusive o ensaio `-rc.N`, exige que a revisão mais antiga tenha no
 
 ## Branches
 
-- `main` guarda apenas o código lançado; cada versão é uma tag na `main`.
+- `main` guarda apenas o código lançado; cada lançamento é uma tag num merge commit da `main`.
 - `develop` é a linha de integração.
 - O trabalho acontece em branches criados a partir da `develop`: `feature/<descricao-curta>`, `fix/<assunto>` ou `docs/<assunto>`.
 - Versões passam por `release/<versao>`, criado a partir da `develop`, mesclado na `main` e depois de volta na `develop`.
+- A correção de uma versão lançada passa por `hotfix/<versao>`, criado a partir da `main`, mesclado na `main` e depois de volta na `develop`.
+- O motivo de cada regra está no [ADR 0023](docs/adr/0023-gitflow-sem-historico-linear.md).
 - Ninguém envia commits direto para `main` ou `develop`: toda mudança entra por pull request.
 
 ## Commits e pull requests
 
-- Pull requests apontam para a `develop` (só os de `release/<versao>` apontam para a `main`), e o CI precisa estar verde antes do merge.
+- Pull requests apontam para a `develop` (só os de `release/<versao>` e `hotfix/<versao>` apontam para a `main`). O job `rapido` precisa estar verde antes do merge; os outros checks são acompanhados e uma falha neles é tratada antes de seguir.
 - Mensagens de commit em português, com a primeira linha no imperativo (por exemplo, "Adicionar o transformador de CEP").
 - Um assunto por pull request. Mudanças que afetam quem usa os pacotes entram no `CHANGELOG.md`, em "Não publicado".
 - Ao contribuir, você concorda que sua contribuição seja licenciada sob a [licença MIT](LICENSE).

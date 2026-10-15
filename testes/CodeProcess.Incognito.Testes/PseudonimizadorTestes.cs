@@ -290,8 +290,8 @@ public sealed class PseudonimizadorTestes : IDisposable
         // Cada instância interna recusa uso depois do descarte da fachada.
         Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorCpf)internas.Single(i => i is PseudonimizadorCpf)!).Pseudonimizar(cpf, out _));
         Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorCnpj)internas.Single(i => i is PseudonimizadorCnpj)!).Pseudonimizar(cpf, out _));
-        Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorTelefone)internas.Single(i => i is PseudonimizadorTelefone)!).Pseudonimizar("11987654321", out _));
-        Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorEmail)internas.Single(i => i is PseudonimizadorEmail)!).Pseudonimizar("a@b.com", out _));
+        Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorTelefone)internas.Single(i => i is PseudonimizadorTelefone)!).Pseudonimizar(new GeradorBr(2107).Telefone(celular: true), out _));
+        Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorEmail)internas.Single(i => i is PseudonimizadorEmail)!).Pseudonimizar("a@example.com", out _));
         // Na chave Pix aleatória e na chave zerada, só a própria instância trabalha: o descarte é dela, não das que ela usa.
         var aleatoria = new GeradorBr(2410).ChavePix(Geracao.TipoChavePix.Aleatoria);
         Assert.Throws<ObjectDisposedException>(() => ((PseudonimizadorChavePix)internas.Single(i => i is PseudonimizadorChavePix)!).Pseudonimizar(aleatoria, out _));
