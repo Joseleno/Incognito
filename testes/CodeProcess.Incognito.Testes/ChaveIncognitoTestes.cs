@@ -1,4 +1,5 @@
 using System.Buffers.Text;
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -204,6 +205,9 @@ public sealed class ChaveIncognitoTestes
 
         Assert.True(Array.TrueForAll(valor, octeto => octeto == 0), "O valor da chave não foi zerado ao descartar.");
         Assert.Throws<ObjectDisposedException>(() => chave.TentarExportar(new char[48], out _));
+
+        // Com o destino curto, a recusa vem da marca de descarte, não da conferência depois da exportação.
+        Assert.Throws<ObjectDisposedException>(() => chave.TentarExportar(new char[10], out _));
         Assert.Throws<ObjectDisposedException>(() => chave.ExtrairPrk(new byte[32]));
         Assert.Equal("ChaveIncognito(inc1_****)", chave.ToString());
         chave.Dispose();
@@ -214,30 +218,38 @@ public sealed class ChaveIncognitoTestes
     {
         // Quem cruza com o descarte recebe ObjectDisposedException; nunca true com a chave total ou parcialmente zerada.
         var cancelamento = TestContext.Current.CancellationToken;
-        for (var rodada = 0; rodada < 2_000; rodada++)
+        for (var rodada = 0; rodada < Mutacao.Tamanho(2_000, 100); rodada++)
         {
             var chave = ChaveIncognito.Gerar();
             var original = Exportar(chave);
             var destino = new char[48];
             var exportou = false;
+            Exception? falha = null;
             using var largada = new Barrier(2);
 
+            // Em segundo plano e com toda exceção guardada: um defeito vira falha do teste, não queda nem trava do processo.
             var exportacao = new Thread(() =>
             {
-                largada.SignalAndWait(cancelamento);
                 try
                 {
+                    largada.SignalAndWait(cancelamento);
                     exportou = chave.TentarExportar(destino, out _);
                 }
                 catch (ObjectDisposedException)
                 {
                 }
-            });
+                catch (Exception excecao)
+                {
+                    falha = excecao;
+                }
+            })
+            { IsBackground = true };
             exportacao.Start();
             largada.SignalAndWait(cancelamento);
             chave.Dispose();
-            exportacao.Join();
 
+            Assert.True(exportacao.Join(TimeSpan.FromSeconds(10)), "A exportação não terminou depois do descarte.");
+            Assert.Null(falha);
             if (exportou)
             {
                 Assert.True(new string(destino) == original, "A exportação cruzada com o descarte entregou outra chave.");
@@ -246,6 +258,66 @@ public sealed class ChaveIncognitoTestes
             {
                 Assert.True(Array.TrueForAll(destino, caractere => caractere == '\0'), "Sobrou parte da chave no destino.");
             }
+        }
+    }
+
+    [Fact]
+    public void Extracao_concorrente_com_o_descarte_nunca_entrega_PRK_de_chave_zerada()
+    {
+        // Quem cruza com o descarte recebe ObjectDisposedException com o destino zerado; a PRK entregue é sempre a da
+        // chave inteira.
+        var cancelamento = TestContext.Current.CancellationToken;
+        for (var rodada = 0; rodada < Mutacao.Tamanho(2_000, 100); rodada++)
+        {
+            var chave = ChaveIncognito.Gerar();
+            var esperada = new byte[32];
+            chave.ExtrairPrk(esperada);
+            var erradas = 0;
+            var sobrou = false;
+            var recusada = false;
+            Exception? falha = null;
+            using var largada = new Barrier(2);
+
+            // Em segundo plano, com prazo e com toda exceção guardada: um defeito vira falha do teste, não queda nem
+            // trava do processo.
+            var extracao = new Thread(() =>
+            {
+                var prk = new byte[32];
+                try
+                {
+                    largada.SignalAndWait(cancelamento);
+                    var prazo = Stopwatch.StartNew();
+                    while (prazo.Elapsed < TimeSpan.FromSeconds(10))
+                    {
+                        Array.Clear(prk);
+                        chave.ExtrairPrk(prk);
+                        if (!prk.AsSpan().SequenceEqual(esperada))
+                        {
+                            erradas++;
+                        }
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    recusada = true;
+                    sobrou = !Array.TrueForAll(prk, octeto => octeto == 0);
+                }
+                catch (Exception excecao)
+                {
+                    falha = excecao;
+                }
+            })
+            { IsBackground = true };
+            extracao.Start();
+            largada.SignalAndWait(cancelamento);
+            Thread.SpinWait(50);
+            chave.Dispose();
+
+            Assert.True(extracao.Join(TimeSpan.FromSeconds(15)), "A extração não terminou depois do descarte.");
+            Assert.Null(falha);
+            Assert.True(recusada, "A extração seguiu depois do descarte.");
+            Assert.Equal(0, erradas);
+            Assert.False(sobrou, "Sobrou parte da PRK no destino.");
         }
     }
 

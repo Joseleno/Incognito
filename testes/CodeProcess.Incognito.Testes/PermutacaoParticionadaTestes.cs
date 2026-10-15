@@ -105,15 +105,19 @@ public sealed class PermutacaoParticionadaTestes
         // A redução da raiz do CNPJ (8 caracteres, 8 fixos, 3 excluídos): as cadeias só com dígitos que começam com os
         // zeros excluídos voltam como vieram e nunca são produzidas; fora delas, a saída só difere da permutação sem a
         // exclusão quando esta cairia no prefixo; a inversa desfaz.
-        using var permutacao = Criar(tamanho, zerosFixos, zerosExcluidos);
+
+        // Sob a mutação, um caractere a menos (36² cadeias em vez de 36³). Com 2 zeros fixos em 2 caracteres, a exclusão
+        // coincide com os fixos e nada caminha; os outros dois casos caminham.
+        var caracteres = Mutacao.Tamanho(tamanho, tamanho - 1);
+        using var permutacao = Criar(caracteres, Math.Min(zerosFixos, caracteres), zerosExcluidos);
         var prefixo = new string('0', zerosExcluidos);
         var saidas = new HashSet<string>();
-        var saida = new char[tamanho];
-        var semExclusao = new char[tamanho];
-        var volta = new char[tamanho];
+        var saida = new char[caracteres];
+        var semExclusao = new char[caracteres];
+        var volta = new char[caracteres];
         var caminhadas = 0;
 
-        foreach (var entrada in Todas(tamanho))
+        foreach (var entrada in Todas(caracteres))
         {
             var excluida = !TemLetra(entrada) && entrada.StartsWith(prefixo, StringComparison.Ordinal);
             var pontoFixo = permutacao.Permutar(entrada, saida, excluirZeros: true);
@@ -138,8 +142,8 @@ public sealed class PermutacaoParticionadaTestes
             saidas.Add(texto);
         }
 
-        Assert.Equal((int)Math.Pow(36, tamanho), saidas.Count);
-        Assert.True(caminhadas > 0, "Nenhuma saída precisou do cycle-walking.");
+        Assert.Equal((int)Math.Pow(36, caracteres), saidas.Count);
+        Assert.True(caminhadas > 0 || (Mutacao.Ativa && zerosExcluidos == caracteres), "Nenhuma saída precisou do cycle-walking.");
     }
 
     [Fact]

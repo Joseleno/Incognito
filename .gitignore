@@ -6,6 +6,9 @@
 # Relatórios de cobertura.
 coverage/
 
+# Saída do Stryker.NET (mutação noturna).
+StrykerOutput/
+
 ## Modelo padrão do .NET (dotnet new gitignore)
 
 ## Ignore Visual Studio temporary files, build results, and

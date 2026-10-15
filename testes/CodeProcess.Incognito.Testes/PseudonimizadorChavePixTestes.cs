@@ -42,6 +42,9 @@ public sealed class PseudonimizadorChavePixTestes : IDisposable
         "01234567-89ab-cdef-0123-456789abcdef ",
         " 0123456789",
         "-0123456789",
+        // Só zeros: tomados por telefone, sairiam como Zerado, e não pela política.
+        "-0000-0000",
+        "0000+0000",
         "000.000.000/00",
         "123.456|789-01",
         "123|456.789-01",
@@ -393,7 +396,7 @@ public sealed class PseudonimizadorChavePixTestes : IDisposable
         using var pix = Criar();
         var sorteio = new Random(1814);
         var entradas = new HashSet<string>();
-        while (entradas.Count < 100_000)
+        while (entradas.Count < Mutacao.Tamanho(100_000, 5_000))
         {
             entradas.Add(Uuid(sorteio));
         }
@@ -510,6 +513,19 @@ public sealed class PseudonimizadorChavePixTestes : IDisposable
         Assert.Equal(Desfecho.AnuladoMalformado, pix.Pseudonimizar("local@semponto", out var email));
         Assert.Equal(Desfecho.AnuladoMalformado, pix.Pseudonimizar(Digitos(sorteio, 5), out var curto));
         Assert.True(telefone is null && email is null && curto is null, "O malformado dentro do tipo não foi anulado.");
+    }
+
+    [Fact]
+    public void CNPJ_em_minusculas_com_o_primeiro_separador_trocado_nao_tem_tipo_e_volta_com_a_caixa_da_entrada()
+    {
+        // DV certo e só o primeiro separador trocado: sem a máscara do CNPJ, o valor não tem tipo e, com Preservar, volta
+        // como veio. Tomado por CNPJ, passaria a maiúsculas antes da coluna de CNPJ e voltaria em maiúsculas.
+        using var pix = Criar(PoliticaEntradaMalformada.Preservar);
+        var cnpj = new GeradorBr(1840).Cnpj(alfanumerico: true, formatado: true);
+        var entrada = (cnpj[..2] + "-" + cnpj[3..]).ToLowerInvariant();
+
+        Assert.Equal(Desfecho.CopiadoEmClaro, pix.Pseudonimizar(entrada, out var saida));
+        Assert.True(saida == entrada, "O valor sem tipo não voltou como veio.");
     }
 
     [Theory]

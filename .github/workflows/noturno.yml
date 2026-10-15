@@ -1,0 +1,237 @@
+# O MutacaoTestes aceita a variável INCOGNITO_MUTACAO no CI só neste workflow, pelo nome: renomear quebra a guarda.
+name: noturno
+
+# Mutação do núcleo com o Stryker.NET (limite de 80% por fatia), todo dia e quando pedida. Também roda no PR que muda
+# a própria mutação ou o que ela usa (este workflow, a configuração do Stryker, Mutacao.cs, a versão da ferramenta, o
+# SDK e os projetos e pacotes do núcleo e dos testes), para o tempo e o placar serem conferidos antes do merge: o
+# runner do Stryker para o Microsoft Testing Platform ainda é preview. Um teste novo pesado não dispara: aparece como
+# falha do noturno seguinte (ver Mutacao.cs). O relatório de cada fatia fica como artefato.
+#
+# O núcleo inteiro num job só passaria de 2 h no runner: são 8 fatias em paralelo, de ~210 a ~310 mutantes testados
+# (as da criptografia menores, porque cada mutante custa mais), e a última é o complemento das outras sete, para um
+# arquivo novo do núcleo sempre cair em alguma. O job fatias confere que o complemento acompanha as outras.
+
+on:
+  schedule:
+    # Fora do começo da hora, quando o GitHub atrasa ou descarta agendamentos. 03:17 em Brasília.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/noturno.yml
+      - testes/CodeProcess.Incognito.Testes/stryker-config.json
+      - testes/CodeProcess.Incognito.Testes/Mutacao.cs
+      - .config/dotnet-tools.json
+      - global.json
+      - Directory.Build.props
+      - src/Directory.Build.props
+      - testes/Directory.Build.props
+      - src/CodeProcess.Incognito/CodeProcess.Incognito.csproj
+      - testes/CodeProcess.Incognito.Testes/CodeProcess.Incognito.Testes.csproj
+      # O lock dos testes inclui os pacotes do núcleo: muda com toda atualização que chega à mutação.
+      - testes/CodeProcess.Incognito.Testes/packages.lock.json
+
+permissions: {}
+
+# No nível do workflow: no do job, as fatias da matriz entrariam numa fila só.
+concurrency:
+  group: noturno-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # Cada arquivo do núcleo cai numa fatia só: os padrões das sete primeiras casam com algum arquivo, não se repetem, e
+  # as exclusões da restante são exatamente eles. Segundos, antes das fatias longas.
+  fatias:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Conferir as fatias
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          awk '/- fatia: /{f=$3} /padroes: [|]/{p=1;next} p && /^              [^ ]/{sub(/^ +/,""); print f "\t" $0; next} {p=0}' .github/workflows/noturno.yml > "$RUNNER_TEMP/padroes.tsv"
+          awk -F'\t' '$1 != "restante"{print $2}' "$RUNNER_TEMP/padroes.tsv" | sort > "$RUNNER_TEMP/positivos.txt"
+          awk -F'\t' '$1 == "restante" && $2 ~ /^!/{print substr($2, 2)}' "$RUNNER_TEMP/padroes.tsv" | sort > "$RUNNER_TEMP/exclusoes.txt"
+          [ -s "$RUNNER_TEMP/positivos.txt" ] || { echo "Sem padrões nas fatias."; exit 1; }
+          [ "$(awk -F'\t' '$1 == "restante"{print $2; exit}' "$RUNNER_TEMP/padroes.tsv")" = '**/*.cs' ] || { echo "A fatia restante precisa começar por **/*.cs."; exit 1; }
+          [ -z "$(uniq -d "$RUNNER_TEMP/positivos.txt")" ] || { echo "Padrão repetido em duas fatias."; exit 1; }
+          diff "$RUNNER_TEMP/positivos.txt" "$RUNNER_TEMP/exclusoes.txt" || { echo "As exclusões da restante não são os padrões das outras fatias."; exit 1; }
+          cd src/CodeProcess.Incognito
+          while IFS= read -r padrao; do
+            arquivos=( $padrao )
+            [ "${#arquivos[@]}" -gt 0 ] || { echo "O padrão $padrao não casa com nenhum arquivo do núcleo."; exit 1; }
+            printf '%s\n' "${arquivos[@]}" >> "$RUNNER_TEMP/casados.txt"
+          done < "$RUNNER_TEMP/positivos.txt"
+          [ -z "$(sort "$RUNNER_TEMP/casados.txt" | uniq -d)" ] || { echo "Um arquivo cai em duas fatias."; exit 1; }
+          echo "$(wc -l < "$RUNNER_TEMP/positivos.txt") padrões em $(cut -f1 "$RUNNER_TEMP/padroes.tsv" | sort -u | wc -l) fatias."
+
+  mutacao:
+    name: mutacao (${{ matrix.fatia }})
+    needs: fatias
+    runs-on: ubuntu-24.04
+    # Folga para as primeiras execuções medirem o tempo no runner (a meta do noturno é de 30 a 45 min); o passo da
+    # mutação tem limite menor, para o resumo e o artefato saírem mesmo quando ele estoura.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - fatia: telefone
+            padroes: |
+              **/Pseudonimizacao/PseudonimizadorTelefone.cs
+          - fatia: pix-email-cep
+            padroes: |
+              **/Pseudonimizacao/PseudonimizadorChavePix.cs
+              **/Pseudonimizacao/PseudonimizadorEmail.cs
+              **/Pseudonimizacao/PseudonimizadorCep.cs
+          - fatia: chave-dfe-cpf
+            padroes: |
+              **/Pseudonimizacao/PseudonimizadorChaveDfe.cs
+              **/Pseudonimizacao/PseudonimizadorCpf.cs
+          - fatia: numero-dfe-cnpj
+            padroes: |
+              **/Pseudonimizacao/PseudonimizadorNumeroDfe.cs
+              **/Pseudonimizacao/PseudonimizadorCnpj.cs
+          - fatia: feistel
+            padroes: |
+              **/Criptografia/PermutacaoFeistel.cs
+              **/Criptografia/HmacDeSemente.cs
+              **/Criptografia/Subchaves.cs
+              **/Criptografia/ConjuntoExcluido.cs
+              **/Criptografia/Variantes.cs
+          - fatia: particionada-chave
+            padroes: |
+              **/Criptografia/PermutacaoParticionada.cs
+              **/ChaveIncognito.cs
+              **/Documentos/Caracteres.cs
+          - fatia: gerador
+            padroes: |
+              **/GeradorBr.cs
+              **/Geracao/*.cs
+              **/Pseudonimizador.cs
+          - fatia: restante
+            padroes: |
+              **/*.cs
+              !**/Pseudonimizacao/PseudonimizadorTelefone.cs
+              !**/Pseudonimizacao/PseudonimizadorChavePix.cs
+              !**/Pseudonimizacao/PseudonimizadorEmail.cs
+              !**/Pseudonimizacao/PseudonimizadorCep.cs
+              !**/Pseudonimizacao/PseudonimizadorChaveDfe.cs
+              !**/Pseudonimizacao/PseudonimizadorCpf.cs
+              !**/Pseudonimizacao/PseudonimizadorNumeroDfe.cs
+              !**/Pseudonimizacao/PseudonimizadorCnpj.cs
+              !**/Criptografia/PermutacaoFeistel.cs
+              !**/Criptografia/HmacDeSemente.cs
+              !**/Criptografia/Subchaves.cs
+              !**/Criptografia/ConjuntoExcluido.cs
+              !**/Criptografia/Variantes.cs
+              !**/Criptografia/PermutacaoParticionada.cs
+              !**/ChaveIncognito.cs
+              !**/Documentos/Caracteres.cs
+              !**/GeradorBr.cs
+              !**/Geracao/*.cs
+              !**/Pseudonimizador.cs
+    defaults:
+      run:
+        # bash com pipefail: o código de saída do Stryker (limite não atingido) passa pelo tee.
+        shell: bash
+        working-directory: testes/CodeProcess.Incognito.Testes
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: testes/CodeProcess.Incognito.Testes/packages.lock.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet tool restore
+        working-directory: .
+      # Os padrões chegam por variável de ambiente, nunca interpolados no script. A configuração (stryker-config.json)
+      # fica nesta pasta; os testes pesados encolhem ou são pulados com INCOGNITO_MUTACAO (Mutacao.cs).
+      - name: Mutação
+        timeout-minutes: 75
+        env:
+          PADROES: ${{ matrix.padroes }}
+          INCOGNITO_MUTACAO: '1'
+        run: |
+          argumentos=()
+          while IFS= read -r padrao; do
+            [ -n "$padrao" ] && argumentos+=(-m "$padrao")
+          done <<< "$PADROES"
+          mkdir -p StrykerOutput
+          dotnet stryker "${argumentos[@]}" --output StrykerOutput --skip-version-check -L 2>&1 | tee StrykerOutput/console.log
+      # O placar só vale com a cobertura teste a teste e com todo mutante executado. Sem a cobertura por teste, cada
+      # mutante roda a suíte inteira, as execuções em paralelo estouram o tempo e o "Timeout" conta como detectado.
+      # Conferências: o relatório existe; nenhuma mensagem de captura quebrada ou de mutante não executado; nenhum
+      # mutante pendente; todo morto ou sobrevivente (fora os da inicialização estática) com os testes que o cobrem e
+      # todo morto com quem o matou, dentro deles; algum mutante testado (uma fatia vazia dá placar NaN, que passa no
+      # limite); e no máximo 25% por tempo esgotado (nas medições, até 18% nas fatias da criptografia, quase todos reais:
+      # dobrar o timeout-ratio não os tirou). Roda também quando o limite reprova, para mostrar se a causa foi a captura.
+      - name: Conferir a rodada
+        if: ${{ !cancelled() }}
+        run: |
+          relatorio=StrykerOutput/reports/mutation-report.json
+          [ -f "$relatorio" ] || { echo "Sem o relatório do Stryker: a mutação não terminou."; exit 1; }
+          compgen -G 'StrykerOutput/logs/*.txt' > /dev/null || { echo "Sem o log do Stryker."; exit 1; }
+          padrao='Dubious|coverage capture failed|Failed to capture per-test coverage|Failed to (read|list) coverage|coverage epoch|epoch relay|Stryker failed to test|was not fully tested|Failed to write mutant ID'
+          codigo=0
+          grep -E -h "$padrao" StrykerOutput/console.log StrykerOutput/logs/*.txt > "$RUNNER_TEMP/alertas.txt" || codigo=$?
+          [ "$codigo" -le 1 ] || { echo "Erro ao ler os logs do Stryker."; exit 1; }
+          if [ "$codigo" -eq 0 ]; then
+            head -n 20 "$RUNNER_TEMP/alertas.txt"
+            echo "A captura da cobertura por teste ou a execução de mutantes falhou: o placar não vale. Se a causa for um teste lento demais, ver Mutacao.cs."
+            exit 1
+          fi
+          read -r testados esgotados pendentes erros descobertos sem_assassino < <(jq -r '[.files[].mutants[]]
+            | [ (map(select(.status == "Killed" or .status == "Survived" or .status == "Timeout" or .status == "NoCoverage")) | length),
+                (map(select(.status == "Timeout")) | length),
+                (map(select(.status == "Pending")) | length),
+                (map(select(.status == "RuntimeError")) | length),
+                (map(select((.status == "Killed" or .status == "Survived") and (.static != true) and ((.coveredBy // []) | length == 0))) | length),
+                (map(select(.status == "Killed" and (.static != true) and (((.killedBy // []) | length == 0) or (((.killedBy // []) - (.coveredBy // [])) | length > 0)))) | length) ]
+            | @tsv' "$relatorio")
+          echo "Testados: $testados; por tempo esgotado: $esgotados; pendentes: $pendentes; erros de execução: $erros"
+          [ "$testados" -gt 0 ] || { echo "Nenhum mutante testado."; exit 1; }
+          [ "$pendentes" -eq 0 ] || { echo "Mutantes pendentes, nunca executados."; exit 1; }
+          [ "$descobertos" -eq 0 ] || { echo "$descobertos mutantes sem a cobertura por teste: o placar não vale."; exit 1; }
+          [ "$sem_assassino" -eq 0 ] || { echo "$sem_assassino mortos sem um teste que os cobre como assassino: o placar não vale."; exit 1; }
+          [ $((esgotados * 4)) -le "$testados" ] || { echo "Mais de 25% por tempo esgotado: o placar não vale."; exit 1; }
+      # O Markdown sai com BOM, que impediria o título de virar cabeçalho no resumo. O placar só com os mortos vai junto:
+      # o do Stryker conta o tempo esgotado como detectado.
+      - name: Resumo
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -f StrykerOutput/reports/mutation-report.md ]; then
+            sed '1s/^\xEF\xBB\xBF//' StrykerOutput/reports/mutation-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Sem relatório: a mutação não terminou." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f StrykerOutput/reports/mutation-report.json ]; then
+            jq -r '[.files[].mutants[].status] | (map(select(. == "Killed")) | length) as $mortos
+              | (map(select(. == "Killed" or . == "Survived" or . == "Timeout" or . == "NoCoverage")) | length) as $testados
+              | "\nSó com os mortos: \($mortos) de \($testados)."' StrykerOutput/reports/mutation-report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+      # Sem os logs de cada processo de teste (logs/test-servers, centenas de MB).
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutacao-${{ matrix.fatia }}
+          path: |
+            testes/CodeProcess.Incognito.Testes/StrykerOutput/reports/
+            testes/CodeProcess.Incognito.Testes/StrykerOutput/logs/*.txt
+            testes/CodeProcess.Incognito.Testes/StrykerOutput/console.log
+          if-no-files-found: warn
+          retention-days: 30

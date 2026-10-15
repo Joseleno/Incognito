@@ -33,6 +33,9 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         "12.3456-78",
         "12345_678",
         "12-345-678",
+        // 11 caracteres: nem CEP nem preenchimento (tomados por zerados, sairiam em claro como Zerado).
+        "12.345-6789",
+        "00.000-0000",
         "12/345-678",
         " 12345678",
         "12345678\t",
@@ -375,7 +378,7 @@ public sealed class PseudonimizadorCepTestes : IDisposable
     {
         using var cep = Criar();
         var sorteio = new Random(1732);
-        var entradas = Enumerable.Range(0, 100_000)
+        var entradas = Enumerable.Range(0, Mutacao.Tamanho(100_000, 5_000))
             .Select(_ => (Cep: Oito(Sortear(sorteio, _faixasPorUf.ElementAt(sorteio.Next(_faixasPorUf.Count)).Value)), Entidade: Digitos(sorteio, 11)))
             .ToArray();
         var sequencial = entradas.Select(e => { cep.Pseudonimizar(e.Cep, e.Entidade, out var saida); return saida; }).ToArray();
@@ -400,6 +403,8 @@ public sealed class PseudonimizadorCepTestes : IDisposable
         }
 
         Assert.Throws<ObjectDisposedException>(() => cep.Pseudonimizar((long)valido, "entidade", out _));
+        Assert.Throws<ObjectDisposedException>(() => cep.Pseudonimizar(0L, "entidade", out _));
+        Assert.Throws<ObjectDisposedException>(() => cep.Pseudonimizar(-1L, "entidade", out _));
     }
 
     [Fact]

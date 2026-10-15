@@ -257,7 +257,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
             Assert.Equal(10, Enumerable.Range(0, 10).Select(dv => Pseudonimizar(chaveDfe, base43 + (char)('0' + dv))).Distinct().Count());
 
             // Só no número (inclusive o 0) e só no código (inclusive os proibidos), com o cDV de cada uma.
-            var numeros = Enumerable.Range(0, 500)
+            var numeros = Enumerable.Range(0, Mutacao.Tamanho(500, 50))
                 .Select(i => i == 0 ? "000000000" : Digitos(sorteio, 9))
                 .Select(numero => nffComTipo ? numero[..4] + base43[29] + numero[5..] : numero)
                 .Distinct().ToArray();
@@ -268,7 +268,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
             // Na NF3e e na NFCom, o código tem 7 dígitos e a posição 36 (nSiteAutoriz) fica.
             var setes = modelo is "62" or "66";
             var codigos = (setes ? Enumerable.Empty<string>() : RegrasChaveDfe.CodigosNumericosProibidos.ToArray().Select(codigo => codigo.ToString("00000000", CultureInfo.InvariantCulture)))
-                .Concat(Enumerable.Range(0, 500).Select(_ => Digitos(sorteio, setes ? 7 : 8))).Distinct().ToArray();
+                .Concat(Enumerable.Range(0, Mutacao.Tamanho(500, 50)).Select(_ => Digitos(sorteio, setes ? 7 : 8))).Distinct().ToArray();
             var porCodigo = codigos.Select(codigo => ComCdv(base43[..(43 - codigo.Length)] + codigo)).ToArray();
             Assert.Equal(porCodigo.Length, porCodigo.Select(chave => Pseudonimizar(chaveDfe, chave)).Distinct().Count());
         }
@@ -292,7 +292,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
         foreach (var modelo in new[] { "57", "58", "55" })
         {
             var serie = modelo == "55" ? "920" : "001";
-            for (var vez = 0; vez < 3_000; vez++)
+            for (var vez = 0; vez < Mutacao.Tamanho(3_000, 300); vez++)
             {
                 var emitente = vez % 2 == 0 ? "000" + CpfValido(sorteio) : CnpjNumericoSemZerosDoCpf(sorteio);
                 if (modelo == "55" && vez % 2 == 1)
@@ -340,7 +340,7 @@ public sealed class PseudonimizadorChaveDfeTestes : IDisposable
         using var chaveDfe = Criar(cnpj: permutarOrdem ? _cnpjComOrdem : _cnpj);
         var sorteio = new Random(permutarOrdem ? 2812 : 2836);
         var classes = new HashSet<(TipoEmitente, bool, bool, string)>();
-        for (var vez = 0; vez < 20_000; vez++)
+        for (var vez = 0; vez < Mutacao.Tamanho(20_000, 1_000); vez++)
         {
             var entrada = ChaveSorteada(sorteio, _modelos[sorteio.Next(_modelos.Length)]);
             var antes = ClassificadorEmitente.Classificar(entrada);

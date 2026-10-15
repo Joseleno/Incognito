@@ -47,7 +47,10 @@ public sealed class PropriedadeChaveDfeTestes
         using var contexto = new Contexto(nomeDaChave, permutarOrdem);
         var fonte = SequenciaXoshiro.DaSemente(2900 + (permutarOrdem ? 1 : 0) + (nomeDaChave == "bordas" ? 2 : 0));
         var celulas = Celulas().ToArray();
-        foreach (var (modelo, serie, tipoEmissao, aamm, emitente, posicaoTrinta) in celulas)
+
+        // Sob a mutação, uma célula em 10 (a grade inteira continua conferida fora dela).
+        var passo = Mutacao.Tamanho(1, 10);
+        foreach (var (modelo, serie, tipoEmissao, aamm, emitente, posicaoTrinta) in celulas.Where((_, indice) => indice % passo == 0))
         {
             // Nas células de tpEmis 3 dos modelos com NFF, o número quase sempre tem as partes dela, para a posição 30 e as
             // datas da célula decidirem.
@@ -770,7 +773,7 @@ public sealed class PropriedadeChaveDfeTestes
             ];
             foreach (var exigido in exigidos)
             {
-                Assert.True(_cobertura.GetValueOrDefault(exigido) >= 20, $"Célula com pouca amostra: {exigido}.");
+                Assert.True(_cobertura.GetValueOrDefault(exigido) >= Mutacao.Tamanho(20, 1), $"Célula com pouca amostra: {exigido}.");
             }
 
             // Cada classe que o modelo admite, em cada modelo.
@@ -781,7 +784,7 @@ public sealed class PropriedadeChaveDfeTestes
                 var classes = modelo switch { 55 or 65 => daNotaFiscal, 57 or 58 => doTransporte, _ => ["Cnpj"] };
                 foreach (var classe in classes)
                 {
-                    Assert.True(_cobertura.GetValueOrDefault(modelo.ToString(CultureInfo.InvariantCulture) + " " + classe) >= 5, $"Classe sem amostra: {modelo} {classe}.");
+                    Assert.True(_cobertura.GetValueOrDefault(modelo.ToString(CultureInfo.InvariantCulture) + " " + classe) >= Mutacao.Tamanho(5, 1), $"Classe sem amostra: {modelo} {classe}.");
                 }
             }
 
