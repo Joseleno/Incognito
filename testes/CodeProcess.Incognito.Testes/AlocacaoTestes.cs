@@ -9,7 +9,8 @@ namespace CodeProcess.Incognito.Testes;
 /// O que não pode alocar (validação, classificação, número e código da chave de DF-e) e o que só aloca a saída (chave
 /// Pix aleatória, chave de DF-e), medido na thread do teste. Roda sozinho, depois das outras classes: com a suíte em
 /// paralelo, a medida de uma thread chegou a somar de 0,7 a 8 KB que não eram do código medido (uma rodada em dez,
-/// mesmo com a compilação em camadas desligada), e nada disso aparece com os testes sozinhos.
+/// mesmo com a compilação em camadas desligada), e nada disso aparece com os testes sozinhos. Pulado sob a mutação
+/// noturna: o código que o Stryker injeta em cada método mutado lê o arquivo do mutante ativo e aloca.
 /// </summary>
 [Collection(nameof(AlocacaoTestes))]
 public sealed class AlocacaoTestes : IDisposable
@@ -18,7 +19,7 @@ public sealed class AlocacaoTestes : IDisposable
 
     public void Dispose() => _chave.Dispose();
 
-    [Fact]
+    [Fact(Skip = Mutacao.MotivoAlocacao, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     public void Validacao_com_span_nao_aloca()
     {
         var sorteio = new Random(1312);
@@ -35,7 +36,7 @@ public sealed class AlocacaoTestes : IDisposable
         Assert.Equal(3 * 10_100, aceitos);
     }
 
-    [Fact]
+    [Fact(Skip = Mutacao.MotivoAlocacao, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     public void Classificar_o_emitente_nao_aloca()
     {
         var chaves = Chaves(2605);
@@ -49,7 +50,7 @@ public sealed class AlocacaoTestes : IDisposable
         Assert.True(cpfs > 0, "Nenhuma chave da amostra foi classificada como CPF.");
     }
 
-    [Fact]
+    [Fact(Skip = Mutacao.MotivoAlocacao, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     public void Numero_e_codigo_da_chave_de_DF_e_nao_alocam()
     {
         using var numeroDfe = new PseudonimizadorNumeroDfe(_chave, PseudonimizadorNumeroDfe.NomeDoDominio, 1, "homologacao");
@@ -64,7 +65,7 @@ public sealed class AlocacaoTestes : IDisposable
         Assert.Equal(0L, alocados);
     }
 
-    [Fact]
+    [Fact(Skip = Mutacao.MotivoAlocacao, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     public void Chave_Pix_aleatoria_aloca_so_a_saida()
     {
         using var cpf = new PseudonimizadorCpf(_chave, "cpf", 1, "homologacao", PoliticaEntradaInvalida.Falhar, PoliticaEntradaMalformada.Falhar);
@@ -90,7 +91,7 @@ public sealed class AlocacaoTestes : IDisposable
         Assert.Equal(1_000 * 96L, alocados);
     }
 
-    [Fact]
+    [Fact(Skip = Mutacao.MotivoAlocacao, SkipType = typeof(Mutacao), SkipWhen = nameof(Mutacao.Ativa))]
     public void Chave_de_DF_e_aloca_so_a_saida_em_cada_forma()
     {
         // Por chamada, exatamente a string da saída (cabeçalho, tamanho e caracteres, alinhados a 8 bytes): pura, com o
