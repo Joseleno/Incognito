@@ -27,6 +27,8 @@ dotnet build benchmarks/Incognito.Benchmarks.slnx -c Release    # a solução do
 dotnet format benchmarks/Incognito.Benchmarks.slnx --verify-no-changes
 ```
 
+Zero testes executados é erro em todo projeto de teste, exceto nos de dialeto (só têm testes de banco, que o CI sem Docker filtra) e nos que ainda não têm nenhum arquivo de código; a lista fica em `ProjetosDeTesteTestes`, que também recusa perfis e configurações de execução versionados (`launchSettings.json`, `testconfig.json`) e qualquer outro ajuste do código de saída ou da linha de comando dos testes. Por isso, para rodar uma parte dos testes (`--filter-class`, `--filter-trait`), use `--project`: na solução inteira, os projetos sem nenhum teste que case com o filtro falham. Testes marcados com `Categoria=Integracao` ficam só nos projetos de dialeto e na suíte de conformidade.
+
 Cada projeto tem um `packages.lock.json` versionado, e o CI restaura com `dotnet restore --locked-mode`: um lock desatualizado quebra o build. Ao adicionar, remover ou atualizar um pacote (sempre no `Directory.Packages.props`), rode `dotnet restore --force-evaluate` e inclua os `packages.lock.json` alterados no commit. Projetos não usam `VersionOverride`, `PackageDownload`, referência a DLL por caminho nem tarefas próprias do MSBuild; o CI recusa.
 
 ### Vetores fixos
@@ -44,7 +46,7 @@ Uma versão nova de um transformador (`br.cpf@2`) precisa da implementação nos
 
 ### Testes lentos e estatísticos
 
-Testes marcados com `[Trait("Categoria", "Lento")]` ficam fora do CI de pull request e rodam em todo push na `develop` e na `main` (job `lentos`, que exige ao menos um) e no release. Ficam só no projeto `CodeProcess.Incognito.Testes`, o único que o job `lentos` roda. Os testes estatísticos (`EstatisticaTestes`) usam semente fixa e são de fumaça contra defeitos grosseiros de desenho; cada família de conferência roda também contra controles ruins que precisam reprovar cada conferência nomeada. Nunca troque a semente para um teste passar. A propriedade da inversa do Feistel usa o CsCheck com semente aleatória: numa falha, a mensagem traz a semente (`CsCheck_Seed`) para repetir.
+Testes marcados com `[Trait("Categoria", "Lento")]` ficam fora do CI de pull request e rodam em todo push na `develop` e na `main` (job `lentos`, que exige ao menos um) e no release. Ficam só no projeto `CodeProcess.Incognito.Testes`, o único que o job `lentos` roda, e o CI confere. Os testes estatísticos (`EstatisticaTestes`) usam semente fixa e são de fumaça contra defeitos grosseiros de desenho; cada família de conferência roda também contra controles ruins que precisam reprovar cada conferência nomeada. Nunca troque a semente para um teste passar. A propriedade da inversa do Feistel usa o CsCheck com semente aleatória: numa falha, a mensagem traz a semente (`CsCheck_Seed`) para repetir.
 
 ### Benchmarks
 
