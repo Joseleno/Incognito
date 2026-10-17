@@ -112,7 +112,7 @@ jobs:
           cache: true
           cache-dependency-path: testes/CodeProcess.Incognito.Testes/packages.lock.json
       - run: dotnet restore testes/CodeProcess.Incognito.Testes --locked-mode
-      # O projeto de testes ignora o código de saída de zero testes: aqui, zero testes Lento é erro.
+      # Zero testes já é erro no projeto (código 8); o mínimo deixa isso explícito para o filtro de uma categoria só.
       - run: dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-restore --filter-trait "Categoria=Lento" --minimum-expected-tests 1
 
   # Informativo. Os benchmarks ficam numa solução própria (benchmarks/Incognito.Benchmarks.slnx), fora do build do

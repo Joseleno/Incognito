@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Só testes de banco (Categoria=Integracao), que o CI sem Docker filtra: lá este projeto roda zero testes. -->
+  <PropertyGroup>
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 8</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.PostgreSql\CodeProcess.Incognito.PostgreSql.csproj" />
   </ItemGroup>

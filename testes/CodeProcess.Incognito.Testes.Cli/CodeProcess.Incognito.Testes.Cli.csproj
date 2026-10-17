@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Ainda sem testes: a linha sai junto com o primeiro arquivo .cs (ProjetosDeTesteTestes obriga). -->
+  <PropertyGroup>
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 8</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.Cli\CodeProcess.Incognito.Cli.csproj" />
   </ItemGroup>

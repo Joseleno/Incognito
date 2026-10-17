@@ -2,13 +2,15 @@
 
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
-  <!-- Projetos de teste: xUnit v3 sobre o Microsoft Testing Platform. Nunca viram pacote. -->
+  <!--
+    Projetos de teste: xUnit v3 sobre o Microsoft Testing Platform. Nunca viram pacote. Zero testes executados é erro
+    (código 8): só os projetos listados em ProjetosDeTesteTestes o ignoram, no próprio .csproj.
+  -->
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
-    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 8</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
   <!-- Itens são avaliados depois de todas as propriedades, então a condição enxerga o valor final do projeto. -->
