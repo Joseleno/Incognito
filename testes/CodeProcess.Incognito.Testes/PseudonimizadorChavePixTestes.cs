@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 using static CodeProcess.Incognito.Testes.DocumentosDeTeste;
 
 namespace CodeProcess.Incognito.Testes;

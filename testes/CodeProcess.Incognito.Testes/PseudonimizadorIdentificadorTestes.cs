@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Testes;
 

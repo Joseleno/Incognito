@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Testes.Vetores;
 
