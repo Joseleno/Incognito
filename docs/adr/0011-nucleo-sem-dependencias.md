@@ -29,8 +29,9 @@ Falta decidir como o motor chega aos internos do núcleo (a permutação, os pse
 desfechos e as políticas). O `InternalsVisibleTo` resolveria, mas deixaria o motor preso a código que o analisador da
 API pública não rastreia, e quem escreve um transformador próprio não teria o mesmo caminho.
 
-Hoje só o núcleo tem código. Os pacotes `Motor`, `PostgreSql`, `SqlServer`, `EntityFrameworkCore` e `Cli` existem
-como esqueletos, e as regras abaixo já são testadas, para valerem desde a primeira linha deles.
+Quando esta decisão foi tomada (15/10/2026), só o núcleo tinha código. Os pacotes `Motor`, `PostgreSql`,
+`SqlServer`, `EntityFrameworkCore` e `Cli` existiam como esqueletos, e as regras abaixo já eram testadas, para valerem
+desde a primeira linha deles.
 
 ## Decisão
 
@@ -54,7 +55,8 @@ como esqueletos, e as regras abaixo já são testadas, para valerem desde a prim
    `GeradorBr`, `ValidadorBr`, `Pseudonimizador` e `IncognitoException`. O resto fica em sub-namespaces: `.Normas` é
    o único público nessa data; `.Criptografia`, `.Documentos`, `.Geracao` e `.Pseudonimizacao` são internos.
 7. **`InternalsVisibleTo` só para o que nunca vira pacote:** o projeto de testes do núcleo
-   (`CodeProcess.Incognito.Testes`) e os benchmarks (`CodeProcess.Incognito.Benchmarks`, com `IsPackable` falso).
+   (`CodeProcess.Incognito.Testes`) e os benchmarks (`CodeProcess.Incognito.Benchmarks`, com `IsPackable` falso)
+   veem os internos do núcleo; o projeto de testes do motor (`CodeProcess.Incognito.Testes.Motor`), os do motor.
    Nenhum pacote publicado enxerga os internos de outro.
 8. **O motor usa o núcleo só pela API pública.** Ele não usa a fachada `Pseudonimizador`, que tem domínios, versão e
    políticas fixos para o uso direto, nem `InternalsVisibleTo`. Planejado para a etapa do motor (nomes provisórios):
@@ -89,13 +91,13 @@ como esqueletos, e as regras abaixo já são testadas, para valerem desde a prim
   ou fica no núcleo atrás de uma fábrica.
 - **Limitação conhecida da verificação.** `GetReferencedAssemblies` lista só os assemblies cujo código ou metadado é
   usado pelo IL. Um `ProjectReference` ou `PackageReference` sem uso não aparece, mas vira dependência do pacote
-  mesmo assim. Hoje isso já acontece: o motor, sem código, declara o núcleo como dependência no `.nuspec`, e o
-  assembly dele não o referencia. Assim, um pacote de terceiros acrescentado ao núcleo e ainda não usado passaria por
+  mesmo assim. Em 15/10/2026 isso acontecia: o motor, ainda sem código, declarava o núcleo como dependência no
+  `.nuspec`, e o assembly dele não o referenciava. Assim, um pacote de terceiros acrescentado ao núcleo e ainda não usado passaria por
   `Nucleo_nao_referencia_pacotes_de_terceiros`, e uma referência de projeto sem uso entre os dialetos passaria por
   `Dialetos_nao_se_referenciam`. Há mais dois furos: a regra do núcleo compara só o nome com os assemblies do
   framework compartilhado, então um pacote com o mesmo nome de um assembly do framework (como as versões fora de
   banda do `System.Text.Json`) passa; e a busca por `System.Net.Http` percorre só os assemblies deste repositório,
-  não o que os drivers usam por dentro. Esses casos aparecem no `packages.lock.json` do projeto, que o CI exige
+  não o que os drivers e os pacotes de terceiros usam por dentro. Esses casos aparecem no `packages.lock.json` do projeto, que o CI exige
   versionado e atualizado: pacote novo e referência de projeto entram no diff, e são pegos na revisão, não por teste.
 
 ## Evidência e verificação
@@ -109,7 +111,9 @@ como esqueletos, e as regras abaixo já são testadas, para valerem desde a prim
   [`ci.yml`](../../.github/workflows/ci.yml), exigido pelo Ruleset, e no job `pacotes` do
   [`release.yml`](../../.github/workflows/release.yml).
 - [`CodeProcess.Incognito.csproj`](../../src/CodeProcess.Incognito/CodeProcess.Incognito.csproj): `IsAotCompatible` e
-  os dois `InternalsVisibleTo`, só ali. Os benchmarks têm `IsPackable` falso em
+  os dois `InternalsVisibleTo` do núcleo, só ali; o
+  [`CodeProcess.Incognito.Motor.csproj`](../../src/CodeProcess.Incognito.Motor/CodeProcess.Incognito.Motor.csproj)
+  concede o seu só ao projeto de testes do motor. Os benchmarks têm `IsPackable` falso em
   [`benchmarks/Directory.Build.props`](../../benchmarks/Directory.Build.props).
 - O [lock file do núcleo](../../src/CodeProcess.Incognito/packages.lock.json) só tem ferramentas de build: o analisador
   da API pública, o MinVer, o gerador de SBOM e o `Microsoft.NET.ILLink.Tasks`, trazido pelo `IsAotCompatible`
@@ -121,9 +125,9 @@ como esqueletos, e as regras abaixo já são testadas, para valerem desde a prim
   [`PublicAPI.Unshipped.txt`](../../src/CodeProcess.Incognito/PublicAPI.Unshipped.txt): o namespace raiz e o `.Normas`.
   Um símbolo público fora do arquivo quebra o build (RS0016, avisos como erro).
 - Num `dotnet pack` local, o `.nuspec` do núcleo saiu com o grupo de dependências `net10.0` vazio, e o do motor com a
-  dependência do núcleo. O assembly do motor, compilado em 2026-10-15, referencia só o `System.Runtime`.
+  dependência do núcleo. O assembly do motor, compilado em 2026-10-15, referenciava só o `System.Runtime`.
 - O motor sem a fachada e sem `InternalsVisibleTo` é conferido na revisão: o único lugar onde o acesso aos internos
-  pode ser concedido é o `.csproj` do núcleo.
+  do núcleo pode ser concedido é o `.csproj` do núcleo.
 
 ## Gatilho de revisão
 
@@ -132,3 +136,13 @@ como esqueletos, e as regras abaixo já são testadas, para valerem desde a prim
 - O motor precisar de um interno do núcleo que não possa virar API pública nem ficar atrás de uma fábrica.
 - Uma dependência proibida chegar ao `.nuspec` de um pacote gerado sem ser pega pelos testes nem pela revisão do lock
   file: aí a conferência das dependências do `.nuspec` entra no job `pacotes` do release.
+
+## Atualizações
+
+- 2026-10-16: o motor ganhou a leitura do `incognito.yaml` e a primeira dependência de terceiros, o YamlDotNet
+  (18.1.0, MIT), usado só pelo `Parser` (eventos), sem o desserializador por reflexão nem o `YamlStream`, que estoura a
+  pilha com aninhamento profundo e resolve aliases antes de qualquer validação. O modelo da configuração fica interno
+  até o `Plano` decidir o que publica; os testes do motor o conferem pelo `InternalsVisibleTo` do item 7. O núcleo
+  continua sem nenhuma dependência. O assembly do motor passa a referenciar o núcleo e o YamlDotNet; o que o YamlDotNet
+  usa por dentro fica fora da busca por `System.Net.Http` (a limitação acima): a versão fixada não depende de nenhum
+  pacote e não referencia `System.Net.Http`, conferido no lock file e na revisão de cada atualização.

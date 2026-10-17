@@ -22,7 +22,7 @@ public sealed class ProjetosDeTesteTestes
     private static readonly string[] _dialetos = ["CodeProcess.Incognito.Testes.PostgreSql", "CodeProcess.Incognito.Testes.SqlServer"];
 
     // Os vazios só enquanto não tiverem nenhum .cs versionado: com o primeiro teste, a linha sai do .csproj.
-    private static readonly string[] _aindaVazios = ["CodeProcess.Incognito.Testes.Motor", "CodeProcess.Incognito.Testes.Cli"];
+    private static readonly string[] _aindaVazios = ["CodeProcess.Incognito.Testes.Cli"];
 
     // O que mexe no código de saída, na linha de comando ou na configuração dos testes por fora do comando do CI: as
     // propriedades e itens do MSBuild que chegam ao executável de teste e as variáveis de ambiente do MTP e do xUnit. Os

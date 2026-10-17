@@ -1,1 +1,14 @@
 #nullable enable
+CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito
+CodeProcess.Incognito.Configuracao.ConfiguracaoInvalidaException
+CodeProcess.Incognito.Configuracao.ConfiguracaoInvalidaException.Erros.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Configuracao.ErroConfiguracao!>!
+CodeProcess.Incognito.Configuracao.ErroConfiguracao
+CodeProcess.Incognito.Configuracao.ErroConfiguracao.Arquivo.get -> string?
+CodeProcess.Incognito.Configuracao.ErroConfiguracao.Codigo.get -> string!
+CodeProcess.Incognito.Configuracao.ErroConfiguracao.Coluna.get -> int?
+CodeProcess.Incognito.Configuracao.ErroConfiguracao.Linha.get -> int?
+CodeProcess.Incognito.Configuracao.ErroConfiguracao.Local.get -> string!
+CodeProcess.Incognito.Configuracao.ErroConfiguracao.Mensagem.get -> string!
+override CodeProcess.Incognito.Configuracao.ErroConfiguracao.ToString() -> string!
+static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.CarregarYaml(string! caminho) -> CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito!
+static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! texto) -> CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito!

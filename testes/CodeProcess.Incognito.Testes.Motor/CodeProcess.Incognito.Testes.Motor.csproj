@@ -1,12 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Ainda sem testes: a linha sai junto com o primeiro arquivo .cs (ProjetosDeTesteTestes obriga). -->
-  <PropertyGroup>
-    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 8</TestingPlatformCommandLineArguments>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+  </ItemGroup>
+
+  <!-- Testes de propriedade (CsCheck) e o JSON Schema validado por um motor completo de draft-07 (só aqui). -->
+  <ItemGroup>
+    <PackageReference Include="CsCheck" />
+    <PackageReference Include="Corvus.Json.Validator" />
+  </ItemGroup>
+
+  <!-- O esquema publicado, lido da pasta de saída. -->
+  <ItemGroup>
+    <None Include="..\..\esquema\incognito.schema.json" Link="esquema\incognito.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
