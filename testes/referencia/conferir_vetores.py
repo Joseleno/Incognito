@@ -642,6 +642,24 @@ class Email:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# texto.substituir: o texto inteiro trocado pelo texto fixo em ASCII, cortado no comprimento máximo da coluna (nulo: sem
+# limite). Vazio ou só com espaços (U+0020, o preenchimento de char(n)) volta como veio. Não usa a chave nem a entrada.
+# ---------------------------------------------------------------------------------------------------------------------
+
+TEXTO_REMOVIDO = "Texto removido pelo Incognito."
+
+
+class TextoSubstituir:
+    def __init__(self, comprimento_maximo):
+        self.saida = TEXTO_REMOVIDO if comprimento_maximo is None else TEXTO_REMOVIDO[:comprimento_maximo]
+
+    def texto(self, entrada):
+        if not tirar_espacos_a_direita(entrada)[0]:
+            return entrada, "Vazio"
+        return self.saida, "Substituido"
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # br.cep: UF pela faixa do CEP de entrada; CEP de saída nas faixas da UF, contadas em
 # ordem crescente, pelo HMAC da K_semente sobre UF ‖ 0x00 ‖ entidade aparada, 8 bytes big-endian módulo o total.
 # Faixas por UF dos Correios; a 78900-000 a 78999-999 (RO em tabelas antigas) só vale como entrada. De 1 a 8 zeros,
@@ -1212,6 +1230,7 @@ PARAMETROS = {
     "id.permutar@1": ["n", "entradaMalformada"],
     "br.chave-pix@1": ["entradaMalformada", "componentes"],
     "br.chave-dfe@1": ["modelos", "entradaInvalida", "entradaMalformada", "componentes"],
+    "texto.substituir@1": ["comprimentoMaximo"],
 }
 
 # Componentes dos transformadores compostos: as instâncias das colunas usadas dentro do valor. Na chave de DF-e, as
@@ -1233,7 +1252,7 @@ COMPONENTES = {
 VERSOES_DOS_COMPONENTES = {"cpf": {1}, "cnpj": {1}, "email": {1}, "telefone": {1}}
 
 DESFECHOS = {"Pseudonimizado", "DvInvalidoPreservado", "PontoFixo", "AnuladoDvInvalido", "AnuladoMalformado", "CopiadoEmClaro",
-             "ServicoPreservado", "Vazio", "Zerado"}
+             "ServicoPreservado", "Vazio", "Zerado", "Substituido"}
 
 
 def politica(objeto, nome, onde):
@@ -1250,10 +1269,15 @@ def logico(valor, onde):
 
 def montar(transformador, versao, chave, caso, onde):
     dominio, ambiente = texto_de(caso["dominio"], onde), texto_de(caso["ambiente"], onde)
-    malformada = politica(caso, "entradaMalformada", onde)
     identidade = f"{transformador}@{versao}"
     if identidade not in PARAMETROS:
         raise Falha(onde, "transformador ou versão sem implementação")
+    if identidade == "texto.substituir@1":
+        comprimento = caso["comprimentoMaximo"]
+        if comprimento is not None and not 1 <= inteiro(comprimento, onde) <= 2**31 - 1:
+            raise Falha(onde, "comprimento máximo nem nulo nem de 1 a 2147483647")
+        return TextoSubstituir(comprimento)
+    malformada = politica(caso, "entradaMalformada", onde)
     if identidade == "br.cpf@1":
         return Cpf(chave, dominio, versao, ambiente, politica(caso, "entradaInvalida", onde), malformada)
     if identidade == "br.cnpj@1":
@@ -1681,6 +1705,7 @@ ARQUIVOS = {
     "id.permutar@1.json": conferir_transformador,
     "br.chave-pix@1.json": conferir_transformador,
     "br.chave-dfe@1.json": conferir_transformador,
+    "texto.substituir@1.json": conferir_transformador,
     "volume@1.json": conferir_volume,
 }
 
@@ -1718,6 +1743,9 @@ RAMOS_EXIGIDOS = {
     },
     "id.permutar@1.json": {
         "caminhada", "extremo", "zero-ou-negativo", "a-partir-de-n"
+    },
+    "texto.substituir@1.json": {
+        "substituido", "cortado", "tabulacao", "vazio", "so-espacos"
     },
     "br.chave-pix@1.json": {
         "cpf", "cnpj", "email", "telefone", "aleatoria", "aleatoria-assimetrica", "aleatoria-maiusculas",
@@ -1902,9 +1930,19 @@ def autoteste():
             par["desfecho"] = "PontoFixo" if par["desfecho"] != "PontoFixo" else "Pseudonimizado"
             deve_acusar(f"{arquivo}, desfecho", lambda: conferir_transformador(caminho, documento), "diverge")
             documento = ler_arquivo(caminho)
-            par = primeiro_par(documento, lambda p: "erro" in p)
-            par["erro"] = "INC1004" if par["erro"] == "INC1003" else "INC1003"
-            deve_acusar(f"{arquivo}, erro", lambda: conferir_transformador(caminho, documento), "diverge")
+            if arquivo == "texto.substituir@1.json":
+                # Sem erro possível: o comprimento máximo trocado num caso é que tem de ser acusado.
+                caso = next(c for c in documento["casos"] if c["comprimentoMaximo"] is not None and c["comprimentoMaximo"] < 30)
+                caso["comprimentoMaximo"] += 1
+                deve_acusar(f"{arquivo}, comprimento máximo", lambda: conferir_transformador(caminho, documento), "diverge")
+                for recusado, motivo in ((0, "nem nulo"), (-1, "nem nulo"), (2**31, "nem nulo"), (True, "esperado inteiro"), ("30", "esperado inteiro")):
+                    documento = ler_arquivo(caminho)
+                    documento["casos"][0]["comprimentoMaximo"] = recusado
+                    deve_acusar(f"{arquivo}, comprimento máximo recusado", lambda: conferir_transformador(caminho, documento), motivo)
+            else:
+                par = primeiro_par(documento, lambda p: "erro" in p)
+                par["erro"] = "INC1004" if par["erro"] == "INC1003" else "INC1003"
+                deve_acusar(f"{arquivo}, erro", lambda: conferir_transformador(caminho, documento), "diverge")
             if arquivo == "br.chave-dfe@1.json":
                 for condicao in (lambda p: p.get("ocorrencias") == [], lambda p: bool(p.get("ocorrencias"))):
                     documento = ler_arquivo(caminho)

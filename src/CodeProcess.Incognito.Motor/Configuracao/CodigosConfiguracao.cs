@@ -66,11 +66,24 @@ internal static class CodigosConfiguracao
     /// <summary>Domínio declarado mais de uma vez.</summary>
     internal const string DominioRepetido = "INC2019";
 
+    /// <summary>Transformador sem fábrica registrada com esse nome.</summary>
+    internal const string TransformadorDesconhecido = "INC2020";
+
+    /// <summary>Versão do transformador sem fábrica registrada (sem versão escrita, vale a 1).</summary>
+    internal const string VersaoInexistente = "INC2021";
+
+    /// <summary>Regra recusada pela fábrica: parâmetro, <c>derivarDe</c> ou <c>justificativa</c>.</summary>
+    internal const string RegraRecusada = "INC2022";
+
+    /// <summary>Um nome de domínio com duas definições, ou o domínio padrão de uma fábrica com outra definição.</summary>
+    internal const string ConflitoDeDominio = "INC2023";
+
     /// <summary>Todos os códigos, para o teste de unicidade.</summary>
     internal static IReadOnlyList<string> Todos { get; } =
     [
         Agregado, Arquivo, Caractere, Sintaxe, ConstrucaoNaoAceita, ChaveRepetida, ChaveDesconhecida, Obrigatorio, Tipo,
         Valor, Nome, SegredoPorExtenso, Referencia, DominioDesconhecido, Ciclo, Justificativa, Incoerente,
-        Identificador, Transformador, DominioRepetido,
+        Identificador, Transformador, DominioRepetido, TransformadorDesconhecido, VersaoInexistente, RegraRecusada,
+        ConflitoDeDominio,
     ];
 }

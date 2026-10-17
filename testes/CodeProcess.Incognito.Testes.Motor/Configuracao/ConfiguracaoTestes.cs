@@ -1,4 +1,5 @@
 using CodeProcess.Incognito.Configuracao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Testes.Motor.Configuracao;
 
@@ -28,10 +29,10 @@ public sealed class ConfiguracaoTestes
         var configuracao = Yaml.Ler(Yaml.Exemplo);
 
         Assert.Equal(["cpf", "cnpj", "email"], configuracao.Dominios.Select(dominio => dominio.Nome));
-        Assert.Equal(new ReferenciaTransformador("br.cpf", 1, new(25, 27)), configuracao.Dominios[0].Transformador);
+        Assert.Equal(new ReferenciaTransformador("br.cpf", 1, new(25, 27), "/dominios/cpf/transformador"), configuracao.Dominios[0].Transformador);
         Assert.Equal(4, configuracao.Politicas.Paralelismo);
         Assert.Equal(Consistencia.MelhorEsforco, configuracao.Politicas.Consistencia);
-        Assert.Equal(TratamentoEntradaInvalida.Preservar, configuracao.Politicas.Entrada.EntradaInvalida);
+        Assert.Equal(PoliticaEntradaInvalida.Preservar, configuracao.Politicas.Entrada.EntradaInvalida);
 
         Assert.Equal(["clientes", "pedidos", "auditoria", "outbox_messages"], configuracao.Tabelas.Select(tabela => tabela.Nome.Tabela.Nome));
         Assert.All(configuracao.Tabelas, tabela => Assert.Equal(new Identificador("public", false), tabela.Nome.Esquema));
@@ -43,7 +44,7 @@ public sealed class ConfiguracaoTestes
         Assert.Equal(new Identificador("cpf", false), clientes["nome"].DerivarDe);
         Assert.Equal(TipoRegraColuna.Transformador, clientes["telefone"].Tipo);
         Assert.Null(clientes["telefone"].Dominio);
-        Assert.Equal([new KeyValuePair<string, string>("precisao", "ano")], clientes["nascimento"].Parametros);
+        Assert.Equal([("precisao", "ano")], clientes["nascimento"].Parametros.Select(parametro => (parametro.Nome, parametro.Valor)));
         Assert.Equal((TipoRegraColuna.Manter, true, "campo exigido pelo teste de integração do parceiro"), (clientes["laudo"].Tipo, clientes["laudo"].Sensivel, clientes["laudo"].Justificativa));
         Assert.Equal(TipoRegraColuna.Manter, clientes["criado_em"].Tipo);
         Assert.All(configuracao.Tabelas[0].Colunas, coluna => Assert.Equal(OrigemRegra.Configuracao, coluna.Origem));
@@ -238,8 +239,8 @@ public sealed class ConfiguracaoTestes
         var dominio = Assert.Single(Yaml.Ler(Yaml.Com("dominios:\n  chave-dfe: { transformador: br.chave-dfe, modelos: [55, 65], permutarOrdem: true, entradaMalformada: anular }\n")).Dominios);
 
         Assert.Equal(("br.chave-dfe", (int?)null), (dominio.Transformador.Nome, dominio.Transformador.Versao));
-        Assert.Equal([new("modelos", "55,65"), new KeyValuePair<string, string>("permutarOrdem", "true")], dominio.Parametros);
-        Assert.Equal(new PoliticasDeEntrada(null, TratamentoEntradaMalformada.Anular), dominio.Politicas);
+        Assert.Equal([("modelos", "55,65"), ("permutarOrdem", "true")], dominio.Parametros.Select(parametro => (parametro.Nome, parametro.Valor)));
+        Assert.Equal(new PoliticasDeEntrada(null, PoliticaEntradaMalformada.Anular), dominio.Politicas);
     }
 
     [Theory]
@@ -285,8 +286,8 @@ public sealed class ConfiguracaoTestes
         var coluna = Assert.Single(configuracao.Tabelas[0].Colunas);
 
         Assert.Equal((TipoRegraColuna.Dominio, "cpf"), (coluna.Tipo, coluna.Dominio));
-        Assert.Equal(new PoliticasDeEntrada(null, TratamentoEntradaMalformada.Anular), coluna.Politicas);
-        Assert.Equal(new PoliticasDeEntrada(TratamentoEntradaInvalida.Falhar, null), configuracao.Dominios[0].Politicas);
+        Assert.Equal(new PoliticasDeEntrada(null, PoliticaEntradaMalformada.Anular), coluna.Politicas);
+        Assert.Equal(new PoliticasDeEntrada(PoliticaEntradaInvalida.Falhar, null), configuracao.Dominios[0].Politicas);
     }
 
     [Fact]

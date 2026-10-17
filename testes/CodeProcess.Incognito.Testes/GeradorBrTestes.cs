@@ -4,6 +4,7 @@ using System.Text;
 using CodeProcess.Incognito.Documentos;
 using CodeProcess.Incognito.Geracao;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 using static CodeProcess.Incognito.Testes.DocumentosDeTeste;
 
 namespace CodeProcess.Incognito.Testes;

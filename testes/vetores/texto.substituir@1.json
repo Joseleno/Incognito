@@ -1,0 +1,588 @@
+{
+  "descricao": "texto.substituir, versão 1. Chave pública de teste: nunca use fora dos testes. Contrato de compatibilidade: um par existente que mudar exige texto.substituir@2; casos novos só se acrescentam. Cada entrada vem do GeradorBr com a semente registrada, de uma regra de construção sobre a mesma sequência ou da permutação inversa com esta chave, ou é uma borda literal sem documento válido (origem em cada par). Nenhuma foi copiada de um cadastro, mas um documento válido gerado pode coincidir com o de alguém: não use estes valores fora dos testes. O texto.substituir não usa a chave nem a entrada: a saída é um texto fixo cortado no comprimento máximo.",
+  "transformador": "texto.substituir",
+  "versao": 1,
+  "chave": "inc1_7jOL83YLDPrd_f4_umiMU58DBtdpsm1OEdYxKrP7nLw",
+  "casos": [
+    {
+      "nome": "sem comprimento máximo",
+      "dominio": "texto.substituir",
+      "ambiente": "homologacao",
+      "comprimentoMaximo": null,
+      "pares": [
+        {
+          "entrada": "75536103806",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 1,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "17176262624",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 2,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "66.254.327/0001-06",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(formatado)",
+            "semente": 3,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "j6p9iwr0bmb8@example.org",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 4,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "kvx3s2s3nn9j@example.org",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 5,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(83) 99811-0089",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 6,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "Cliente pediu desconto na renovação.",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "\t",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "tabulacao",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "    ",
+          "saida": "    ",
+          "desfecho": "Vazio",
+          "ramo": "so-espacos",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "comprimento 1",
+      "dominio": "texto.substituir",
+      "ambiente": "homologacao",
+      "comprimentoMaximo": 1,
+      "pares": [
+        {
+          "entrada": "20240359658",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 11,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "38892278568",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 12,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "27.916.415/0001-66",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(formatado)",
+            "semente": 13,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "zw77k1h1s044@example.org",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 14,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "yokevh76s5wr@example.org",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 15,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(94) 90908-7940",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 16,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "Cliente pediu desconto na renovação.",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "\t",
+          "saida": "T",
+          "desfecho": "Substituido",
+          "ramo": "tabulacao",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "    ",
+          "saida": "    ",
+          "desfecho": "Vazio",
+          "ramo": "so-espacos",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "comprimento 29",
+      "dominio": "texto.substituir",
+      "ambiente": "homologacao",
+      "comprimentoMaximo": 29,
+      "pares": [
+        {
+          "entrada": "08637094945",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 21,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "91010315544",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 22,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43.220.886/0001-91",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(formatado)",
+            "semente": 23,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "43v99gdbbr5d@example.org",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 24,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "6kkdoyldvbtq@example.org",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 25,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(32) 94210-5913",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 26,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "Cliente pediu desconto na renovação.",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "cortado",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "\t",
+          "saida": "Texto removido pelo Incognito",
+          "desfecho": "Substituido",
+          "ramo": "tabulacao",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "    ",
+          "saida": "    ",
+          "desfecho": "Vazio",
+          "ramo": "so-espacos",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "comprimento 30",
+      "dominio": "texto.substituir",
+      "ambiente": "homologacao",
+      "comprimentoMaximo": 30,
+      "pares": [
+        {
+          "entrada": "75448565506",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 31,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "63310047695",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 32,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "36.191.685/0001-48",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(formatado)",
+            "semente": 33,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "0qr3ype8qqm3@example.org",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 34,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "lvxxfbwhjjgh@example.org",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 35,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(74) 99503-4769",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 36,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "Cliente pediu desconto na renovação.",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "\t",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "tabulacao",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "    ",
+          "saida": "    ",
+          "desfecho": "Vazio",
+          "ramo": "so-espacos",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    },
+    {
+      "nome": "comprimento 31",
+      "dominio": "texto.substituir",
+      "ambiente": "producao",
+      "comprimentoMaximo": 31,
+      "pares": [
+        {
+          "entrada": "71674277300",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 41,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "03699778746",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cpf()",
+            "semente": 42,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "59.601.280/0001-36",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Cnpj(formatado)",
+            "semente": 43,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "3y3mhw2phx6h@example.org",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 44,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "fahwn0t8k1jb@example.org",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Email()",
+            "semente": 45,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "(75) 96266-8097",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "gerador-br",
+            "metodo": "Telefone(celular, formatado)",
+            "semente": 46,
+            "formas": []
+          }
+        },
+        {
+          "entrada": "Cliente pediu desconto na renovação.",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "substituido",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "\t",
+          "saida": "Texto removido pelo Incognito.",
+          "desfecho": "Substituido",
+          "ramo": "tabulacao",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "",
+          "saida": "",
+          "desfecho": "Vazio",
+          "ramo": "vazio",
+          "origem": {
+            "tipo": "literal"
+          }
+        },
+        {
+          "entrada": "    ",
+          "saida": "    ",
+          "desfecho": "Vazio",
+          "ramo": "so-espacos",
+          "origem": {
+            "tipo": "literal"
+          }
+        }
+      ]
+    }
+  ]
+}

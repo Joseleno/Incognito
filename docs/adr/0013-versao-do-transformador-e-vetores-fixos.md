@@ -121,3 +121,18 @@ nada vai ao NuGet: ninguém tem saídas guardadas de uma versão publicada.
 - A primeira versão 2 de um transformador, para conferir que a convivência das versões funciona na configuração, nos
   vetores e na referência.
 - Uma divergência entre o C# e a referência em Python que se revele erro de interpretação nas duas.
+
+## Atualizações
+
+- 2026-10-17: o registro de transformadores (contrato do [ADR 0017](0017-contratos-de-extensao-e-tipos-do-modelo.md))
+  resolve a referência sem versão escrita para a versão 1 mesmo com uma versão mais nova registrada, e recusa a
+  referência sem versão quando o transformador não tem a versão 1, pedindo que a versão seja escrita
+  (`ResolucaoDeRegrasTestes.Transformador_sem_versao_escrita_resolve_sempre_para_a_versao_1` e
+  `Sem_versao_escrita_e_sem_a_versao_1_o_erro_pede_a_versao`). O registro já sabe a versão mais recente de cada nome;
+  o aviso de versão nova e a versão obsoleta entram com o `planejar` e com a primeira versão 2.
+- 2026-10-17: as fábricas embutidas rodam todos os casos dos vetores de `br.cpf@1`, `br.cnpj@1`, `br.telefone@1`,
+  `email@1`, `br.cep@1` e `texto.substituir@1`, com o domínio, as políticas e os parâmetros de cada caso, numa sessão
+  por ambiente, e dão o mesmo valor, desfecho e código de erro (`FabricasContraOsVetoresTestes`). Novo vetor `texto.substituir@1`, com o parâmetro
+  `comprimentoMaximo` (inteiro positivo ou nulo) nos dois lados, no executor e no esquema em C# e na referência em
+  Python, de 1 a 2.147.483.647; sem caso de erro possível, o autoteste prova que um comprimento máximo alterado é
+  acusado e que 0, negativo, acima do limite, lógico e texto são recusados.

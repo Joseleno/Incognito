@@ -1,4 +1,5 @@
 using CodeProcess.Incognito.Configuracao.Leitura;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Configuracao;
 
@@ -30,22 +31,6 @@ internal enum TipoReferenciaSegredo
 
     /// <summary>Arquivo, com caminho absoluto.</summary>
     Arquivo,
-}
-
-/// <summary>DV errado (<c>entradaInvalida</c>).</summary>
-internal enum TratamentoEntradaInvalida
-{
-    Preservar,
-    Falhar,
-    Anular,
-}
-
-/// <summary>Tamanho ou caracteres errados (<c>entradaMalformada</c>).</summary>
-internal enum TratamentoEntradaMalformada
-{
-    Falhar,
-    Anular,
-    Preservar,
 }
 
 /// <summary>Consistência da leitura.</summary>
@@ -94,10 +79,16 @@ internal sealed record ReferenciaSegredo(TipoReferenciaSegredo Tipo, string Alvo
 internal sealed record ConexaoBanco(ProvedorBanco Provedor, ReferenciaSegredo Conexao, string? BancoEsperado, Posicao Posicao);
 
 /// <summary>Transformador escrito como <c>nome@versao</c>; a versão ausente fica nula (o registro resolve para 1).</summary>
-internal sealed record ReferenciaTransformador(string Nome, int? Versao, Posicao Posicao);
+internal sealed record ReferenciaTransformador(string Nome, int? Versao, Posicao Posicao, string Local);
+
+/// <summary>
+/// Parâmetro de transformador como texto: booleanos e inteiros do YAML na forma canônica (<c>true</c>, <c>55</c>), lista
+/// como texto separado por vírgula. Guarda a posição e o caminho da chave, para o erro da fábrica apontar o parâmetro.
+/// </summary>
+internal sealed record ParametroRegra(string Nome, string Valor, Posicao Posicao, string Local);
 
 /// <summary>Políticas que podem ser escritas na raiz, no domínio ou na coluna; nulo quando não escrita naquele nível.</summary>
-internal sealed record PoliticasDeEntrada(TratamentoEntradaInvalida? EntradaInvalida, TratamentoEntradaMalformada? EntradaMalformada)
+internal sealed record PoliticasDeEntrada(PoliticaEntradaInvalida? EntradaInvalida, PoliticaEntradaMalformada? EntradaMalformada)
 {
     internal static PoliticasDeEntrada Nenhuma { get; } = new(null, null);
 }
@@ -109,9 +100,10 @@ internal sealed record PoliticasGerais(PoliticasDeEntrada Entrada, Consistencia?
 internal sealed record RegraDominio(
     string Nome,
     ReferenciaTransformador Transformador,
-    IReadOnlyList<KeyValuePair<string, string>> Parametros,
+    IReadOnlyList<ParametroRegra> Parametros,
     PoliticasDeEntrada Politicas,
-    Posicao Posicao);
+    Posicao Posicao,
+    string Local);
 
 /// <summary>Nome de tabela ou coluna como escrito, sem resolver maiúsculas (o dialeto resolve no planejar).</summary>
 internal sealed record Identificador(string Nome, bool EntreAspas);
@@ -126,12 +118,13 @@ internal sealed record RegraColuna(
     string? Dominio,
     ReferenciaTransformador? Transformador,
     Identificador? DerivarDe,
-    IReadOnlyList<KeyValuePair<string, string>> Parametros,
+    IReadOnlyList<ParametroRegra> Parametros,
     PoliticasDeEntrada Politicas,
     bool Sensivel,
     string? Justificativa,
     OrigemRegra Origem,
-    Posicao Posicao);
+    Posicao Posicao,
+    string Local);
 
 /// <summary>Regra de uma tabela, com as colunas na ordem do arquivo.</summary>
 internal sealed record RegraTabela(NomeTabela Nome, AcaoTabela Acao, IReadOnlyList<RegraColuna> Colunas, Posicao Posicao);

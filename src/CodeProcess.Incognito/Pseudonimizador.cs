@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito;
 

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using CodeProcess.Incognito.Documentos;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Pseudonimizacao;
 

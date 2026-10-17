@@ -1,5 +1,7 @@
 using System.Text.Json;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
+using CodeProcess.Incognito.Transformadores.Embutidos;
 
 namespace CodeProcess.Incognito.Testes.Vetores;
 
@@ -69,7 +71,8 @@ internal sealed class ExecutorDeCaso : IDisposable
 
         var dominio = caso.GetProperty("dominio").GetString()!;
         var ambiente = caso.GetProperty("ambiente").GetString()!;
-        var malformada = Malformada(caso);
+        // O texto.substituir não tem política de entrada malformada.
+        var malformada = caso.TryGetProperty("entradaMalformada", out _) ? Malformada(caso) : PoliticaEntradaMalformada.Falhar;
         // Pela versão também: um arquivo de versão sem implementação é recusado, nunca executado com o algoritmo de outra.
         switch ($"{transformador}@{versao}")
         {
@@ -135,6 +138,14 @@ internal sealed class ExecutorDeCaso : IDisposable
                 {
                     var desfecho = chaveDfe.Pseudonimizar(SoTexto(entrada), out var texto, out var ocorrencias);
                     return Texto(desfecho, texto) with { Ocorrencias = Nomes(ocorrencias) };
+                };
+            case "texto.substituir@1":
+                var comprimento = caso.GetProperty("comprimentoMaximo");
+                var substituir = new TransformadorTextoSubstituir(comprimento.ValueKind == JsonValueKind.Null ? null : comprimento.GetInt32());
+                return entrada =>
+                {
+                    var resultado = substituir.Transformar(SoTexto(entrada), default);
+                    return new ResultadoDoPar(resultado.Valor, resultado.Desfecho.ToString(), null);
                 };
             default:
                 throw new InvalidDataException("Transformador ou versão sem executor.");

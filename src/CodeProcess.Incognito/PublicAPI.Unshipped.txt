@@ -42,3 +42,114 @@ CodeProcess.Incognito.Normas.ReferenciaNormativa.RevisadaEm.get -> System.DateOn
 CodeProcess.Incognito.Normas.ReferenciaNormativa.Titulo.get -> string!
 static CodeProcess.Incognito.Normas.CatalogoNormativo.Referencias.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Normas.ReferenciaNormativa!>!
 static CodeProcess.Incognito.Normas.CatalogoNormativo.RevisaoMaisAntiga.get -> System.DateOnly
+CodeProcess.Incognito.Transformadores.ContextoCriacao
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Ambiente.get -> string!
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Colacao.get -> string?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Colacao.init -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.ComprimentoMaximo.get -> int?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.ComprimentoMaximo.init -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.ContextoCriacao(CodeProcess.Incognito.Transformadores.RegraTransformacao! regra, CodeProcess.Incognito.Transformadores.TipoColuna tipo, CodeProcess.Incognito.Transformadores.SessaoTransformacao! sessao) -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Regra.get -> CodeProcess.Incognito.Transformadores.RegraTransformacao!
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Tipo.get -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.ContextoCriacao.TipoReferencia.get -> CodeProcess.Incognito.Transformadores.TipoColuna?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.TipoReferencia.init -> void
+CodeProcess.Incognito.Transformadores.ContextoTransformacao
+CodeProcess.Incognito.Transformadores.ContextoTransformacao.ContextoTransformacao() -> void
+CodeProcess.Incognito.Transformadores.ContextoTransformacao.ContextoTransformacao(object? referencia) -> void
+CodeProcess.Incognito.Transformadores.ContextoTransformacao.Referencia.get -> object?
+CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.AnuladoDvInvalido = 4 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.AnuladoMalformado = 5 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.CopiadoEmClaro = 6 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.DvInvalidoPreservado = 2 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.Indefinido = 0 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.Nulo = 10 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.PontoFixo = 3 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.Pseudonimizado = 1 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.ServicoPreservado = 7 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.Substituido = 11 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.Vazio = 8 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.Desfecho.Zerado = 9 -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.DominioPseudonimo
+CodeProcess.Incognito.Transformadores.DominioPseudonimo.DominioPseudonimo() -> void
+CodeProcess.Incognito.Transformadores.DominioPseudonimo.DominioPseudonimo(string! nome, int versao) -> void
+CodeProcess.Incognito.Transformadores.DominioPseudonimo.Equals(CodeProcess.Incognito.Transformadores.DominioPseudonimo other) -> bool
+CodeProcess.Incognito.Transformadores.DominioPseudonimo.Nome.get -> string!
+CodeProcess.Incognito.Transformadores.DominioPseudonimo.Versao.get -> int
+CodeProcess.Incognito.Transformadores.FabricaTransformador
+CodeProcess.Incognito.Transformadores.FabricaTransformador.Criar(CodeProcess.Incognito.Transformadores.ContextoCriacao! contexto) -> CodeProcess.Incognito.Transformadores.Transformador!
+CodeProcess.Incognito.Transformadores.FabricaTransformador.DominioPadrao.get -> string!
+CodeProcess.Incognito.Transformadores.FabricaTransformador.FabricaTransformador() -> void
+CodeProcess.Incognito.Transformadores.Injetividade
+CodeProcess.Incognito.Transformadores.Injetividade.Garantida = 2 -> CodeProcess.Incognito.Transformadores.Injetividade
+CodeProcess.Incognito.Transformadores.Injetividade.Nenhuma = 0 -> CodeProcess.Incognito.Transformadores.Injetividade
+CodeProcess.Incognito.Transformadores.Injetividade.Probabilistica = 1 -> CodeProcess.Incognito.Transformadores.Injetividade
+CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida
+CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida.Anular = 2 -> CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida
+CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida.Falhar = 1 -> CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida
+CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida.Preservar = 0 -> CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida
+CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada
+CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada.Anular = 1 -> CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada
+CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada.Falhar = 0 -> CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada
+CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada.Preservar = 2 -> CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada
+CodeProcess.Incognito.Transformadores.RegraInvalidaException
+CodeProcess.Incognito.Transformadores.RegraInvalidaException.Parametro.get -> string?
+CodeProcess.Incognito.Transformadores.RegraInvalidaException.RegraInvalidaException(string! mensagem, string? parametro = null) -> void
+CodeProcess.Incognito.Transformadores.RegraTransformacao
+CodeProcess.Incognito.Transformadores.RegraTransformacao.Dominio.get -> CodeProcess.Incognito.Transformadores.DominioPseudonimo
+CodeProcess.Incognito.Transformadores.RegraTransformacao.EntradaInvalida.get -> CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida
+CodeProcess.Incognito.Transformadores.RegraTransformacao.EntradaInvalida.init -> void
+CodeProcess.Incognito.Transformadores.RegraTransformacao.EntradaMalformada.get -> CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada
+CodeProcess.Incognito.Transformadores.RegraTransformacao.EntradaMalformada.init -> void
+CodeProcess.Incognito.Transformadores.RegraTransformacao.Parametros.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+CodeProcess.Incognito.Transformadores.RegraTransformacao.Parametros.init -> void
+CodeProcess.Incognito.Transformadores.RegraTransformacao.RegraTransformacao(CodeProcess.Incognito.Transformadores.DominioPseudonimo dominio) -> void
+CodeProcess.Incognito.Transformadores.RegraTransformacao.TemDerivarDe.get -> bool?
+CodeProcess.Incognito.Transformadores.RegraTransformacao.TemDerivarDe.init -> void
+CodeProcess.Incognito.Transformadores.RegraTransformacao.TemJustificativa.get -> bool?
+CodeProcess.Incognito.Transformadores.RegraTransformacao.TemJustificativa.init -> void
+CodeProcess.Incognito.Transformadores.ResultadoTransformacao
+CodeProcess.Incognito.Transformadores.ResultadoTransformacao.Desfecho.get -> CodeProcess.Incognito.Transformadores.Desfecho
+CodeProcess.Incognito.Transformadores.ResultadoTransformacao.ResultadoTransformacao() -> void
+CodeProcess.Incognito.Transformadores.ResultadoTransformacao.ResultadoTransformacao(object? valor, CodeProcess.Incognito.Transformadores.Desfecho desfecho) -> void
+CodeProcess.Incognito.Transformadores.ResultadoTransformacao.Valor.get -> object?
+CodeProcess.Incognito.Transformadores.SessaoTransformacao
+CodeProcess.Incognito.Transformadores.SessaoTransformacao.Ambiente.get -> string!
+CodeProcess.Incognito.Transformadores.SessaoTransformacao.Dispose() -> void
+CodeProcess.Incognito.Transformadores.SessaoTransformacao.SessaoTransformacao(CodeProcess.Incognito.ChaveIncognito! chave, string! ambiente) -> void
+CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Binario = 6 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Booleano = 7 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Data = 3 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.DataHora = 4 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.DataHoraComFuso = 5 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Decimal = 2 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Inteiro = 1 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Texto = 0 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.TipoColuna.Uuid = 8 -> CodeProcess.Incognito.Transformadores.TipoColuna
+CodeProcess.Incognito.Transformadores.Transformador
+CodeProcess.Incognito.Transformadores.Transformador.Transformador() -> void
+CodeProcess.Incognito.Transformadores.TransformadoresEmbutidos
+abstract CodeProcess.Incognito.Transformadores.FabricaTransformador.CriarCore(CodeProcess.Incognito.Transformadores.ContextoCriacao! contexto) -> CodeProcess.Incognito.Transformadores.Transformador!
+abstract CodeProcess.Incognito.Transformadores.FabricaTransformador.Injetividade.get -> CodeProcess.Incognito.Transformadores.Injetividade
+abstract CodeProcess.Incognito.Transformadores.FabricaTransformador.Nome.get -> string!
+abstract CodeProcess.Incognito.Transformadores.FabricaTransformador.TiposSuportados.get -> System.Collections.Generic.IReadOnlySet<CodeProcess.Incognito.Transformadores.TipoColuna>!
+abstract CodeProcess.Incognito.Transformadores.FabricaTransformador.Versao.get -> int
+abstract CodeProcess.Incognito.Transformadores.Transformador.Injetividade.get -> CodeProcess.Incognito.Transformadores.Injetividade
+abstract CodeProcess.Incognito.Transformadores.Transformador.Nome.get -> string!
+abstract CodeProcess.Incognito.Transformadores.Transformador.Transformar(object? valor, in CodeProcess.Incognito.Transformadores.ContextoTransformacao contexto) -> CodeProcess.Incognito.Transformadores.ResultadoTransformacao
+abstract CodeProcess.Incognito.Transformadores.Transformador.Versao.get -> int
+const CodeProcess.Incognito.Transformadores.RegraInvalidaException.CodigoDoErro = "INC1005" -> string!
+override CodeProcess.Incognito.Transformadores.ContextoTransformacao.ToString() -> string!
+override CodeProcess.Incognito.Transformadores.DominioPseudonimo.Equals(object? obj) -> bool
+override CodeProcess.Incognito.Transformadores.DominioPseudonimo.GetHashCode() -> int
+override CodeProcess.Incognito.Transformadores.DominioPseudonimo.ToString() -> string!
+override CodeProcess.Incognito.Transformadores.ResultadoTransformacao.ToString() -> string!
+static CodeProcess.Incognito.Transformadores.DominioPseudonimo.TryParse(string? texto, out CodeProcess.Incognito.Transformadores.DominioPseudonimo dominio) -> bool
+static CodeProcess.Incognito.Transformadores.DominioPseudonimo.operator !=(CodeProcess.Incognito.Transformadores.DominioPseudonimo esquerda, CodeProcess.Incognito.Transformadores.DominioPseudonimo direita) -> bool
+static CodeProcess.Incognito.Transformadores.DominioPseudonimo.operator ==(CodeProcess.Incognito.Transformadores.DominioPseudonimo esquerda, CodeProcess.Incognito.Transformadores.DominioPseudonimo direita) -> bool
+static CodeProcess.Incognito.Transformadores.TransformadoresEmbutidos.Fabricas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Transformadores.FabricaTransformador!>!
+virtual CodeProcess.Incognito.Transformadores.FabricaTransformador.Normalizar(CodeProcess.Incognito.Transformadores.RegraTransformacao! regra) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+virtual CodeProcess.Incognito.Transformadores.FabricaTransformador.ParametrosDeIdentidade.get -> System.Collections.Generic.IReadOnlySet<string!>!
+virtual CodeProcess.Incognito.Transformadores.FabricaTransformador.Validar(CodeProcess.Incognito.Transformadores.RegraTransformacao! regra) -> void
+virtual CodeProcess.Incognito.Transformadores.Transformador.TransformaNulo.get -> bool

@@ -5,6 +5,7 @@ using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Documentos;
 using CodeProcess.Incognito.Geracao;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Testes;
 

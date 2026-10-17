@@ -26,6 +26,7 @@ internal static class EsquemaDeVetores
         ["id.permutar@1"] = ["n", "entradaMalformada"],
         ["br.chave-pix@1"] = ["entradaMalformada", "componentes"],
         ["br.chave-dfe@1"] = ["modelos", "entradaInvalida", "entradaMalformada", "componentes"],
+        ["texto.substituir@1"] = ["comprimentoMaximo"],
     };
 
     // Os componentes de cada transformador composto: as instâncias das colunas que ele usa.
@@ -173,6 +174,13 @@ internal static class EsquemaDeVetores
                     break;
                 case "modelos":
                     ConferirModelos(caso, onde);
+                    break;
+                case "comprimentoMaximo":
+                    if (caso.GetProperty(parametro).ValueKind != JsonValueKind.Null && Inteiro(caso, parametro, onde) is < 1 or > int.MaxValue)
+                    {
+                        throw Falha(onde, "comprimento máximo nem nulo nem de 1 a 2147483647");
+                    }
+
                     break;
                 default:
                     throw Falha(onde, "parâmetro sem conferência");

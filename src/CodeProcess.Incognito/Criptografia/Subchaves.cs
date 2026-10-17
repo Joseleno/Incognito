@@ -152,7 +152,7 @@ internal static class Subchaves
     }
 
     // [a-z0-9]+ ([._-] [a-z0-9]+)*, até 64 caracteres. O nome vazio cai no retorno final, como se terminasse em separador.
-    private static bool EhNomeValido(string nome)
+    internal static bool EhNomeValido(string nome)
     {
         if (nome.Length > TamanhoMaximoDoNome)
         {
