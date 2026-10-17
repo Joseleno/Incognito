@@ -1,0 +1,270 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Joseleno/Incognito/main/esquema/incognito.schema.json",
+  "title": "incognito.yaml",
+  "description": "Configuração do Incognito: cópia de um banco com os dados pessoais substituídos. A chave e as strings de conexão nunca vão por extenso: use ambiente:NOME ou arquivo:caminho.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao", "origem", "destino", "modo", "ambiente"],
+  "properties": {
+    "versao": {
+      "description": "Versão do formato do arquivo.",
+      "const": 1
+    },
+    "origem": {
+      "description": "Banco lido, de preferência uma réplica. Nunca é escrito.",
+      "$ref": "#/definitions/origem"
+    },
+    "destino": {
+      "description": "Banco que recebe a cópia, marcado antes por preparar-destino.",
+      "$ref": "#/definitions/destino"
+    },
+    "modo": {
+      "description": "reproduzivel: chave persistente, o mesmo valor dá o mesmo pseudônimo entre execuções (gera dado pessoal). efemero: chave gerada na memória e descartada (não é anonimização garantida).",
+      "enum": ["reproduzivel", "efemero"]
+    },
+    "chave": {
+      "description": "Referência à chave do Incognito: obrigatória em reproduzivel, proibida em efemero.",
+      "$ref": "#/definitions/segredo"
+    },
+    "ambiente": {
+      "description": "Entra em todas as derivações: a mesma chave em ambientes diferentes gera pseudônimos sem relação.",
+      "$ref": "#/definitions/nome"
+    },
+    "politica": {
+      "$ref": "#/definitions/politica"
+    },
+    "dominios": {
+      "description": "Domínio = mesmo significado em várias tabelas. O nome entra na derivação: renomear muda a saída do modo reproduzivel.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/nomeDeDominio" },
+      "additionalProperties": { "$ref": "#/definitions/dominio" }
+    },
+    "tabelas": {
+      "description": "Regras por tabela, no formato esquema.tabela.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/nomeDeTabela" },
+      "additionalProperties": { "$ref": "#/definitions/tabela" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "modo": { "const": "reproduzivel" } }, "required": ["modo"] },
+      "then": { "required": ["chave"] }
+    },
+    {
+      "if": { "properties": { "modo": { "const": "efemero" } }, "required": ["modo"] },
+      "then": { "not": { "required": ["chave"] } }
+    }
+  ],
+  "definitions": {
+    "nome": {
+      "description": "Letras minúsculas sem acento e dígitos, com '.', '_' ou '-' entre eles, até 64 caracteres.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$"
+    },
+    "nomeDeDominio": {
+      "allOf": [
+        { "$ref": "#/definitions/nome" },
+        { "not": { "const": "manter" } }
+      ]
+    },
+    "segredo": {
+      "description": "ambiente:NOME (variável de ambiente) ou arquivo:caminho (relativo à pasta do incognito.yaml).",
+      "type": "string",
+      "pattern": "^(ambiente:[A-Za-z_][A-Za-z0-9_]*|arquivo:[^\\s~](.*[^\\s])?)$"
+    },
+    "provedor": {
+      "enum": ["postgresql", "sqlserver"]
+    },
+    "origem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provedor", "conexao"],
+      "properties": {
+        "provedor": { "$ref": "#/definitions/provedor" },
+        "conexao": { "$ref": "#/definitions/segredo" }
+      }
+    },
+    "destino": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provedor", "conexao", "bancoEsperado"],
+      "properties": {
+        "provedor": { "$ref": "#/definitions/provedor" },
+        "conexao": { "$ref": "#/definitions/segredo" },
+        "bancoEsperado": {
+          "description": "Nome do banco de destino, conferido antes de qualquer escrita.",
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "entradaInvalida": {
+      "description": "DV errado: preservar (com o deslocamento), falhar ou anular.",
+      "enum": ["preservar", "falhar", "anular"]
+    },
+    "entradaMalformada": {
+      "description": "Tamanho ou caracteres errados: falhar, anular ou preservar (copia em claro, com aviso no relatório).",
+      "enum": ["falhar", "anular", "preservar"]
+    },
+    "politica": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "semClassificacao": {
+          "description": "Colunas sem suspeita são copiadas como estão.",
+          "enum": ["copiar"]
+        },
+        "suspeitaSemRegra": {
+          "description": "Coluna suspeita sem regra faz a execução falhar.",
+          "enum": ["falhar"]
+        },
+        "entradaInvalida": { "$ref": "#/definitions/entradaInvalida" },
+        "entradaMalformada": { "$ref": "#/definitions/entradaMalformada" },
+        "consistencia": {
+          "description": "melhorEsforco (padrão) ou exigir um snapshot único na leitura.",
+          "enum": ["melhorEsforco", "exigir"]
+        },
+        "paralelismo": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
+      }
+    },
+    "transformador": {
+      "description": "nome@versao; sem versão vale a versão 1, para sempre.",
+      "type": "string",
+      "maxLength": 74,
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*(@[1-9][0-9]{0,8})?$"
+    },
+    "nomeDeParametro": {
+      "type": "string",
+      "pattern": "^[a-z][A-Za-z0-9]*$"
+    },
+    "parametro": {
+      "description": "Parâmetro do transformador: um valor ou uma lista de valores.",
+      "oneOf": [
+        { "type": ["string", "number", "boolean"] },
+        {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": ["number", "boolean"] },
+              { "type": "string", "pattern": "^[^,]*$" }
+            ]
+          }
+        }
+      ]
+    },
+    "dominio": {
+      "type": "object",
+      "required": ["transformador"],
+      "properties": {
+        "transformador": { "$ref": "#/definitions/transformador" },
+        "entradaInvalida": { "$ref": "#/definitions/entradaInvalida" },
+        "entradaMalformada": { "$ref": "#/definitions/entradaMalformada" }
+      },
+      "propertyNames": {
+        "allOf": [
+          { "$ref": "#/definitions/nomeDeParametro" },
+          { "not": { "enum": ["acao", "dominio", "derivarDe", "classe", "justificativa"] } }
+        ]
+      },
+      "additionalProperties": { "$ref": "#/definitions/parametro" }
+    },
+    "nomeDeTabela": {
+      "description": "esquema.tabela; nome com ponto ou maiúsculas entre aspas duplas: '\"Vendas\".\"Clientes\"'.",
+      "type": "string",
+      "pattern": "^(\"([^\"]|\"\")+\"|[^\".\\s]+)\\.(\"([^\"]|\"\")+\"|[^\".\\s]+)$"
+    },
+    "nomeDeColuna": {
+      "type": "string",
+      "pattern": "^(\"([^\"]|\"\")+\"|[^\".\\s]+)$"
+    },
+    "tabela": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "acao": {
+          "description": "copiar (padrão: esvazia o destino e copia), esvaziar ou ignorar.",
+          "enum": ["copiar", "esvaziar", "ignorar"]
+        },
+        "colunas": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/definitions/nomeDeColuna" },
+          "additionalProperties": { "$ref": "#/definitions/regraColuna" }
+        }
+      },
+      "if": { "properties": { "acao": { "enum": ["esvaziar", "ignorar"] } }, "required": ["acao"] },
+      "then": { "not": { "required": ["colunas"] } }
+    },
+    "justificativa": {
+      "description": "Por que a coluna pode ir assim; vai para o relatório: nunca ponha dado pessoal.",
+      "type": "string",
+      "maxLength": 500,
+      "pattern": "\\S"
+    },
+    "regraColuna": {
+      "oneOf": [
+        { "description": "Copia sem alterar.", "const": "manter" },
+        { "description": "Nome de um domínio declarado.", "$ref": "#/definitions/nomeDeDominio" },
+        { "$ref": "#/definitions/colunaManter" },
+        { "$ref": "#/definitions/colunaTransformador" },
+        { "$ref": "#/definitions/colunaDominio" }
+      ]
+    },
+    "colunaManter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acao"],
+      "properties": {
+        "acao": { "const": "manter" },
+        "classe": { "enum": ["sensivel"] },
+        "justificativa": { "$ref": "#/definitions/justificativa" }
+      },
+      "if": { "properties": { "classe": { "const": "sensivel" } }, "required": ["classe"] },
+      "then": { "required": ["justificativa"] }
+    },
+    "colunaTransformador": {
+      "type": "object",
+      "required": ["transformador"],
+      "properties": {
+        "transformador": { "$ref": "#/definitions/transformador" },
+        "dominio": {
+          "description": "Só no id.permutar: declara o domínio na coluna de PK.",
+          "$ref": "#/definitions/nomeDeDominio"
+        },
+        "derivarDe": { "$ref": "#/definitions/nomeDeColuna" },
+        "classe": { "enum": ["sensivel"] },
+        "justificativa": { "$ref": "#/definitions/justificativa" },
+        "entradaInvalida": { "$ref": "#/definitions/entradaInvalida" },
+        "entradaMalformada": { "$ref": "#/definitions/entradaMalformada" }
+      },
+      "propertyNames": {
+        "allOf": [
+          { "$ref": "#/definitions/nomeDeParametro" },
+          { "not": { "const": "acao" } }
+        ]
+      },
+      "additionalProperties": { "$ref": "#/definitions/parametro" },
+      "if": { "required": ["dominio"] },
+      "then": { "properties": { "transformador": { "pattern": "^id\\.permutar(@[1-9][0-9]{0,8})?$" } } }
+    },
+    "colunaDominio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dominio"],
+      "properties": {
+        "dominio": { "$ref": "#/definitions/nomeDeDominio" },
+        "derivarDe": { "$ref": "#/definitions/nomeDeColuna" },
+        "classe": { "enum": ["sensivel"] },
+        "justificativa": { "$ref": "#/definitions/justificativa" },
+        "entradaInvalida": { "$ref": "#/definitions/entradaInvalida" },
+        "entradaMalformada": { "$ref": "#/definitions/entradaMalformada" }
+      }
+    }
+  }
+}

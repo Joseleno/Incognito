@@ -8,4 +8,13 @@
     <ProjectReference Include="..\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
   </ItemGroup>
 
+  <!-- Leitura do incognito.yaml só pelo Parser (eventos), sem reflexão; ver Configuracao/Leitura/LeitorYaml.cs. -->
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CodeProcess.Incognito.Testes.Motor" />
+  </ItemGroup>
+
 </Project>
