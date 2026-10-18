@@ -11,9 +11,15 @@ internal sealed class FabricaEmail() : FabricaEmbutida("email", "email", Injetiv
     protected override Transformador CriarCore(ContextoCriacao contexto)
     {
         ExigirComprimento(contexto, 32, "o pseudônimo de e-mail tem 32 caracteres");
-        var regra = contexto.Regra;
-        var email = contexto.Sessao.Obter(Identidade(contexto), (chave, ambiente) => new PseudonimizadorEmail(
-            chave, regra.Dominio.Nome, regra.Dominio.Versao, ambiente, regra.EntradaMalformada));
+        var email = Instancia(contexto.Sessao, contexto.Regra);
         return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, email.Pseudonimizar, null);
     }
+
+    /// <summary>
+    /// A instância de uma regra, pela mesma identidade da coluna: a chave Pix e a chave de DF-e pedem por aqui a do
+    /// domínio do documento, e a coluna dele usa a mesma.
+    /// </summary>
+    internal PseudonimizadorEmail Instancia(SessaoTransformacao sessao, RegraTransformacao regra) =>
+        sessao.Obter(Identidade(regra), (chave, ambiente) => new PseudonimizadorEmail(
+            chave, regra.Dominio.Nome, regra.Dominio.Versao, ambiente, regra.EntradaMalformada));
 }

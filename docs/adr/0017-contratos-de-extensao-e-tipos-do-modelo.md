@@ -86,3 +86,14 @@ carregá-los de um lado para o outro.
 - O congelamento da API pública, para conferir a lista do item 4 e as propriedades de cada contexto.
 - O primeiro pedido de um transformador próprio determinístico com a chave (item 7).
 - Uma versão do .NET que mude o que um método padrão de interface pode fazer.
+
+## Atualizações
+
+- 2026-10-18: a chave Pix e a chave de DF-e usam outros domínios da configuração (`dominioCpf`, `dominioCnpj`,
+  `dominioEmail`, `dominioTelefone`). A tabela de domínios entra na sessão (`SessaoTransformacao.Dominios`, por
+  propriedade `init`), e cada domínio é um `DefinicaoDominio` (transformador e regra do domínio), que se soma à lista
+  do item 4. `FabricaTransformador.ParametrosDeDominio` diz quais parâmetros citam outro domínio e de qual
+  transformador; como o `DominioPadrao`, só as embutidas o preenchem, porque só elas pedem instâncias à sessão
+  (item 7). Os domínios citados são referência, não identidade: não mudam o domínio da regra. Verificado por
+  `FabricasDasChavesTestes` (domínio ausente, de outro transformador ou de outra versão recusado; instâncias
+  compartilhadas com as colunas dos documentos) e, no motor, por `DominiosCitadosTestes`.

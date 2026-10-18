@@ -26,11 +26,19 @@ internal sealed class FabricaCnpj() : FabricaEmbutida("br.cnpj", "cnpj", Injetiv
     protected override Transformador CriarCore(ContextoCriacao contexto)
     {
         ExigirComprimento(contexto, 14, "o pseudônimo de CNPJ tem 14 caracteres (18 com a máscara)");
-        var regra = contexto.Regra;
+        var cnpj = Instancia(contexto.Sessao, contexto.Regra);
+        return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, cnpj.Pseudonimizar, cnpj.Pseudonimizar);
+    }
+
+    /// <summary>
+    /// A instância de uma regra, pela mesma identidade da coluna: a chave Pix e a chave de DF-e pedem por aqui a do
+    /// domínio do documento, e a coluna dele usa a mesma.
+    /// </summary>
+    internal PseudonimizadorCnpj Instancia(SessaoTransformacao sessao, RegraTransformacao regra)
+    {
         var normalizados = Normalizar(regra);
         var permutarOrdem = normalizados[PermutarOrdem] == "true";
-        var cnpj = contexto.Sessao.Obter(Identidade(contexto, normalizados), (chave, ambiente) => new PseudonimizadorCnpj(
+        return sessao.Obter(Identidade(regra, normalizados), (chave, ambiente) => new PseudonimizadorCnpj(
             chave, regra.Dominio.Nome, regra.Dominio.Versao, ambiente, permutarOrdem, regra.EntradaInvalida, regra.EntradaMalformada));
-        return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, cnpj.Pseudonimizar, cnpj.Pseudonimizar);
     }
 }

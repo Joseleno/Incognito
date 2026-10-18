@@ -10,9 +10,15 @@ internal sealed class FabricaCpf() : FabricaEmbutida("br.cpf", "cpf", Injetivida
     protected override Transformador CriarCore(ContextoCriacao contexto)
     {
         ExigirComprimento(contexto, 11, "o pseudônimo de CPF tem 11 caracteres (14 com a máscara)");
-        var regra = contexto.Regra;
-        var cpf = contexto.Sessao.Obter(Identidade(contexto), (chave, ambiente) => new PseudonimizadorCpf(
-            chave, regra.Dominio.Nome, regra.Dominio.Versao, ambiente, regra.EntradaInvalida, regra.EntradaMalformada));
+        var cpf = Instancia(contexto.Sessao, contexto.Regra);
         return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, cpf.Pseudonimizar, cpf.Pseudonimizar);
     }
+
+    /// <summary>
+    /// A instância de uma regra, pela mesma identidade da coluna: a chave Pix e a chave de DF-e pedem por aqui a do
+    /// domínio do documento, e a coluna dele usa a mesma.
+    /// </summary>
+    internal PseudonimizadorCpf Instancia(SessaoTransformacao sessao, RegraTransformacao regra) =>
+        sessao.Obter(Identidade(regra), (chave, ambiente) => new PseudonimizadorCpf(
+            chave, regra.Dominio.Nome, regra.Dominio.Versao, ambiente, regra.EntradaInvalida, regra.EntradaMalformada));
 }

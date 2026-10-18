@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using CodeProcess.Incognito.Configuracao;
 using CodeProcess.Incognito.Configuracao.Leitura;
 using Corvus.Json;
 using JsonSchema = Corvus.Json.Validator.JsonSchema;
@@ -25,7 +26,30 @@ public sealed class EsquemaJsonTestes
         Yaml.Trocando("modo: reproduzivel", "modo: efemero").Replace("chave: ambiente:INCOGNITO_CHAVE\n", "", StringComparison.Ordinal),
         Yaml.Com("tabelas:\n  public.pedidos:\n    colunas:\n      id: { transformador: id.permutar@1, dominio: pedido_id }\n  public.itens:\n    colunas:\n      pedido_id: pedido_id\n      cpf: { dominio: pedido_id, entradaMalformada: anular }\n"),
         Yaml.Com("tabelas:\n  '\"Vendas\".\"Clientes\"': { acao: ignorar }\n  dbo.pedidos: { acao: copiar }\n"),
-        Yaml.Com("dominios:\n  chave-dfe: { transformador: br.chave-dfe, modelos: [55, 65], permutarOrdem: true }\n"),
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe, modelos: [55, 65], dominioCnpj: cnpj-loja }\n  cnpj-loja: { transformador: br.cnpj@1, permutarOrdem: true }\n"),
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe@1, modelos: 57 }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      pix: { transformador: br.chave-pix, dominioCpf: cpf, entradaMalformada: preservar, justificativa: \"chaves antigas fora do DICT\" }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      a: { transformador: br.cpf@1 }\n      b: { transformador: email }\n      c: { transformador: br.cep, derivarDe: a }\n      d: { transformador: texto.substituir }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      pix: { transformador: br.chave-pix@1, dominioCpf: a, dominioCnpj: b, dominioEmail: c, dominioTelefone: d }\n"),
+        // A declaração do domínio não tem justificativa: quem a exige é cada coluna.
+        Yaml.Com("dominios:\n  pix-loja: { transformador: br.chave-pix@1, entradaMalformada: preservar }\n"),
+        // Outra versão ou transformador de fora: o esquema não conhece os parâmetros.
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      a: { transformador: br.cpf@2, precisao: ano }\n      b: { transformador: empresa.doc@1, estilo: x }\n"),
+    ];
+
+    // Aceitos na leitura, recusados pela fábrica na resolução (INC2022): o esquema conhece os parâmetros das embutidas.
+    public static TheoryData<string> InvalidosNaResolucaoENoEsquema() =>
+    [
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      cpf: { transformador: br.cpf@1, precisao: ano }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      obs: { transformador: texto.substituir, comprimento: 3 }\n"),
+        Yaml.Com("dominios:\n  fornecedor: { transformador: br.cnpj, permutarOrdem: 1 }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      pix: { transformador: br.chave-pix, dominioCpf: Cpf }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      pix: { transformador: br.chave-pix@1, modelos: [55] }\n"),
+        Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      pix: { transformador: br.chave-pix, entradaMalformada: preservar }\n"),
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe, modelos: [54] }\n"),
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe, modelos: [55, 55] }\n"),
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe, permutarOrdem: true }\n"),
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe, dominioEmail: email }\n"),
     ];
 
     public static TheoryData<string> InvalidosNosDois() =>
@@ -84,6 +108,9 @@ public sealed class EsquemaJsonTestes
     [
         Yaml.Com("politica:\n  consistencia: ~\n"),
         Yaml.Com("tabelas:\n  public.clientes: { acao: ~ }\n"),
+        // Formas que o motor tolera e o editor corrige para a canônica: lista como texto com vírgula, lógico entre aspas.
+        Yaml.Com("dominios:\n  dfe-numero: { transformador: br.chave-dfe, modelos: \"55,65\" }\n"),
+        Yaml.Com("dominios:\n  fornecedor: { transformador: br.cnpj, permutarOrdem: \"true\" }\n"),
         // Justificativa em branco numa coluna não sensível: o validador a trata como ausente.
         Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n      c: { acao: manter, justificativa: \" \" }\n"),
     ];
@@ -109,6 +136,16 @@ public sealed class EsquemaJsonTestes
     public void Invalido_no_validador_e_no_esquema(string texto)
     {
         Assert.NotEmpty(Yaml.Erros(texto));
+        Assert.False(ValidoNoEsquema(texto));
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidosNaResolucaoENoEsquema))]
+    public void Invalido_na_resolucao_e_no_esquema(string texto)
+    {
+        var configuracao = Yaml.Ler(texto);
+        var excecao = Assert.Throws<ConfiguracaoInvalidaException>(() => ResolvedorDeRegras.Resolver(configuracao, new RegistroTransformadores()));
+        Assert.All(excecao.Erros, erro => Assert.Equal("INC2022", erro.Codigo));
         Assert.False(ValidoNoEsquema(texto));
     }
 

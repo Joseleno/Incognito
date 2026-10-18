@@ -173,7 +173,8 @@
           { "not": { "enum": ["acao", "dominio", "derivarDe", "classe", "justificativa"] } }
         ]
       },
-      "additionalProperties": { "$ref": "#/definitions/parametro" }
+      "additionalProperties": { "$ref": "#/definitions/parametro" },
+      "allOf": [{ "$ref": "#/definitions/parametrosDasEmbutidas" }]
     },
     "nomeDeTabela": {
       "description": "esquema.tabela; nome com ponto ou maiúsculas entre aspas duplas: '\"Vendas\".\"Clientes\"'.",
@@ -251,7 +252,69 @@
       },
       "additionalProperties": { "$ref": "#/definitions/parametro" },
       "if": { "required": ["dominio"] },
-      "then": { "properties": { "transformador": { "pattern": "^id\\.permutar(@[1-9][0-9]{0,8})?$" } } }
+      "then": { "properties": { "transformador": { "pattern": "^id\\.permutar(@[1-9][0-9]{0,8})?$" } } },
+      "allOf": [
+        { "$ref": "#/definitions/parametrosDasEmbutidas" },
+        {
+          "description": "Na chave Pix, 'entradaMalformada: preservar' copia em claro o que não tem forma de chave: a coluna precisa da justificativa.",
+          "if": {
+            "properties": { "transformador": { "pattern": "^br\\.chave-pix(@1)?$" }, "entradaMalformada": { "const": "preservar" } },
+            "required": ["transformador", "entradaMalformada"]
+          },
+          "then": { "required": ["justificativa"] }
+        }
+      ]
+    },
+    "parametrosDasEmbutidas": {
+      "description": "Os parâmetros de cada transformador embutido na versão 1; os de outros transformadores, só o Incognito confere.",
+      "allOf": [
+        {
+          "if": { "properties": { "transformador": { "pattern": "^(br\\.cpf|br\\.telefone|email|br\\.cep|texto\\.substituir)(@1)?$" } }, "required": ["transformador"] },
+          "then": { "propertyNames": { "enum": ["transformador", "dominio", "derivarDe", "classe", "justificativa", "entradaInvalida", "entradaMalformada"] } }
+        },
+        {
+          "if": { "properties": { "transformador": { "pattern": "^br\\.cnpj(@1)?$" } }, "required": ["transformador"] },
+          "then": {
+            "propertyNames": { "enum": ["transformador", "dominio", "derivarDe", "classe", "justificativa", "entradaInvalida", "entradaMalformada", "permutarOrdem"] },
+            "properties": { "permutarOrdem": { "description": "Permuta a ordem da raiz do CNPJ; muda o universo de pseudônimos.", "type": "boolean" } }
+          }
+        },
+        {
+          "if": { "properties": { "transformador": { "pattern": "^br\\.chave-pix(@1)?$" } }, "required": ["transformador"] },
+          "then": {
+            "propertyNames": {
+              "enum": ["transformador", "dominio", "derivarDe", "classe", "justificativa", "entradaInvalida", "entradaMalformada", "dominioCpf", "dominioCnpj", "dominioEmail", "dominioTelefone"]
+            },
+            "properties": {
+              "dominioCpf": { "description": "Domínio do br.cpf@1 das chaves do tipo CPF (padrão: cpf).", "$ref": "#/definitions/nomeDeDominio" },
+              "dominioCnpj": { "description": "Domínio do br.cnpj@1 das chaves do tipo CNPJ (padrão: cnpj).", "$ref": "#/definitions/nomeDeDominio" },
+              "dominioEmail": { "description": "Domínio do email@1 das chaves do tipo e-mail (padrão: email).", "$ref": "#/definitions/nomeDeDominio" },
+              "dominioTelefone": { "description": "Domínio do br.telefone@1 das chaves do tipo telefone (padrão: telefone).", "$ref": "#/definitions/nomeDeDominio" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "transformador": { "pattern": "^br\\.chave-dfe(@1)?$" } }, "required": ["transformador"] },
+          "then": {
+            "propertyNames": { "enum": ["transformador", "dominio", "derivarDe", "classe", "justificativa", "entradaInvalida", "entradaMalformada", "modelos", "dominioCpf", "dominioCnpj"] },
+            "properties": {
+              "modelos": {
+                "description": "Modelos aceitos pela coluna (padrão: os nove).",
+                "oneOf": [
+                  { "$ref": "#/definitions/modeloDfe" },
+                  { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/modeloDfe" } }
+                ]
+              },
+              "dominioCpf": { "description": "Domínio do br.cpf@1 do emitente pessoa física (padrão: cpf).", "$ref": "#/definitions/nomeDeDominio" },
+              "dominioCnpj": { "description": "Domínio do br.cnpj@1 do emitente pessoa jurídica (padrão: cnpj).", "$ref": "#/definitions/nomeDeDominio" }
+            }
+          }
+        }
+      ]
+    },
+    "modeloDfe": {
+      "description": "NF-e 55, CT-e 57, MDF-e 58, NFCom 62, BP-e 63, GTV-e 64, NFC-e 65, NF3e 66, CT-e OS 67.",
+      "enum": [55, 57, 58, 62, 63, 64, 65, 66, 67]
     },
     "colunaDominio": {
       "type": "object",

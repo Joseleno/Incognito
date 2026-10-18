@@ -1,12 +1,14 @@
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
+using CodeProcess.Incognito.Criptografia;
 
 namespace CodeProcess.Incognito.Transformadores.Embutidos;
 
 /// <summary>
 /// Base das fábricas embutidas, todas na versão 1: parâmetros aceitos com o padrão e a forma canônica, uso do
-/// <c>derivarDe</c>, comprimento mínimo da coluna e a identidade das instâncias na sessão.
+/// <c>derivarDe</c>, comprimento mínimo da coluna, a identidade das instâncias na sessão e os domínios citados por
+/// outras fábricas.
 /// </summary>
 internal abstract class FabricaEmbutida : FabricaTransformador
 {
@@ -76,6 +78,8 @@ internal abstract class FabricaEmbutida : FabricaTransformador
             throw new RegraInvalidaException(
                 $"O transformador {Nome}@{Versao} precisa de 'derivarDe': a coluna da mesma tabela de que o valor é derivado (numa coluna de domínio, {{ dominio: nome, derivarDe: coluna }}).");
         }
+
+        ValidarRegra(regra);
     }
 
     public sealed override IReadOnlyDictionary<string, string> Normalizar(RegraTransformacao regra)
@@ -83,8 +87,34 @@ internal abstract class FabricaEmbutida : FabricaTransformador
         Validar(regra);
         return ParametrosAceitos.ToFrozenDictionary(
             parametro => parametro.Key,
-            parametro => regra.Parametros.TryGetValue(parametro.Key, out var valor) ? valor : parametro.Value.Padrao,
+            parametro => regra.Parametros.TryGetValue(parametro.Key, out var valor) ? parametro.Value.Canonico(valor) : parametro.Value.Padrao,
             StringComparer.Ordinal);
+    }
+
+    /// <summary>Confere o que é próprio da fábrica, depois dos parâmetros e do <c>derivarDe</c>.</summary>
+    /// <exception cref="RegraInvalidaException">Regra recusada.</exception>
+    protected virtual void ValidarRegra(RegraTransformacao regra)
+    {
+    }
+
+    /// <summary>
+    /// A regra do domínio citado num parâmetro (<c>dominioCpf</c>), da tabela de domínios da sessão: precisa ser do
+    /// transformador esperado, na versão 1.
+    /// </summary>
+    /// <exception cref="RegraInvalidaException">Domínio fora da tabela, de outro transformador ou de outra versão.</exception>
+    protected static RegraTransformacao DominioCitado(SessaoTransformacao sessao, IReadOnlyDictionary<string, string> normalizados, string parametro, string transformador)
+    {
+        if (!sessao.TentarObterDominio(normalizados[parametro], out var definicao))
+        {
+            throw new RegraInvalidaException($"O domínio citado em '{parametro}' não está na tabela de domínios da sessão.", parametro);
+        }
+
+        if (!string.Equals(definicao.Transformador, transformador, StringComparison.Ordinal) || definicao.Regra.Dominio.Versao != 1)
+        {
+            throw new RegraInvalidaException($"O domínio citado em '{parametro}' precisa ser do {transformador}@1.", parametro);
+        }
+
+        return definicao.Regra;
     }
 
     /// <summary>Recusa a coluna de texto que não comporta o menor pseudônimo.</summary>
@@ -100,12 +130,11 @@ internal abstract class FabricaEmbutida : FabricaTransformador
     /// Tudo o que muda a saída de uma instância: transformador, domínio, versão, parâmetros normalizados e as políticas
     /// que ele usa. Duas colunas com a mesma identidade usam a mesma instância da sessão.
     /// </summary>
-    protected string Identidade(ContextoCriacao contexto) => Identidade(contexto, Normalizar(contexto.Regra));
+    protected string Identidade(RegraTransformacao regra) => Identidade(regra, Normalizar(regra));
 
-    /// <inheritdoc cref="Identidade(ContextoCriacao)"/>
-    protected string Identidade(ContextoCriacao contexto, IReadOnlyDictionary<string, string> normalizados)
+    /// <inheritdoc cref="Identidade(RegraTransformacao)"/>
+    protected string Identidade(RegraTransformacao regra, IReadOnlyDictionary<string, string> normalizados)
     {
-        var regra = contexto.Regra;
         var invalida = UsaEntradaInvalida ? regra.EntradaInvalida.ToString() : "-";
         var identidade = new StringBuilder()
             .Append(CultureInfo.InvariantCulture, $"{Nome}@{Versao}|{regra.Dominio}|{invalida}|{regra.EntradaMalformada}");
@@ -125,10 +154,20 @@ internal abstract class FabricaEmbutida : FabricaTransformador
         ParametrosAceitos.Count == 0 ? "não tem parâmetros" : "aceita " + string.Join(", ", ParametrosAceitos.Keys.Order(StringComparer.Ordinal));
 }
 
-/// <summary>Um parâmetro de fábrica embutida: o padrão, a forma canônica e a conferência.</summary>
-internal sealed record ParametroEmbutido(string Padrao, string Forma, Func<string, bool> Valido)
+/// <summary>
+/// Um parâmetro de fábrica embutida: o padrão, a forma aceita, a conferência e a forma canônica de um valor aceito (o
+/// próprio valor, quando não há outra).
+/// </summary>
+internal sealed record ParametroEmbutido(string Padrao, string Forma, Func<string, bool> Valido, Func<string, string>? Normalizacao = null)
 {
     /// <summary>Lógico, só <c>true</c> ou <c>false</c>.</summary>
     internal static ParametroEmbutido Logico(bool padrao) =>
         new(padrao ? "true" : "false", "true ou false", valor => valor is "true" or "false");
+
+    /// <summary>O nome de outro domínio da configuração, na regra dos nomes.</summary>
+    internal static ParametroEmbutido Dominio(string padrao) =>
+        new(padrao, "nome de domínio, com letras minúsculas e dígitos e '.', '_' ou '-' entre eles", Subchaves.EhNomeValido);
+
+    /// <summary>A forma canônica de um valor já aceito.</summary>
+    internal string Canonico(string valor) => Normalizacao?.Invoke(valor) ?? valor;
 }

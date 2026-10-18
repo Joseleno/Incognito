@@ -153,7 +153,7 @@ internal sealed class ExecutorDeCaso : IDisposable
     }
 
     // Enum.GetValues vem em ordem crescente de valor: a ordem canônica do vetor. Os nomes são contrato dos vetores.
-    private static string[] Nomes(OcorrenciasChaveDfe ocorrencias) =>
+    internal static string[] Nomes(OcorrenciasChaveDfe ocorrencias) =>
         [.. Enum.GetValues<OcorrenciasChaveDfe>().Where(o => o != OcorrenciasChaveDfe.Nenhuma && ocorrencias.HasFlag(o)).Select(o => o.ToString())];
 
     private static string Dominio(JsonElement componente) => componente.GetProperty("dominio").GetString()!;

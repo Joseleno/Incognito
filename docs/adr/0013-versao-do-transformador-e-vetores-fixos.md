@@ -136,3 +136,7 @@ nada vai ao NuGet: ninguém tem saídas guardadas de uma versão publicada.
   `comprimentoMaximo` (inteiro positivo ou nulo) nos dois lados, no executor e no esquema em C# e na referência em
   Python, de 1 a 2.147.483.647; sem caso de erro possível, o autoteste prova que um comprimento máximo alterado é
   acusado e que 0, negativo, acima do limite, lógico e texto são recusados.
+- 2026-10-18: as fábricas de `br.chave-pix@1` e `br.chave-dfe@1` também rodam todos os casos dos vetores delas, com a
+  tabela de domínios da sessão montada dos `componentes` de cada caso, uma sessão por caso, e dão o mesmo valor,
+  desfecho, código de erro e, na chave de DF-e, as mesmas ocorrências (`FabricasContraOsVetoresTestes`, que confere
+  também que todos os pares do arquivo foram rodados). Nenhum vetor mudou.

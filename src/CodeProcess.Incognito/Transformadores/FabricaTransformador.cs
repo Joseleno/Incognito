@@ -45,8 +45,19 @@ public abstract class FabricaTransformador
     /// </summary>
     public virtual IReadOnlySet<string> ParametrosDeIdentidade => FrozenSet<string>.Empty;
 
+    /// <summary>
+    /// Os parâmetros que nomeiam outro domínio da configuração, com o transformador que esse domínio precisa ter, na
+    /// versão 1 (<c>dominioCpf</c> → <c>br.cpf</c> na chave Pix e na chave de DF-e). O motor confere, antes do banco,
+    /// que o domínio citado existe e é desse transformador. Não mudam a identidade do domínio da regra: cada parte de
+    /// documento fica no universo do domínio citado. Só as embutidas os declaram; nas outras, nenhum.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> ParametrosDeDominio => ParametrosDeDominioEmbutido ?? FrozenDictionary<string, string>.Empty;
+
     // Só as embutidas sobrescrevem: o domínio padrão de uma fábrica de fora é o nome dela, que não colide com os da fachada.
     private protected virtual string? DominioPadraoEmbutido => null;
+
+    // Só as embutidas citam outros domínios: uma fábrica de fora não tem acesso às instâncias da sessão.
+    private protected virtual IReadOnlyDictionary<string, string>? ParametrosDeDominioEmbutido => null;
 
     /// <summary>
     /// Confere a regra antes do banco: parâmetros, <c>derivarDe</c> e <c>justificativa</c>. O padrão recusa qualquer

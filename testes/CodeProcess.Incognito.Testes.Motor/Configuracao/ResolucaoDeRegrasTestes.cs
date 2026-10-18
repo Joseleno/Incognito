@@ -80,9 +80,13 @@ public sealed class ResolucaoDeRegrasTestes
     {
         var colunas = Resolver(Colunas(
             "      a: { transformador: br.cpf@1 }\n      b: { transformador: br.cnpj@1 }\n      c: { transformador: br.telefone@1 }\n"
-            + "      d: { transformador: email@1 }\n      e: { transformador: br.cep@1, derivarDe: a }\n      f: { transformador: texto.substituir@1 }\n")).Colunas;
+            + "      d: { transformador: email@1 }\n      e: { transformador: br.cep@1, derivarDe: a }\n      f: { transformador: texto.substituir@1 }\n"
+            + "      g: { transformador: br.chave-pix@1 }\n      h: { transformador: br.chave-dfe@1 }\n")).Colunas;
 
-        Assert.Equal(["cpf@1", "cnpj@1", "telefone@1", "email@1", "cep@1", "texto.substituir@1"], colunas.Select(coluna => coluna.Regra.Dominio.ToString()));
+        Assert.Equal(
+            ["cpf@1", "cnpj@1", "telefone@1", "email@1", "cep@1", "texto.substituir@1", "chave-pix@1", "dfe-numero@1"],
+            colunas.Select(coluna => coluna.Regra.Dominio.ToString()));
+        Assert.Equal(TransformadoresEmbutidos.Fabricas.Count, colunas.Count);
     }
 
     [Fact]
@@ -91,6 +95,8 @@ public sealed class ResolucaoDeRegrasTestes
         Assert.Equal(("INC2023", (int?)13, (int?)25, "/dominios/cpf/transformador"), Tupla(Unico(Yaml.Com("dominios:\n  cpf: { transformador: br.cnpj@1 }\n"))));
         Assert.Equal("INC2023", Unico(Yaml.Com("dominios:\n  email: { transformador: br.cpf@1 }\n")).Codigo);
         Assert.Equal("INC2023", Unico(Yaml.Com("dominios:\n  texto.substituir: { transformador: br.cpf@1 }\n")).Codigo);
+        Assert.Equal("INC2023", Unico(Yaml.Com("dominios:\n  chave-pix: { transformador: br.cpf@1 }\n")).Codigo);
+        Assert.Equal("INC2023", Unico(Yaml.Com("dominios:\n  dfe-numero: { transformador: br.cnpj@1 }\n")).Codigo);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using CodeProcess.Incognito.Criptografia;
@@ -5,9 +7,9 @@ using CodeProcess.Incognito.Criptografia;
 namespace CodeProcess.Incognito.Transformadores;
 
 /// <summary>
-/// A sessão de uma execução: a chave, o ambiente e as instâncias derivadas que os transformadores embutidos usam, uma
-/// por identidade (domínio, versão, parâmetros e políticas), compartilhadas entre as colunas do mesmo universo. Nunca
-/// expõe a chave nem uma subchave, e não guarda pseudônimos.
+/// A sessão de uma execução: a chave, o ambiente, a tabela de domínios da configuração e as instâncias derivadas que os
+/// transformadores embutidos usam, uma por identidade (domínio, versão, parâmetros e políticas), compartilhadas entre as
+/// colunas do mesmo universo. Nunca expõe a chave nem uma subchave, e não guarda pseudônimos.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -33,6 +35,8 @@ public sealed class SessaoTransformacao : IDisposable
     private readonly List<IDisposable> _ordem = [];
 
     private readonly Lock _trava = new();
+    private readonly IReadOnlyCollection<DefinicaoDominio> _dominios = ReadOnlyCollection<DefinicaoDominio>.Empty;
+    private readonly FrozenDictionary<string, DefinicaoDominio> _porNome = FrozenDictionary<string, DefinicaoDominio>.Empty;
     private bool _descartada;
 
     /// <summary>Abre a sessão.</summary>
@@ -55,6 +59,37 @@ public sealed class SessaoTransformacao : IDisposable
 
     /// <summary>O ambiente das derivações.</summary>
     public string Ambiente { get; }
+
+    /// <summary>
+    /// Os domínios da configuração, um por nome: os declarados, os implícitos das colunas e os que a chave Pix e a chave
+    /// de DF-e citam (<c>dominioCpf</c>…), com as políticas de cada domínio. A chave Pix e a chave de DF-e procuram aqui
+    /// o domínio de cada documento, para usar a mesma instância da coluna dele. Padrão: nenhum.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Na atribuição: nula, ou com um item nulo.</exception>
+    /// <exception cref="ArgumentException">Na atribuição: nome de domínio repetido.</exception>
+    public IReadOnlyCollection<DefinicaoDominio> Dominios
+    {
+        get => _dominios;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            var porNome = new Dictionary<string, DefinicaoDominio>(StringComparer.Ordinal);
+            var naOrdem = new List<DefinicaoDominio>();
+            foreach (var definicao in value)
+            {
+                ArgumentNullException.ThrowIfNull(definicao, nameof(value));
+                if (!porNome.TryAdd(definicao.Nome, definicao))
+                {
+                    throw new ArgumentException("Nome de domínio repetido: um nome de domínio tem uma definição só.", nameof(value));
+                }
+
+                naOrdem.Add(definicao);
+            }
+
+            _dominios = naOrdem.AsReadOnly();
+            _porNome = porNome.ToFrozenDictionary(StringComparer.Ordinal);
+        }
+    }
 
     /// <summary>
     /// Descarta as instâncias derivadas, na ordem inversa da criação, depois de todo uso; idempotente. A
@@ -101,6 +136,10 @@ public sealed class SessaoTransformacao : IDisposable
             }
         }
     }
+
+    /// <summary>A definição de um domínio da tabela, pelo nome.</summary>
+    internal bool TentarObterDominio(string nome, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out DefinicaoDominio? definicao) =>
+        _porNome.TryGetValue(nome, out definicao);
 
     /// <summary>
     /// A instância de uma identidade: a já criada, ou uma nova, guardada para as próximas colunas do mesmo universo.

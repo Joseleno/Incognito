@@ -11,12 +11,22 @@ namespace CodeProcess.Incognito.Testes;
 public sealed class FabricasEmbutidasTestes : IDisposable
 {
     private const string Ambiente = "homologacao";
-    private const string Sentinela = "SENTINELA-987.654.321-00";
+    private const string Sentinela = "SENTINELA-987654321-XX";
 
     private readonly ChaveIncognito _chave = ChaveIncognito.Gerar();
     private readonly SessaoTransformacao _sessao;
 
-    public FabricasEmbutidasTestes() => _sessao = new SessaoTransformacao(_chave, Ambiente);
+    // Com os domínios padrão dos documentos, que a chave Pix e a chave de DF-e procuram na sessão.
+    public FabricasEmbutidasTestes() => _sessao = new SessaoTransformacao(_chave, Ambiente)
+    {
+        Dominios =
+        [
+            new("br.cpf", new RegraTransformacao(new DominioPseudonimo("cpf", 1))),
+            new("br.cnpj", new RegraTransformacao(new DominioPseudonimo("cnpj", 1))),
+            new("email", new RegraTransformacao(new DominioPseudonimo("email", 1))),
+            new("br.telefone", new RegraTransformacao(new DominioPseudonimo("telefone", 1))),
+        ],
+    };
 
     public static TheoryData<string> Nomes => [.. TransformadoresEmbutidos.Fabricas.Select(fabrica => fabrica.Nome)];
 
@@ -27,7 +37,7 @@ public sealed class FabricasEmbutidasTestes : IDisposable
     }
 
     [Fact]
-    public void As_embutidas_sao_as_seis_da_versao_1_com_os_dominios_padrao()
+    public void As_embutidas_sao_as_oito_da_versao_1_com_os_dominios_padrao()
     {
         var esperadas = new (string Nome, string Dominio, Injetividade Injetividade, TipoColuna[] Tipos)[]
         {
@@ -36,6 +46,8 @@ public sealed class FabricasEmbutidasTestes : IDisposable
             ("br.telefone", "telefone", Injetividade.Garantida, [TipoColuna.Texto, TipoColuna.Inteiro]),
             ("email", "email", Injetividade.Probabilistica, [TipoColuna.Texto]),
             ("br.cep", "cep", Injetividade.Nenhuma, [TipoColuna.Texto, TipoColuna.Inteiro]),
+            ("br.chave-pix", "chave-pix", Injetividade.Probabilistica, [TipoColuna.Texto]),
+            ("br.chave-dfe", "dfe-numero", Injetividade.Garantida, [TipoColuna.Texto]),
             ("texto.substituir", "texto.substituir", Injetividade.Nenhuma, [TipoColuna.Texto]),
         };
 
@@ -59,7 +71,14 @@ public sealed class FabricasEmbutidasTestes : IDisposable
         var excecao = Assert.Throws<RegraInvalidaException>(() => fabrica.Validar(regra));
 
         Assert.Equal(("INC1005", "precisao"), (excecao.Codigo, excecao.Parametro));
-        Assert.Contains(nome == "br.cnpj" ? "aceita permutarOrdem" : "não tem parâmetros", excecao.Message, StringComparison.Ordinal);
+        var esperado = nome switch
+        {
+            "br.cnpj" => "aceita permutarOrdem)",
+            "br.chave-pix" => "aceita dominioCnpj, dominioCpf, dominioEmail, dominioTelefone)",
+            "br.chave-dfe" => "aceita dominioCnpj, dominioCpf, modelos)",
+            _ => "não tem parâmetros",
+        };
+        Assert.Contains(esperado, excecao.Message, StringComparison.Ordinal);
         Assert.Equal("a", Assert.Throws<RegraInvalidaException>(() => fabrica.Validar(Regra(fabrica, parametros: new() { ["b"] = "1", ["a"] = "1" }))).Parametro);
         Assert.Throws<ArgumentNullException>(() => fabrica.Validar(null!));
         Assert.DoesNotContain(Sentinela, excecao.ToString(), StringComparison.Ordinal);
@@ -100,6 +119,8 @@ public sealed class FabricasEmbutidasTestes : IDisposable
     [InlineData("br.cnpj")]
     [InlineData("br.telefone")]
     [InlineData("email")]
+    [InlineData("br.chave-pix")]
+    [InlineData("br.chave-dfe")]
     [InlineData("texto.substituir")]
     public void DerivarDe_e_recusado_onde_nao_se_usa_e_ignorado_na_declaracao_do_dominio(string nome)
     {
@@ -127,6 +148,8 @@ public sealed class FabricasEmbutidasTestes : IDisposable
     [InlineData("br.cnpj", 14, "CNPJ")]
     [InlineData("email", 32, "e-mail")]
     [InlineData("br.cep", 8, "CEP")]
+    [InlineData("br.chave-pix", 36, "chave Pix")]
+    [InlineData("br.chave-dfe", 44, "chave de DF-e")]
     public void Coluna_de_texto_que_nao_comporta_o_pseudonimo_e_recusada(string nome, int minimo, string documento)
     {
         var fabrica = Fabrica(nome);
