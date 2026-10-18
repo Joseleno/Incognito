@@ -20,6 +20,7 @@ internal static partial class ReceitasDeVetores
     private const string ServicoPreservado = "ServicoPreservado";
     private const string Vazio = "Vazio";
     private const string Zerado = "Zerado";
+    private const string Substituido = "Substituido";
     private const string Malformado = "INC1003";
     private const string DvInvalido = "INC1004";
 
@@ -37,6 +38,7 @@ internal static partial class ReceitasDeVetores
         Identificador(),
         ChavePix(),
         ChaveDfe(),
+        TextoSubstituir(),
     ];
 
     private static string Descricao(string transformador, int versao) => transformador == "br.chave-dfe"
@@ -50,6 +52,9 @@ internal static partial class ReceitasDeVetores
             ? " Os números de serviço (0800, 0300, 0303, 0500 e 0900 com 7 dígitos sorteados, ou 6 no formato antigo; DDD "
                 + "inexistente com 3003 ou 4004 e 4 sorteados) podem coincidir com números de empresas: são necessários para "
                 + "provar a preservação e nunca são de pessoa."
+            : "")
+        + (transformador == "texto.substituir"
+            ? " O texto.substituir não usa a chave nem a entrada: a saída é um texto fixo cortado no comprimento máximo."
             : "");
 
     private static string DescricaoDaChaveDfe(int versao) =>
@@ -545,6 +550,31 @@ internal static partial class ReceitasDeVetores
                 Gerador("maiusculas", "Email()", "maiusculas-ascii").E(Pseudonimizado),
                 Gerador("duas-arrobas", "Email()", "prefixo:a@").E(Malformado),
             ]),
+        ]);
+    }
+
+    private static ReceitaDeArquivo TextoSubstituir()
+    {
+        // O texto fixo tem 30 caracteres: até 29 ele é cortado; de 30 em diante sai inteiro.
+        static ReceitaDePar[] Pares(string ramo) =>
+        [
+            Gerador(ramo, "Cpf()").X(2).E(Substituido),
+            Gerador(ramo, "Cnpj(formatado)").E(Substituido),
+            Gerador(ramo, "Email()").X(2).E(Substituido),
+            Gerador(ramo, "Telefone(celular, formatado)").E(Substituido),
+            DeLiteral(ramo, "Cliente pediu desconto na renovação.").E(Substituido),
+            DeLiteral("tabulacao", "	").E(Substituido),
+            DeLiteral("vazio", "").E(Vazio),
+            DeLiteral("so-espacos", "    ").E(Vazio),
+        ];
+
+        return new("texto.substituir@1.json", "texto.substituir", 1, Descricao("texto.substituir", 1),
+        [
+            new("sem comprimento máximo", Parametros("texto.substituir", "homologacao", ("comprimentoMaximo", null!)), Pares("substituido")),
+            new("comprimento 1", Parametros("texto.substituir", "homologacao", ("comprimentoMaximo", 1L)), Pares("cortado")),
+            new("comprimento 29", Parametros("texto.substituir", "homologacao", ("comprimentoMaximo", 29L)), Pares("cortado")),
+            new("comprimento 30", Parametros("texto.substituir", "homologacao", ("comprimentoMaximo", 30L)), Pares("substituido")),
+            new("comprimento 31", Parametros("texto.substituir", "producao", ("comprimentoMaximo", 31L)), Pares("substituido")),
         ]);
     }
 

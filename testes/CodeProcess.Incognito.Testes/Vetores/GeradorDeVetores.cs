@@ -315,6 +315,9 @@ internal static class GeradorDeVetores
         {
             switch (valor)
             {
+                case null:
+                    escritor.WriteNull(nome);
+                    break;
                 case string texto:
                     escritor.WriteString(nome, texto);
                     break;

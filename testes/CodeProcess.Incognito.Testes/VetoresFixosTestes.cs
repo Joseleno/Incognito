@@ -278,6 +278,11 @@ public sealed class VetoresFixosTestes
     // ordem preservada.
     private static string? MetodoDaFachada(string transformador, JsonElement caso)
     {
+        if (transformador is not ("br.cpf" or "br.cnpj" or "br.telefone" or "email" or "br.chave-pix" or "br.chave-dfe"))
+        {
+            return null;
+        }
+
         var dominio = caso.GetProperty("dominio").GetString();
         var malformadaFalha = caso.GetProperty("entradaMalformada").GetString() == "falhar";
         var invalidaPreserva = !caso.TryGetProperty("entradaInvalida", out var invalida) || invalida.GetString() == "preservar";

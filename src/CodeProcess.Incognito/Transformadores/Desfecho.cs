@@ -1,8 +1,17 @@
-namespace CodeProcess.Incognito.Pseudonimizacao;
+namespace CodeProcess.Incognito.Transformadores;
 
-/// <summary>Como um valor foi tratado; o relatório conta cada desfecho.</summary>
-internal enum Desfecho
+/// <summary>
+/// Como um valor foi tratado; o relatório conta cada desfecho. Os nomes são contrato dos vetores fixos; novos desfechos
+/// podem ser acrescentados, e quem os lê trata um valor desconhecido.
+/// </summary>
+public enum Desfecho
 {
+    /// <summary>
+    /// Nenhum desfecho: é o valor de <c>default</c>, nunca um resultado válido. O motor recusa um transformador que o
+    /// devolva, para um <c>default(ResultadoTransformacao)</c> não passar por sucesso.
+    /// </summary>
+    Indefinido,
+
     /// <summary>Trocado pelo pseudônimo.</summary>
     Pseudonimizado,
 
@@ -13,7 +22,7 @@ internal enum Desfecho
     /// Base excluída da permutação (repdígito do CPF, raiz zero do CNPJ): base e DV ficam como vieram, com os zeros à
     /// esquerda completados. A regra vale com qualquer DV; um DV errado só chega aqui com a política de preservar. No
     /// <c>id.permutar</c>, são o zero e os negativos, que ficam fora do domínio e voltam como vieram. Na chave de DF-e,
-    /// quando emitente, número e código ficam todos como vieram (as ocorrências dizem por quê).
+    /// quando emitente, número e código ficam todos como vieram.
     /// </summary>
     PontoFixo,
 
@@ -39,4 +48,10 @@ internal enum Desfecho
     /// prefixo, máscara, separadores e preenchimento, antes da política de entrada malformada.
     /// </summary>
     Zerado,
+
+    /// <summary>NULL na entrada, que sai NULL.</summary>
+    Nulo,
+
+    /// <summary>Trocado por um valor que não depende da entrada (o texto fixo do <c>texto.substituir</c>).</summary>
+    Substituido,
 }

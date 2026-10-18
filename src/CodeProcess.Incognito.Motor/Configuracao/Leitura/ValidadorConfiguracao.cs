@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Numerics;
 using System.Text.RegularExpressions;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Configuracao.Leitura;
 
@@ -42,18 +44,18 @@ internal sealed partial class ValidadorConfiguracao
         ["efemero"] = ModoTratamento.Efemero,
     };
 
-    private static readonly Dictionary<string, TratamentoEntradaInvalida> _entradaInvalida = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, PoliticaEntradaInvalida> _entradaInvalida = new(StringComparer.Ordinal)
     {
-        ["preservar"] = TratamentoEntradaInvalida.Preservar,
-        ["falhar"] = TratamentoEntradaInvalida.Falhar,
-        ["anular"] = TratamentoEntradaInvalida.Anular,
+        ["preservar"] = PoliticaEntradaInvalida.Preservar,
+        ["falhar"] = PoliticaEntradaInvalida.Falhar,
+        ["anular"] = PoliticaEntradaInvalida.Anular,
     };
 
-    private static readonly Dictionary<string, TratamentoEntradaMalformada> _entradaMalformada = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, PoliticaEntradaMalformada> _entradaMalformada = new(StringComparer.Ordinal)
     {
-        ["falhar"] = TratamentoEntradaMalformada.Falhar,
-        ["anular"] = TratamentoEntradaMalformada.Anular,
-        ["preservar"] = TratamentoEntradaMalformada.Preservar,
+        ["falhar"] = PoliticaEntradaMalformada.Falhar,
+        ["anular"] = PoliticaEntradaMalformada.Anular,
+        ["preservar"] = PoliticaEntradaMalformada.Preservar,
     };
 
     private static readonly Dictionary<string, Consistencia> _consistencias = new(StringComparer.Ordinal)
@@ -270,7 +272,7 @@ internal sealed partial class ValidadorConfiguracao
             var politicas = PoliticasDoMapa(definicao);
             if (transformador is not null)
             {
-                dominios.Add(new RegraDominio(chave.Valor, transformador, parametros, politicas, chave.Posicao));
+                dominios.Add(new RegraDominio(chave.Valor, transformador, parametros, politicas, chave.Posicao, valor.Local));
             }
         }
 
@@ -344,7 +346,7 @@ internal sealed partial class ValidadorConfiguracao
             case EscalarYaml texto when Texto(texto, "coluna") is { } nome:
                 if (nome == Manter)
                 {
-                    return new RegraColuna(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao);
+                    return new RegraColuna(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao, valor.Local);
                 }
 
                 if (!NomeValido(nome))
@@ -354,7 +356,7 @@ internal sealed partial class ValidadorConfiguracao
                 }
 
                 _dominiosCitados.Add((nome, texto.Posicao, texto.Local));
-                return new RegraColuna(vazia, TipoRegraColuna.Dominio, nome, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao);
+                return new RegraColuna(vazia, TipoRegraColuna.Dominio, nome, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao, valor.Local);
             case EscalarYaml { Tipo: TipoEscalar.Nulo } semRegra:
                 _erros.Adicionar(CodigosConfiguracao.Obrigatorio, semRegra.Posicao, semRegra.Local, "Regra de coluna vazia: use 'manter', o nome de um domínio ou um mapa.");
                 return null;
@@ -394,7 +396,7 @@ internal sealed partial class ValidadorConfiguracao
                 _erros.Adicionar(CodigosConfiguracao.Justificativa, mapa.Posicao, mapa.Local, "Coluna 'classe: sensivel' mantida sem 'justificativa': escreva por que o dado sensível pode ir em claro.");
             }
 
-            return new RegraColuna(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao);
+            return new RegraColuna(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 
         var noTransformador = Obter(mapa, "transformador");
@@ -434,7 +436,7 @@ internal sealed partial class ValidadorConfiguracao
                 return null;
             }
 
-            return new RegraColuna(vazia, TipoRegraColuna.Transformador, dominio, transformador, derivarDe, Parametros(mapa), politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao);
+            return new RegraColuna(vazia, TipoRegraColuna.Transformador, dominio, transformador, derivarDe, Parametros(mapa), politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 
         if (noDominio is not null)
@@ -449,7 +451,7 @@ internal sealed partial class ValidadorConfiguracao
                 _dominiosCitados.Add((dominio, noDominio.Posicao, noDominio.Local));
             }
 
-            return dominio is null ? null : new RegraColuna(vazia, TipoRegraColuna.Dominio, dominio, null, derivarDe, [], politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao);
+            return dominio is null ? null : new RegraColuna(vazia, TipoRegraColuna.Dominio, dominio, null, derivarDe, [], politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 
         _erros.Adicionar(CodigosConfiguracao.Obrigatorio, mapa.Posicao, mapa.Local, "A regra da coluna precisa de 'transformador', 'dominio' ou 'acao: manter'.");
@@ -476,9 +478,9 @@ internal sealed partial class ValidadorConfiguracao
         return texto;
     }
 
-    private List<KeyValuePair<string, string>> Parametros(MapaYaml mapa)
+    private List<ParametroRegra> Parametros(MapaYaml mapa)
     {
-        var parametros = new List<KeyValuePair<string, string>>();
+        var parametros = new List<ParametroRegra>();
         foreach (var (chave, valor) in mapa.Entradas.Where(entrada => !_chavesReservadas.Contains(entrada.Key.Valor)))
         {
             var local = mapa.LocalDoFilho(chave.Valor);
@@ -491,18 +493,67 @@ internal sealed partial class ValidadorConfiguracao
             switch (valor)
             {
                 case EscalarYaml { Tipo: not TipoEscalar.Nulo } escalar:
-                    parametros.Add(new(chave.Valor, escalar.Valor));
+                    parametros.Add(new(chave.Valor, Canonico(escalar), chave.Posicao, local));
                     break;
-                case ListaYaml lista when lista.Itens.All(item => item is EscalarYaml { Tipo: not TipoEscalar.Nulo } escalar && !escalar.Valor.Contains(',', StringComparison.Ordinal)):
-                    parametros.Add(new(chave.Valor, string.Join(',', lista.Itens.Cast<EscalarYaml>().Select(item => item.Valor))));
+                case ListaYaml lista when lista.Itens.Count > 0 && lista.Itens.All(item => item is EscalarYaml { Tipo: not TipoEscalar.Nulo } escalar && !escalar.Valor.Contains(',', StringComparison.Ordinal)):
+                    parametros.Add(new(chave.Valor, string.Join(',', lista.Itens.Cast<EscalarYaml>().Select(Canonico)), chave.Posicao, local));
                     break;
                 default:
-                    _erros.Adicionar(CodigosConfiguracao.Tipo, valor.Posicao, local, "O parâmetro precisa ser um valor ou uma lista de valores (sem vírgula dentro de um item).");
+                    _erros.Adicionar(CodigosConfiguracao.Tipo, valor.Posicao, local, "O parâmetro precisa ser um valor ou uma lista não vazia de valores (sem vírgula dentro de um item).");
                     break;
             }
         }
 
         return parametros;
+    }
+
+    // Booleano e inteiro do core schema na forma canônica, para a fábrica conferir um texto só: True e TRUE viram true,
+    // 0x37 e 0o67 viram 55. Texto (inclusive entre aspas) vai como escrito.
+    private static string Canonico(EscalarYaml escalar) => escalar.Tipo switch
+    {
+        TipoEscalar.Booleano => escalar.Valor.ToLowerInvariant(),
+        TipoEscalar.Inteiro when InteiroCanonico(escalar.Valor) is { } inteiro => inteiro,
+        _ => escalar.Valor,
+    };
+
+    // Em decimal, de qualquer tamanho até 64 dígitos (o mesmo valor escrito com sinal, zeros à esquerda ou em outra base dá
+    // o mesmo texto); acima disso, como escrito.
+    private static string? InteiroCanonico(string valor)
+    {
+        const int MaximoDeDigitos = 64;
+        var (digitos, baseNumerica) = valor switch
+        {
+            ['0', 'x', .. var resto] => (resto, 16),
+            ['0', 'o', .. var resto] => (resto, 8),
+            _ => (valor, 10),
+        };
+
+        if (digitos.Length > MaximoDeDigitos + 1)
+        {
+            return null;
+        }
+
+        BigInteger inteiro;
+        switch (baseNumerica)
+        {
+            case 16:
+                // O zero na frente impede que o primeiro dígito alto seja lido como sinal.
+                inteiro = BigInteger.Parse("0" + digitos, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+                break;
+            case 8:
+                inteiro = BigInteger.Zero;
+                foreach (var digito in digitos)
+                {
+                    inteiro = (inteiro * 8) + (digito - '0');
+                }
+
+                break;
+            default:
+                inteiro = BigInteger.Parse(digitos, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+                break;
+        }
+
+        return inteiro.ToString(CultureInfo.InvariantCulture);
     }
 
     private ReferenciaTransformador? Transformador(NoYaml no)
@@ -525,7 +576,7 @@ internal sealed partial class ValidadorConfiguracao
         }
 
         int? versao = achado.Groups["versao"].Success ? int.Parse(achado.Groups["versao"].Value, CultureInfo.InvariantCulture) : null;
-        return new ReferenciaTransformador(achado.Groups["nome"].Value, versao, no.Posicao);
+        return new ReferenciaTransformador(achado.Groups["nome"].Value, versao, no.Posicao, no.Local);
     }
 
     private ReferenciaSegredo? Segredo(NoYaml no, string campo)

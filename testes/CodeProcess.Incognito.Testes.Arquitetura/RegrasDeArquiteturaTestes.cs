@@ -103,6 +103,58 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.True(usados.Length == 0, $"O gerador usa tipos da chave ou da pseudonimização: {string.Join(", ", usados)}.");
     }
 
+    [Fact]
+    public void Os_contratos_de_extensao_sao_classes_abstratas_sem_construtor_publico_e_o_Criar_nao_e_virtual()
+    {
+        // ADR 0017: classe abstrata pode ganhar membro virtual sem quebrar quem estende; o Criar confere a regra antes e
+        // o transformador depois, e quem estende não consegue pular a conferência.
+        var contratos = Tipos(Nucleo).Where(tipo => tipo.FullName is Nucleo + ".Transformadores.Transformador" or Nucleo + ".Transformadores.FabricaTransformador").ToArray();
+        var criar = contratos.Single(tipo => tipo.Name == "FabricaTransformador").GetMethod("Criar")!;
+
+        Assert.Equal(2, contratos.Length);
+        Assert.All(contratos, tipo => Assert.True(tipo.IsAbstract && !tipo.IsInterface && tipo.GetConstructors().Length == 0, $"{tipo.FullName} precisa ser classe abstrata sem construtor público."));
+        Assert.False(criar.IsVirtual, "O Criar da fábrica é o método-modelo: não pode ser virtual.");
+    }
+
+    [Fact]
+    public void Tipos_publicos_do_motor_so_nascem_do_motor()
+    {
+        // ADR 0017: o modelo produzido pelo motor (configuração, erros, plano) não tem construtor público.
+        var comConstrutor = Tipos(Motor)
+            .Where(tipo => tipo.IsVisible && tipo.GetConstructors().Length > 0)
+            .Select(tipo => tipo.FullName)
+            .ToArray();
+
+        Assert.True(comConstrutor.Length == 0, $"Tipos públicos do motor com construtor público: {string.Join(", ", comConstrutor)}.");
+    }
+
+    [Fact]
+    public void Os_tipos_publicos_do_contrato_sao_selados_abstratos_structs_ou_enums()
+    {
+        // ADR 0017: as entradas e saídas do contrato têm construtor público, mas ninguém herda delas; os contratos de
+        // extensão são abstratos.
+        var abertos = Tipos(Nucleo)
+            .Where(tipo => tipo.IsVisible && tipo.Namespace == Nucleo + ".Transformadores")
+            .Where(tipo => tipo.IsClass && !tipo.IsSealed && !tipo.IsAbstract)
+            .Select(tipo => tipo.FullName)
+            .ToArray();
+
+        Assert.True(abertos.Length == 0, $"Tipos do contrato que se podem herdar sem serem contratos: {string.Join(", ", abertos)}.");
+    }
+
+    [Theory]
+    [InlineData("ContextoTransformacao")]
+    [InlineData("ResultadoTransformacao")]
+    public void Os_structs_com_valor_de_coluna_nao_sao_record_e_nao_herdam_o_ToString(string nome)
+    {
+        // O ToString de um record mostraria o valor (às vezes o próprio dado pessoal).
+        var tipo = Tipos(Nucleo).Single(t => t.FullName == $"{Nucleo}.Transformadores.{nome}");
+
+        Assert.True(tipo.IsValueType, $"{nome} precisa ser struct.");
+        Assert.Null(tipo.GetMethod("PrintMembers", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance));
+        Assert.Equal(tipo, tipo.GetMethod(nameof(ToString), Type.EmptyTypes)!.DeclaringType);
+    }
+
     // Os tipos que aparecem nos campos, propriedades, parâmetros, retornos, tipo base e tipos aninhados (inclusive os
     // gerados para lambdas). Não percorre o corpo dos métodos.
     private static IEnumerable<Type> TiposDaAssinatura(Type tipo)

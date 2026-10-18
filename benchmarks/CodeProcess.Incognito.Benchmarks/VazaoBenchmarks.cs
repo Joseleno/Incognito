@@ -1,5 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using CodeProcess.Incognito.Pseudonimizacao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Benchmarks;
 

@@ -133,3 +133,10 @@ precisam trazê-los escritos, e eles são números de empresas.
   serviço.
 - Um transformador novo cujo identificador o `GeradorBr` não gera: a origem dos valores dele é definida antes dos
   primeiros vetores.
+
+## Atualizações
+
+- 2026-10-17: o vetor `texto.substituir@1` acrescenta uma categoria ao literal (item 4 da origem): texto livre
+  sintético, sem nome, documento, contato nem endereço, só como entrada de um transformador de texto livre. É a
+  frase `Cliente pediu desconto na renovação.`; os outros pares do arquivo vêm do `GeradorBr` com semente. A
+  conferência da proveniência continua reprovando literal que seja documento.

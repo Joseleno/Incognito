@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using CodeProcess.Incognito.Criptografia;
 using CodeProcess.Incognito.Documentos;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Pseudonimizacao;
 

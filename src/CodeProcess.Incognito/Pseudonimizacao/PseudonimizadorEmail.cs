@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using CodeProcess.Incognito.Criptografia;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Pseudonimizacao;
 

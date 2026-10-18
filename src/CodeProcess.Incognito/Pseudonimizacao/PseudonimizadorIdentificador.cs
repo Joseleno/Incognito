@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using CodeProcess.Incognito.Criptografia;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Pseudonimizacao;
 
