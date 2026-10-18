@@ -78,6 +78,7 @@ internal sealed class RegistroTransformadores
         var injetividade = fabrica.Injetividade;
         var tipos = (fabrica.TiposSuportados ?? throw new ArgumentException($"A fábrica {nome}@{versao} não declara os tipos suportados.", nameof(fabrica))).ToFrozenSet();
         var identidade = (fabrica.ParametrosDeIdentidade ?? throw new ArgumentException($"A fábrica {nome}@{versao} não declara os parâmetros de identidade.", nameof(fabrica))).ToFrozenSet(StringComparer.Ordinal);
+        var citados = fabrica.ParametrosDeDominio.ToFrozenDictionary(StringComparer.Ordinal);
         _ = new DominioPseudonimo(nome, versao);
         _ = new DominioPseudonimo(dominioPadrao, versao);
         if (!Enum.IsDefined(injetividade))
@@ -100,7 +101,7 @@ internal sealed class RegistroTransformadores
             throw new ArgumentException($"O domínio padrão {dominioPadrao} já é de outra fábrica.", nameof(fabrica));
         }
 
-        _fabricas.Add((nome, versao), new FabricaRegistrada(fabrica, nome, versao, injetividade, tipos, dominioPadrao, identidade));
+        _fabricas.Add((nome, versao), new FabricaRegistrada(fabrica, nome, versao, injetividade, tipos, dominioPadrao, identidade, citados));
     }
 }
 
@@ -112,7 +113,8 @@ internal sealed record FabricaRegistrada(
     Injetividade Injetividade,
     FrozenSet<TipoColuna> TiposSuportados,
     string DominioPadrao,
-    FrozenSet<string> ParametrosDeIdentidade)
+    FrozenSet<string> ParametrosDeIdentidade,
+    FrozenDictionary<string, string> ParametrosDeDominio)
 {
     /// <summary>
     /// Cria o transformador de uma coluna conferindo os metadados registrados, não os que a fábrica devolve agora: o tipo

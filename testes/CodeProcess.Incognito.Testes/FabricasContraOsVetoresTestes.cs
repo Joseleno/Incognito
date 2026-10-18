@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CodeProcess.Incognito.Testes.Vetores;
 using CodeProcess.Incognito.Transformadores;
+using CodeProcess.Incognito.Transformadores.Embutidos;
 
 namespace CodeProcess.Incognito.Testes;
 
@@ -11,7 +12,18 @@ namespace CodeProcess.Incognito.Testes;
 /// </summary>
 public sealed class FabricasContraOsVetoresTestes
 {
-    private static readonly string[] _transformadores = ["br.cpf", "br.cnpj", "br.telefone", "email", "br.cep", "texto.substituir"];
+    private static readonly string[] _transformadores =
+        ["br.cpf", "br.cnpj", "br.telefone", "email", "br.cep", "br.chave-pix", "br.chave-dfe", "texto.substituir"];
+
+    // O transformador de cada componente das chaves: o domínio-alvo de dominioCpf, dominioCnpj, dominioEmail e
+    // dominioTelefone.
+    private static readonly Dictionary<string, (string Transformador, string Parametro)> _componentes = new(StringComparer.Ordinal)
+    {
+        ["cpf"] = ("br.cpf", "dominioCpf"),
+        ["cnpj"] = ("br.cnpj", "dominioCnpj"),
+        ["email"] = ("email", "dominioEmail"),
+        ["telefone"] = ("br.telefone", "dominioTelefone"),
+    };
 
     public static TheoryData<string> Arquivos => [.. _transformadores.Select(transformador => $"{transformador}@1.json")];
 
@@ -27,17 +39,22 @@ public sealed class FabricasContraOsVetoresTestes
         var conferidos = 0;
 
         // Uma sessão por ambiente para o arquivo inteiro: casos do mesmo domínio com políticas diferentes só saem certos
-        // se a identidade das instâncias separar as políticas.
+        // se a identidade das instâncias separar as políticas. Nas chaves, uma sessão por caso: cada caso tem a própria
+        // tabela de domínios (os componentes).
         var sessoes = new Dictionary<string, SessaoTransformacao>(StringComparer.Ordinal);
         try
         {
+            var indiceDoCaso = 0;
             foreach (var caso in raiz.GetProperty("casos").EnumerateArray())
             {
                 var ambiente = caso.GetProperty("ambiente").GetString()!;
-                if (!sessoes.TryGetValue(ambiente, out var sessao))
+                var componentes = caso.TryGetProperty("componentes", out var lidos) ? lidos : (JsonElement?)null;
+                var chaveDaSessao = componentes is null ? ambiente : $"{ambiente}#{indiceDoCaso}";
+                indiceDoCaso++;
+                if (!sessoes.TryGetValue(chaveDaSessao, out var sessao))
                 {
-                    sessao = new SessaoTransformacao(chave, ambiente);
-                    sessoes.Add(ambiente, sessao);
+                    sessao = new SessaoTransformacao(chave, ambiente) { Dominios = Dominios(componentes) };
+                    sessoes.Add(chaveDaSessao, sessao);
                 }
 
                 conferidos += ConferirCaso(arquivo, fabrica, nome, caso, sessao);
@@ -51,7 +68,9 @@ public sealed class FabricasContraOsVetoresTestes
             }
         }
 
-        Assert.True(conferidos >= 20, $"{arquivo}: poucos pares conferidos.");
+        var pares = raiz.GetProperty("casos").EnumerateArray().Sum(caso => caso.GetProperty("pares").GetArrayLength());
+        Assert.True(pares >= 20, $"{arquivo}: poucos pares no vetor.");
+        Assert.Equal(pares, conferidos);
     }
 
     private static int ConferirCaso(string arquivo, FabricaTransformador fabrica, string nome, JsonElement caso, SessaoTransformacao sessao)
@@ -92,21 +111,72 @@ public sealed class FabricasContraOsVetoresTestes
             parametros["permutarOrdem"] = permutarOrdem.GetBoolean() ? "true" : "false";
         }
 
+        if (caso.TryGetProperty("modelos", out var modelos))
+        {
+            parametros["modelos"] = string.Join(",", modelos.EnumerateArray().Select(modelo => modelo.GetInt32()));
+        }
+
+        if (caso.TryGetProperty("componentes", out var componentes))
+        {
+            foreach (var componente in componentes.EnumerateObject())
+            {
+                parametros[_componentes[componente.Name].Parametro] = componente.Value.GetProperty("dominio").GetString()!;
+            }
+        }
+
         return new RegraTransformacao(new DominioPseudonimo(caso.GetProperty("dominio").GetString()!, 1))
         {
             Parametros = parametros,
             EntradaInvalida = caso.TryGetProperty("entradaInvalida", out var invalida) ? Invalida(invalida.GetString()) : PoliticaEntradaInvalida.Preservar,
             EntradaMalformada = caso.TryGetProperty("entradaMalformada", out var malformada) ? Malformada(malformada.GetString()) : PoliticaEntradaMalformada.Falhar,
             TemDerivarDe = transformador == "br.cep",
+            TemJustificativa = true,
         };
+    }
+
+    // A tabela de domínios da sessão: um domínio por componente, com o transformador, a versão, o permutarOrdem e a
+    // política de DV do vetor.
+    private static List<DefinicaoDominio> Dominios(JsonElement? componentes)
+    {
+        var dominios = new List<DefinicaoDominio>();
+        if (componentes is not { } lidos)
+        {
+            return dominios;
+        }
+
+        foreach (var componente in lidos.EnumerateObject())
+        {
+            var valor = componente.Value;
+            var parametros = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (valor.TryGetProperty("permutarOrdem", out var permutarOrdem))
+            {
+                parametros["permutarOrdem"] = permutarOrdem.GetBoolean() ? "true" : "false";
+            }
+
+            var dominio = new DominioPseudonimo(valor.GetProperty("dominio").GetString()!, valor.GetProperty("versao").GetInt32());
+            dominios.Add(new DefinicaoDominio(_componentes[componente.Name].Transformador, new RegraTransformacao(dominio)
+            {
+                Parametros = parametros,
+                EntradaInvalida = valor.TryGetProperty("entradaInvalida", out var invalida) ? Invalida(invalida.GetString()) : PoliticaEntradaInvalida.Preservar,
+            }));
+        }
+
+        return dominios;
     }
 
     private static ResultadoDoPar Executar(Transformador transformador, EntradaDoPar entrada)
     {
         try
         {
-            var resultado = transformador.Transformar(
-                entrada.EhNumero ? entrada.Numero : entrada.Texto, new ContextoTransformacao(entrada.Entidade));
+            object? valor = entrada.EhNumero ? entrada.Numero : entrada.Texto;
+            if (transformador is TransformadorChaveDfe chaveDfe)
+            {
+                // As ocorrências da chave de DF-e ficam internas até o relatório ganhar o canal delas.
+                var comOcorrencias = chaveDfe.Transformar(valor, out var ocorrencias);
+                return new ResultadoDoPar(comOcorrencias.Valor, comOcorrencias.Desfecho.ToString(), null) { Ocorrencias = ExecutorDeCaso.Nomes(ocorrencias) };
+            }
+
+            var resultado = transformador.Transformar(valor, new ContextoTransformacao(entrada.Entidade));
             return new ResultadoDoPar(resultado.Valor, resultado.Desfecho.ToString(), null);
         }
         catch (IncognitoException excecao)

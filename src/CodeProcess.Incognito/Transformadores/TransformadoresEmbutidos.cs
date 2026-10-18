@@ -7,8 +7,8 @@ namespace CodeProcess.Incognito.Transformadores;
 public static class TransformadoresEmbutidos
 {
     /// <summary>
-    /// As fábricas embutidas: <c>br.cpf</c>, <c>br.cnpj</c>, <c>br.telefone</c>, <c>email</c>, <c>br.cep</c> e
-    /// <c>texto.substituir</c>. A lista não muda depois de criada.
+    /// As fábricas embutidas: <c>br.cpf</c>, <c>br.cnpj</c>, <c>br.telefone</c>, <c>email</c>, <c>br.cep</c>,
+    /// <c>br.chave-pix</c>, <c>br.chave-dfe</c> e <c>texto.substituir</c>. A lista não muda depois de criada.
     /// </summary>
     public static IReadOnlyList<FabricaTransformador> Fabricas { get; } = new ReadOnlyCollection<FabricaTransformador>(
     [
@@ -17,6 +17,8 @@ public static class TransformadoresEmbutidos
         new FabricaTelefone(),
         new FabricaEmail(),
         new FabricaCep(),
+        new FabricaChavePix(),
+        new FabricaChaveDfe(),
         new FabricaTextoSubstituir(),
     ]);
 }

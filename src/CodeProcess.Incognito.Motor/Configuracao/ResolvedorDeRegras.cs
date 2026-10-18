@@ -7,7 +7,9 @@ namespace CodeProcess.Incognito.Configuracao;
 /// Resolve as regras da configuração contra o registro, antes do banco: a fábrica de cada transformador (sem versão
 /// escrita, a 1), o domínio (o declarado ou o padrão da fábrica), as políticas (coluna, domínio, global) e a conferência
 /// da fábrica. Um nome de domínio tem uma definição só por configuração (transformador, versão e parâmetros de
-/// identidade), e o domínio padrão de uma fábrica só com a definição padrão dela. Junta todos os erros, como a leitura.
+/// identidade), e o domínio padrão de uma fábrica só com a definição padrão dela. Os domínios citados por outra regra
+/// (<c>dominioCpf</c> na chave Pix e na chave de DF-e) precisam existir e ser do transformador certo; o domínio padrão
+/// citado e não usado por nenhuma coluna entra com as políticas globais. Junta todos os erros, como a leitura.
 /// </summary>
 /// <remarks>Usado pelo <c>planejar</c>, que cria os transformadores com as colunas do banco.</remarks>
 internal sealed class ResolvedorDeRegras
@@ -19,6 +21,7 @@ internal sealed class ResolvedorDeRegras
     private readonly HashSet<string> _falhos = new(StringComparer.Ordinal);
     private readonly Dictionary<FabricaRegistrada, (bool Conseguiu, SortedDictionary<string, string>? Padrao)> _padroes = [];
     private readonly List<ColunaResolvida> _colunas = [];
+    private readonly List<Citacao> _citacoes = [];
 
     private ResolvedorDeRegras(ConfiguracaoIncognito configuracao, RegistroTransformadores registro)
     {
@@ -40,7 +43,7 @@ internal sealed class ResolvedorDeRegras
             throw resolvedor._erros.Excecao();
         }
 
-        return new ResolucaoDeRegras(resolvedor._colunas);
+        return new ResolucaoDeRegras(resolvedor._colunas, resolvedor.Dominios());
     }
 
     private void ResolverTudo()
@@ -70,6 +73,12 @@ internal sealed class ResolvedorDeRegras
                     UsarTransformador(tabela, coluna);
                     break;
             }
+        }
+
+        // Depois de tudo: um domínio citado pode ser declarado adiante no arquivo, ou numa coluna.
+        foreach (var citacao in _citacoes)
+        {
+            ConferirCitados(citacao);
         }
     }
 
@@ -116,6 +125,7 @@ internal sealed class ResolvedorDeRegras
         }
 
         _definicoes[nome] = new Definicao(fabrica, regra.Parametros, politicas, identidade);
+        Citar(fabrica, normalizados, parametros, posicao, local);
     }
 
     private void UsarDominio(NomeTabela tabela, RegraColuna coluna)
@@ -181,13 +191,70 @@ internal sealed class ResolvedorDeRegras
             return;
         }
 
+        // O domínio implícito tem a definição padrão: os parâmetros de identidade já batem com os padrões, e os outros
+        // (modelos, dominioCpf...) são da coluna, não do domínio que outra coluna cite pelo nome.
         if (definicao is null)
         {
-            _definicoes[nome] = new Definicao(fabrica, regra.Parametros, PoliticasDeEntrada.Nenhuma, identidade);
+            _definicoes[nome] = new Definicao(fabrica, new Dictionary<string, string>(StringComparer.Ordinal), PoliticasDeEntrada.Nenhuma, identidade);
         }
 
         _colunas.Add(new ColunaResolvida(tabela, coluna, fabrica, regra));
+        Citar(fabrica, normalizados, coluna.Parametros, coluna.Posicao, coluna.Local);
     }
+
+    private void Citar(FabricaRegistrada fabrica, IReadOnlyDictionary<string, string> normalizados, IReadOnlyList<ParametroRegra> parametros, Posicao posicao, string local)
+    {
+        if (fabrica.ParametrosDeDominio.Count > 0)
+        {
+            _citacoes.Add(new Citacao(fabrica, normalizados, parametros, posicao, local));
+        }
+    }
+
+    // Cada domínio citado existe (declarado, numa coluna ou o padrão do transformador citado) e é desse transformador, na
+    // versão 1. O erro aponta o parâmetro escrito, ou a regra quando vale o padrão; nunca traz o nome citado.
+    private void ConferirCitados(Citacao citacao)
+    {
+        foreach (var (parametro, transformador) in citacao.Fabrica.ParametrosDeDominio.OrderBy(citado => citado.Key, StringComparer.Ordinal))
+        {
+            if (!citacao.Normalizados.TryGetValue(parametro, out var nome) || _falhos.Contains(nome))
+            {
+                continue;
+            }
+
+            var escrito = citacao.Parametros.FirstOrDefault(p => p.Nome == parametro);
+            var (posicao, local) = escrito is null ? (citacao.Posicao, citacao.Local) : (escrito.Posicao, escrito.Local);
+            if (!_definicoes.TryGetValue(nome, out var definicao))
+            {
+                if (!_registro.TentarObter(transformador, 1, out var citada) || citada.DominioPadrao != nome)
+                {
+                    _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local,
+                        $"O domínio citado em '{parametro}' não está definido: declare-o em 'dominios' com o {transformador}@1, ou cite o domínio padrão dele.");
+                    continue;
+                }
+
+                // O padrão citado e não usado por nenhuma coluna: as políticas globais.
+                definicao = new Definicao(citada, new Dictionary<string, string>(StringComparer.Ordinal), PoliticasDeEntrada.Nenhuma, []);
+                _definicoes[nome] = definicao;
+            }
+
+            if (definicao.Fabrica.Nome != transformador || definicao.Fabrica.Versao != 1)
+            {
+                _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local,
+                    $"O domínio citado em '{parametro}' é de outro transformador ou de outra versão: precisa ser do {transformador}@1.");
+            }
+        }
+    }
+
+    // A tabela de domínios da sessão, em ordem de nome: cada um com os parâmetros e as políticas do próprio domínio.
+    private List<DefinicaoDominio> Dominios() =>
+    [
+        .. _definicoes
+            .Where(par => !_falhos.Contains(par.Key))
+            .OrderBy(par => par.Key, StringComparer.Ordinal)
+            .Select(par => new DefinicaoDominio(
+                par.Value.Fabrica.Nome,
+                Regra(new DominioPseudonimo(par.Key, par.Value.Fabrica.Versao), par.Value.Parametros, [par.Value.Politicas], derivarDe: null, justificativa: null))),
+    ];
 
     private FabricaRegistrada? Fabrica(ReferenciaTransformador referencia)
     {
@@ -354,10 +421,17 @@ internal sealed class ResolvedorDeRegras
 
     private sealed record Definicao(
         FabricaRegistrada Fabrica, IReadOnlyDictionary<string, string> Parametros, PoliticasDeEntrada Politicas, SortedDictionary<string, string> Identidade);
+
+    // Uma regra que cita outros domínios, conferida no fim.
+    private sealed record Citacao(
+        FabricaRegistrada Fabrica, IReadOnlyDictionary<string, string> Normalizados, IReadOnlyList<ParametroRegra> Parametros, Posicao Posicao, string Local);
 }
 
 /// <summary>Uma coluna com transformador: a fábrica e a regra conferida, para o <c>planejar</c> criar o transformador.</summary>
 internal sealed record ColunaResolvida(NomeTabela Tabela, RegraColuna Coluna, FabricaRegistrada Fabrica, RegraTransformacao Regra);
 
-/// <summary>As regras resolvidas, na ordem do arquivo.</summary>
-internal sealed record ResolucaoDeRegras(IReadOnlyList<ColunaResolvida> Colunas);
+/// <summary>
+/// As regras resolvidas, na ordem do arquivo, e a tabela de domínios da sessão (os declarados, os implícitos e os
+/// citados, com as políticas de cada domínio).
+/// </summary>
+internal sealed record ResolucaoDeRegras(IReadOnlyList<ColunaResolvida> Colunas, IReadOnlyList<DefinicaoDominio> Dominios);

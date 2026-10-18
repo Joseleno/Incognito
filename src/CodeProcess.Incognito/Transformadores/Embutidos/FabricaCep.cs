@@ -21,7 +21,7 @@ internal sealed class FabricaCep() : FabricaEmbutida(NomeDoTransformador, "cep",
 
         ExigirComprimento(contexto, 8, "o pseudônimo de CEP tem 8 caracteres (9 ou 10 com a máscara)");
         var regra = contexto.Regra;
-        var cep = contexto.Sessao.Obter(Identidade(contexto), (chave, ambiente) => new PseudonimizadorCep(
+        var cep = contexto.Sessao.Obter(Identidade(regra), (chave, ambiente) => new PseudonimizadorCep(
             chave, regra.Dominio.Nome, regra.Dominio.Versao, ambiente, regra.EntradaMalformada));
         return new TransformadorCep(cep, contexto.Tipo, tipoReferencia);
     }

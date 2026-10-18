@@ -153,3 +153,11 @@ virtual CodeProcess.Incognito.Transformadores.FabricaTransformador.Normalizar(Co
 virtual CodeProcess.Incognito.Transformadores.FabricaTransformador.ParametrosDeIdentidade.get -> System.Collections.Generic.IReadOnlySet<string!>!
 virtual CodeProcess.Incognito.Transformadores.FabricaTransformador.Validar(CodeProcess.Incognito.Transformadores.RegraTransformacao! regra) -> void
 virtual CodeProcess.Incognito.Transformadores.Transformador.TransformaNulo.get -> bool
+CodeProcess.Incognito.Transformadores.DefinicaoDominio
+CodeProcess.Incognito.Transformadores.DefinicaoDominio.DefinicaoDominio(string! transformador, CodeProcess.Incognito.Transformadores.RegraTransformacao! regra) -> void
+CodeProcess.Incognito.Transformadores.DefinicaoDominio.Nome.get -> string!
+CodeProcess.Incognito.Transformadores.DefinicaoDominio.Regra.get -> CodeProcess.Incognito.Transformadores.RegraTransformacao!
+CodeProcess.Incognito.Transformadores.DefinicaoDominio.Transformador.get -> string!
+CodeProcess.Incognito.Transformadores.FabricaTransformador.ParametrosDeDominio.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+CodeProcess.Incognito.Transformadores.SessaoTransformacao.Dominios.get -> System.Collections.Generic.IReadOnlyCollection<CodeProcess.Incognito.Transformadores.DefinicaoDominio!>!
+CodeProcess.Incognito.Transformadores.SessaoTransformacao.Dominios.init -> void
