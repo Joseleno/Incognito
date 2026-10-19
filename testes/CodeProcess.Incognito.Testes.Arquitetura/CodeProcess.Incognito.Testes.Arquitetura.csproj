@@ -7,6 +7,8 @@
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.SqlServer\CodeProcess.Incognito.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.EntityFrameworkCore\CodeProcess.Incognito.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.Cli\CodeProcess.Incognito.Cli.csproj" />
+    <!-- Só para a reflexão sobre a suíte de conformidade (classes de teste abstratas). -->
+    <ProjectReference Include="..\CodeProcess.Incognito.Testes.Conformidade\CodeProcess.Incognito.Testes.Conformidade.csproj" />
   </ItemGroup>
 
 </Project>

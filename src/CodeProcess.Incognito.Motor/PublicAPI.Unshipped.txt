@@ -12,3 +12,149 @@ CodeProcess.Incognito.Configuracao.ErroConfiguracao.Mensagem.get -> string!
 override CodeProcess.Incognito.Configuracao.ErroConfiguracao.ToString() -> string!
 static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.CarregarYaml(string! caminho) -> CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito!
 static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! texto) -> CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito!
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.ChaveEstrangeira() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Colunas.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Colunas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.ColunasReferenciadas.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.ColunasReferenciadas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Referenciada.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Referenciada.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Anulavel.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Anulavel.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.ColunaEsquema() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Geracao.get -> CodeProcess.Incognito.Dialetos.GeracaoColuna
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Geracao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Identidade.get -> CodeProcess.Incognito.Dialetos.IdentidadeColuna
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Identidade.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Mascarada.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Mascarada.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Situacao.get -> CodeProcess.Incognito.Dialetos.SituacaoTipo
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Situacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Tipo.get -> CodeProcess.Incognito.Transformadores.TipoColuna?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.TipoNativo.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.TipoNativo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.DialetoBanco() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.DisposeAsync() -> System.Threading.Tasks.ValueTask
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoDestino
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoDestino.DialetoDestino() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoOrigem
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoOrigem.DialetoOrigem() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoSql
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoSql.Citar(CodeProcess.Incognito.Dialetos.NomeObjeto! nome) -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoSql.DialetoSql() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.EsquemaBanco() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosResiduais.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ObjetoResidual!>!
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosResiduais.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Sequences.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.SequenceEsquema!>!
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Sequences.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Tabelas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.TabelaEsquema!>!
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Tabelas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.GeracaoColuna
+[INCX001]CodeProcess.Incognito.Dialetos.GeracaoColuna.Armazenada = 1 -> CodeProcess.Incognito.Dialetos.GeracaoColuna
+[INCX001]CodeProcess.Incognito.Dialetos.GeracaoColuna.Nenhuma = 0 -> CodeProcess.Incognito.Dialetos.GeracaoColuna
+[INCX001]CodeProcess.Incognito.Dialetos.GeracaoColuna.Virtual = 2 -> CodeProcess.Incognito.Dialetos.GeracaoColuna
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeBanco
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeBanco.IdentidadeBanco() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeColuna
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeColuna.Nenhuma = 0 -> CodeProcess.Incognito.Dialetos.IdentidadeColuna
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeColuna.PorPadrao = 2 -> CodeProcess.Incognito.Dialetos.IdentidadeColuna
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeColuna.Sempre = 1 -> CodeProcess.Incognito.Dialetos.IdentidadeColuna
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Banco.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Banco.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.IdentidadeLida() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Linhagem.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Linhagem.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Servidor.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Servidor.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorEsquema.LeitorEsquema() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.NomeObjeto
+[INCX001]CodeProcess.Incognito.Dialetos.NomeObjeto.Equals(CodeProcess.Incognito.Dialetos.NomeObjeto? other) -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.NomeObjeto.Esquema.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.NomeObjeto.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.NomeObjeto.NomeObjeto(string! esquema, string! nome) -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.Nome.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.ObjetoResidual() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.Tipo.get -> CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ProvedorDialeto
+[INCX001]CodeProcess.Incognito.Dialetos.ProvedorDialeto.ProvedorDialeto() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciaColuna
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciaColuna.Coluna.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciaColuna.Equals(CodeProcess.Incognito.Dialetos.ReferenciaColuna? other) -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciaColuna.ReferenciaColuna(CodeProcess.Incognito.Dialetos.NomeObjeto! tabela, string! coluna) -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciaColuna.Tabela.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.SegredoConexao
+[INCX001]CodeProcess.Incognito.Dialetos.SegredoConexao.Revelar() -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.SegredoConexao.SegredoConexao(string! valor) -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SequenceEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.SequenceEsquema.Colunas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ReferenciaColuna!>!
+[INCX001]CodeProcess.Incognito.Dialetos.SequenceEsquema.Colunas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SequenceEsquema.Nome.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.SequenceEsquema.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SequenceEsquema.SequenceEsquema() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo.ComRessalva = 1 -> CodeProcess.Incognito.Dialetos.SituacaoTipo
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo.NaoSuportado = 3 -> CodeProcess.Incognito.Dialetos.SituacaoTipo
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo.Suportado = 0 -> CodeProcess.Incognito.Dialetos.SituacaoTipo
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo.SuportadoPorExclusao = 2 -> CodeProcess.Incognito.Dialetos.SituacaoTipo
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChavePrimaria.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChavePrimaria.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChavesEstrangeiras.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ChaveEstrangeira!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChavesEstrangeiras.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Colunas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ColunaEsquema!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Colunas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Historico.get -> CodeProcess.Incognito.Dialetos.NomeObjeto?
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Historico.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Nome.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Pai.get -> CodeProcess.Incognito.Dialetos.NomeObjeto?
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Pai.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.SegurancaDeLinha.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.SegurancaDeLinha.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.TabelaEsquema() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Tipo.get -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoResidual.CapturaDeMudancas = 2 -> CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoResidual.ObjetosGrandes = 3 -> CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoResidual.VisaoIndexada = 1 -> CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoResidual.VisaoMaterializada = 0 -> CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela.Comum = 0 -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela.Herdeira = 3 -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela.HistoricoDeTemporal = 5 -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela.Particao = 2 -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela.Particionada = 1 -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.TipoTabela.Temporal = 4 -> CodeProcess.Incognito.Dialetos.TipoTabela
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Esquema.get -> CodeProcess.Incognito.Dialetos.LeitorEsquema!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Identidade.get -> CodeProcess.Incognito.Dialetos.IdentidadeBanco!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Sql.get -> CodeProcess.Incognito.Dialetos.DialetoSql!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoSql.Citar(string! identificador) -> string!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.IdentidadeBanco.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.IdentidadeLida!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorEsquema.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.EsquemaBanco!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.ProvedorDialeto.ConectarDestinoAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoDestino!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.ProvedorDialeto.ConectarOrigemAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoOrigem!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.ProvedorDialeto.Nome.get -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.NomeObjeto.Equals(object? obj) -> bool
+[INCX001]override CodeProcess.Incognito.Dialetos.NomeObjeto.GetHashCode() -> int
+[INCX001]override CodeProcess.Incognito.Dialetos.NomeObjeto.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.ReferenciaColuna.Equals(object? obj) -> bool
+[INCX001]override CodeProcess.Incognito.Dialetos.ReferenciaColuna.GetHashCode() -> int
+[INCX001]override CodeProcess.Incognito.Dialetos.ReferenciaColuna.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.SegredoConexao.ToString() -> string!
+[INCX001]virtual CodeProcess.Incognito.Dialetos.DialetoBanco.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.LancarSeDescartado() -> void

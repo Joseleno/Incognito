@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -13,6 +14,13 @@ public sealed class ProjetosDeTesteTestes
     private const string Este = "testes/CodeProcess.Incognito.Testes.Arquitetura/ProjetosDeTesteTestes.cs";
     private const string Nucleo = "CodeProcess.Incognito.Testes";
     private const string Conformidade = "CodeProcess.Incognito.Testes.Conformidade";
+
+    // Roda a suíte de conformidade por reflexão contra um dialeto falso, sem banco e sem classe concreta descoberta pelo
+    // xUnit: a única referência à suíte fora dos dialetos.
+    private const string Motor = "CodeProcess.Incognito.Testes.Motor";
+
+    // Confere por reflexão que a suíte só tem classes de teste abstratas; não roda nenhum teste dela.
+    private const string Arquitetura = "CodeProcess.Incognito.Testes.Arquitetura";
 
     // A única forma permitida de ignorar o código 8, igual nos quatro .csproj.
     private const string LinhaPermitida =
@@ -36,6 +44,11 @@ public sealed class ProjetosDeTesteTestes
     // a usam. Lento: o rapido e o nucleo-so a tiram, e o job lentos a roda só no núcleo (o release roda as duas, em tudo).
     private static readonly Regex _integracao = new(@"\bintegracao\b", RegexOptions.IgnoreCase);
     private static readonly Regex _lento = new(@"\blento\b", RegexOptions.IgnoreCase);
+
+    // Onde se suprime um diagnóstico do compilador.
+    private static readonly string[] _comConfiguracaoDeCompilacao =
+        ["*.cs", "*.csproj", "*.props", "*.targets", "*.editorconfig", "*.globalconfig", "*.json", "*.yml", "*.yaml", "*.rsp", "*.ruleset"];
+
 
     [Fact]
     public void A_varredura_ve_os_projetos_de_teste()
@@ -134,12 +147,57 @@ public sealed class ProjetosDeTesteTestes
     public void So_os_dialetos_usam_a_suite_de_conformidade()
     {
         var raiz = Repositorio.Raiz();
-        var esperados = _dialetos.Select(projeto => $"testes/{projeto}/{projeto}.csproj").ToArray();
+        var esperados = _dialetos.Append(Motor).Append(Arquitetura).Select(projeto => $"testes/{projeto}/{projeto}.csproj").ToArray();
         var intrusos = Repositorio.Versionados("*.csproj").Concat(Repositorio.Versionados("*.props")).Concat(Repositorio.Versionados("*.targets"))
             .Where(arquivo => !esperados.Contains(arquivo) && File.ReadAllText(Path.Combine(raiz, arquivo)).Contains(Conformidade, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
-        Assert.True(intrusos.Length == 0, $"Só os projetos de dialeto referenciam a suíte de conformidade, cujos testes são de banco: {string.Join(", ", intrusos)}.");
+        Assert.True(intrusos.Length == 0, $"Só os projetos de dialeto (e o do motor, pelo dialeto falso, e o de arquitetura) referenciam a suíte de conformidade, cujos testes são de banco: {string.Join(", ", intrusos)}.");
+    }
+
+    [Fact]
+    public void A_suite_de_conformidade_e_biblioteca_com_classes_de_teste_abstratas()
+    {
+        // Uma classe concreta com testes numa biblioteca nunca roda; o xunit.v3 (ou o core) faria dela um executável de
+        // teste, que o dotnet test da solução rodaria sem banco.
+        var raiz = Repositorio.Raiz();
+        var projeto = XDocument.Load(Path.Combine(raiz, $"testes/{Conformidade}/{Conformidade}.csproj"));
+        var pacotes = projeto.Descendants("PackageReference").Select(pacote => (string?)pacote.Attribute("Include")).ToArray();
+        Assert.Equal("false", projeto.Descendants("IsTestProject").Single().Value);
+        Assert.DoesNotContain("xunit.v3", pacotes);
+        Assert.DoesNotContain("xunit.v3.core", pacotes);
+
+        var concretas = Assembly.Load(new AssemblyName(Conformidade)).GetTypes()
+            .Where(tipo => !tipo.IsAbstract && tipo.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+                .Any(metodo => metodo.GetCustomAttributes(inherit: true).OfType<FactAttribute>().Any()))
+            .Select(tipo => tipo.FullName)
+            .ToArray();
+        Assert.True(concretas.Length == 0, $"Classes concretas com testes na suíte de conformidade: {string.Join(", ", concretas)}.");
+    }
+
+    [Fact]
+    public void O_INCX001_so_e_suprimido_nos_projetos_que_consomem_o_contrato_de_dialeto()
+    {
+        // O contrato experimental de dialeto avisa quem o usa; suprimir em lugar mais largo (Directory.Build.props,
+        // .editorconfig, pragma) esconderia o aviso de quem não sabe que o contrato muda. O próprio contrato o declara e o
+        // documenta.
+        var raiz = Repositorio.Raiz();
+
+        // Pode suprimir: o .csproj que referencia o motor ou a suíte de conformidade (dialetos, CLI, testes que
+        // implementam ou consomem o contrato). O .csproj usa a barra invertida, que o Linux não separa.
+        var permitidos = Repositorio.Versionados("*.csproj")
+            .Where(projeto => XDocument.Load(Path.Combine(raiz, projeto)).Descendants("ProjectReference")
+                .Select(referencia => ((string?)referencia.Attribute("Include") ?? "").Replace('\\', '/').Split('/')[^1])
+                .Any(nome => nome is "CodeProcess.Incognito.Motor.csproj" or $"{Conformidade}.csproj"))
+            .Append(Este)
+            .Append("testes/CodeProcess.Incognito.Testes.Arquitetura/RegrasDeArquiteturaTestes.cs")
+            .ToHashSet();
+        var achados = _comConfiguracaoDeCompilacao
+            .SelectMany(Repositorio.Versionados)
+            .Where(arquivo => !permitidos.Contains(arquivo) && !arquivo.StartsWith("src/CodeProcess.Incognito.Motor/Dialetos/", StringComparison.Ordinal) && File.ReadAllText(Path.Combine(raiz, arquivo)).Contains("INCX001", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        Assert.True(achados.Length == 0, $"INCX001 citado fora dos projetos que consomem o contrato de dialeto: {string.Join(", ", achados)}.");
     }
 
     [Fact]

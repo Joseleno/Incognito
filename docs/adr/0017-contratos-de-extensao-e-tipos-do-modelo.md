@@ -97,3 +97,10 @@ carregá-los de um lado para o outro.
   (item 7). Os domínios citados são referência, não identidade: não mudam o domínio da regra. Verificado por
   `FabricasDasChavesTestes` (domínio ausente, de outro transformador ou de outra versão recusado; instâncias
   compartilhadas com as colunas dos documentos) e, no motor, por `DominiosCitadosTestes`.
+- 2026-10-18: o contrato de dialeto ([ADR 0008](0008-dialetos-com-contrato-experimental-e-suite-de-conformidade.md))
+  segue este ADR: classes abstratas (`ProvedorDialeto`, `DialetoOrigem`, `DialetoDestino`, `LeitorEsquema`,
+  `IdentidadeBanco`, `DialetoSql`), sem interface, com o descarte como método-modelo. O esquema lido por um dialeto
+  (`EsquemaBanco`, `TabelaEsquema`, `ColunaEsquema` e vizinhos, `NomeObjeto`, `IdentidadeLida`) é saída de um contrato
+  de extensão, não modelo produzido pelo motor: tem construtor público e propriedades `init` validadas, como as do
+  item 4, e fica de fora de `Tipos_publicos_do_motor_so_nascem_do_motor`. O item 8 vale também para os dialetos: o
+  motor trata uma exceção de dialeto que não seja `IncognitoException` como falha sem mensagem.
