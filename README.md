@@ -7,7 +7,7 @@ Times brasileiros copiam a base de produção para homologação, desenvolviment
 
 Gratuita, open source (MIT) e inteiramente em português.
 
-> **Em desenvolvimento.** Nenhum pacote foi publicado. A primeira publicação no NuGet será a `1.0.0`, com todos os pacotes de uma vez. Hoje só o núcleo (`CodeProcess.Incognito`) funciona: geração, validação e pseudonimização de documentos brasileiros, sem banco. Os pacotes `Motor`, `PostgreSql`, `SqlServer`, `EntityFrameworkCore` e `Cli` ainda são esqueletos, e o comando `incognito` ainda não faz nada.
+> **Em desenvolvimento.** Nenhum pacote foi publicado. A primeira publicação no NuGet será a `1.0.0`, com todos os pacotes de uma vez. Hoje só o núcleo (`CodeProcess.Incognito`) está completo: geração, validação e pseudonimização de documentos brasileiros, sem banco. O `Motor` já lê a configuração e o `PostgreSql` já lê o esquema de um banco, mas nenhum pacote copia banco ainda; `SqlServer`, `EntityFrameworkCore` e `Cli` são esqueletos, e o comando `incognito` ainda não faz nada.
 >
 > **Até a `1.0.0`, nenhuma saída é contrato.** Pseudônimos e sequências do `GeradorBr` com semente podem mudar entre versões candidatas. Não guarde resultados de uma versão candidata contando reproduzi-los depois.
 

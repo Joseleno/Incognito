@@ -2,10 +2,16 @@
 
   <PropertyGroup>
     <Description>Dialeto PostgreSQL do Incognito.</Description>
+    <!-- Implementa o contrato experimental de dialeto. -->
+    <NoWarn>$(NoWarn);INCX001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
 </Project>

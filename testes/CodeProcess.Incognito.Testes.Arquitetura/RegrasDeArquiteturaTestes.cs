@@ -67,6 +67,16 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.DoesNotContain("System.Net.Http", nomes);
     }
 
+    [Fact]
+    public void O_driver_do_dialeto_PostgreSql_nao_usa_System_Net_Http()
+    {
+        // A regra acima não percorre pacotes de terceiros; o driver vai junto em todo uso do dialeto.
+        var nomes = Referencias("Npgsql").Select(referencia => referencia.Name);
+
+        Assert.Contains("Npgsql", Referencias(PostgreSql).Select(referencia => referencia.Name));
+        Assert.DoesNotContain("System.Net.Http", nomes);
+    }
+
     [Theory]
     [InlineData(Nucleo)]
     [InlineData(Motor)]

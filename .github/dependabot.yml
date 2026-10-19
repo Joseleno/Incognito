@@ -1,7 +1,8 @@
-# Atualizações semanais dos pacotes NuGet e das actions: as de versão menor e de correção chegam juntas
-# num único pull request por ecossistema; as de versão maior chegam uma a uma (o BenchmarkDotNet, em
-# qualquer tipo de atualização, num pull request próprio). Uma versão nova só é proposta depois de 7 dias
-# publicada. Atualizações de segurança não esperam.
+# Atualizações semanais dos pacotes NuGet, das actions e das imagens dos testes de banco: as de versão
+# menor e de correção chegam juntas num único pull request por ecossistema; as de versão maior chegam uma
+# a uma (o BenchmarkDotNet, em qualquer tipo de atualização, num pull request próprio; as imagens nunca
+# mudam de versão principal). Uma versão nova só é proposta depois de 7 dias publicada. Atualizações de
+# segurança não esperam.
 #
 # O SDK do .NET fica de fora: subir o global.json exige regenerar os lock files
 # (dotnet restore --force-evaluate), porque o lock do núcleo guarda o Microsoft.NET.ILLink.Tasks na
@@ -49,4 +50,23 @@ updates:
       actions:
         patterns: ['*']
         update-types: [minor, patch]
+    labels: []
+
+  # As imagens do PostgreSQL dos testes de banco, uma pasta por versão principal: só a versão menor e o digest mudam (a
+  # versão principal de cada pasta é a que ela testa). Todas num pull request só.
+  - package-ecosystem: docker
+    directories: ['/testes/CodeProcess.Incognito.Testes.PostgreSql/imagens/*']
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: postgres
+        update-types: ['version-update:semver-major']
+    groups:
+      imagens:
+        patterns: ['*']
     labels: []

@@ -45,10 +45,10 @@ valor() { yq -r "$1" "$workflow"; }
 
 [[ "$(valor '.jobs.publicar.if')" == "needs.preparar.outputs.tipo == 'lancamento'" ]] \
   || falhar "o job publicar não está condicionado a tag de lançamento"
-[[ "$(valor '.jobs | keys | sort | join(" ")')" == "atestar pacotes preparar publicar validar-pacotes validar-publicacao" ]] \
+[[ "$(valor '.jobs | keys | sort | join(" ")')" == "atestar pacotes preparar publicar testes-de-banco validar-pacotes validar-publicacao" ]] \
   || falhar "os jobs do release mudaram: $(valor '.jobs | keys | sort | join(" ")')"
-[[ "$(valor '.jobs.publicar.needs | contains(["preparar", "pacotes", "atestar", "validar-pacotes"])')" == "true" ]] \
-  || falhar "o job publicar não depende de preparar, pacotes, atestar e validar-pacotes"
+[[ "$(valor '.jobs.publicar.needs | contains(["preparar", "pacotes", "testes-de-banco", "atestar", "validar-pacotes"])')" == "true" ]] \
+  || falhar "o job publicar não depende de preparar, pacotes, testes-de-banco, atestar e validar-pacotes"
 [[ "$(valor '[.jobs[] | select(has("environment"))] | length')" == "2" ]] \
   || falhar "há job com environment além de publicar e validar-publicacao"
 [[ "$(valor '[.jobs | to_entries[] | select(.value.permissions."id-token" == "write") | .key] | sort | join(" ")')" == "atestar publicar validar-publicacao" ]] \

@@ -103,3 +103,16 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
 - O congelamento da API pública antes da `1.0.0` (o contrato sai ou não de experimental).
 - O primeiro dialeto de fora que não consiga declarar um caso do catálogo.
 - O primeiro pedido de um dialeto de fora para usar a suíte (publicá-la como pacote).
+
+## Atualizações
+
+- 2026-10-19: o primeiro dialeto, `CodeProcess.Incognito.PostgreSql` (PostgreSQL 15 em diante), implementa o contrato
+  e herda a suíte numa classe selada. Os testes de arquitetura
+  `Cada_dialeto_implementado_herda_a_suite_numa_unica_classe_selada` e `Os_projetos_de_dialeto_so_tem_testes_de_banco`
+  exigem exatamente uma classe dessas por dialeto implementado e só testes de banco no projeto do dialeto. A fixture
+  sobe um contêiner por execução (fixture de assembly), com três logins (o administrador monta; a origem é lida por um
+  login sem superusuário que nunca é dono; o destino é de um dono sem superusuário), e clona um banco-modelo por teste.
+  O dialeto impõe por cima da string de conexão o que o Incognito exige (sem detalhe de erro do servidor, sem registro
+  de parâmetros, sem pool na conexão de controle, em UTF-8, sem senha em claro, só o `pg_catalog` no caminho de busca
+  e, na origem, transações só de leitura), confere a sessão depois de abrir e recusa mais de um servidor. Os testes do
+  dialeto rodam no job `integracao` do CI, nas versões suportadas, e no release.

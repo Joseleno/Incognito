@@ -15,7 +15,7 @@ Obrigado pelo interesse. O Incognito está em desenvolvimento e ainda não tem v
 
 ## Desenvolvimento
 
-Requisitos: o SDK do .NET 10 na versão exata fixada no `global.json` e, para os testes de banco, Docker.
+Requisitos: o SDK do .NET 10 na versão exata fixada no `global.json` e, para os testes de banco, Docker (o `dotnet test` sem filtro sobe contêineres do PostgreSQL: o da versão testada e, para o teste de recusa, um mais antigo). A versão do PostgreSQL dos testes vem de `INCOGNITO_POSTGRES` (padrão 18; as imagens ficam fixadas por digest em `testes/CodeProcess.Incognito.Testes.PostgreSql/imagens/`). A porta do banco fica só em `127.0.0.1`, então o Docker precisa ser local; o Ryuk do Testcontainers, que limpa os contêineres, é uma imagem sem digest com acesso ao socket do Docker e publica a própria porta em todas as interfaces (no CI e no release ele fica desligado; localmente, `TESTCONTAINERS_RYUK_DISABLED=true` o desliga, e um contêiner de teste interrompido fica para apagar à mão). Um teste abre um servidor falso num endereço da máquina fora do loopback, o que pode fazer o firewall perguntar.
 
 ```
 dotnet build -c Release

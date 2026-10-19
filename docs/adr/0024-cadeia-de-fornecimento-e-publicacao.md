@@ -153,3 +153,19 @@ Algumas restrições do ambiente pesaram:
   ferramentas locais.
 - Mudança no Trusted Publishing do nuget.org que altere o que a política prende.
 - Um segundo mantenedor com permissão de publicar.
+
+## Atualizações
+
+- 2026-10-19: o item 5 ganha o ecossistema `docker`, para as imagens do PostgreSQL dos testes de banco
+  (`testes/CodeProcess.Incognito.Testes.PostgreSql/imagens/<versão>/Dockerfile`, uma pasta por versão principal). Cada
+  `Dockerfile` tem só o `FROM` com tag e digest (`postgres:18.6-trixie@sha256:...`), lido pela fixture dos testes e
+  nunca construído; a fixture recusa imagem sem digest. O Dependabot atualiza a versão menor e o digest, todas as
+  imagens num pull request (grupo `imagens`), com o mesmo `cooldown`, e nunca a versão principal (`ignore` de
+  `version-update:semver-major`), porque a versão principal de cada pasta é a que ela testa. A tag leva o sistema da
+  imagem (`-trixie`), para uma troca da glibc, que muda a ordem das colações, chegar visível num pull request. O job
+  `integracao` roda os testes sem o Ryuk do Testcontainers (imagem sem digest com acesso ao socket do Docker), num
+  runner descartado no fim.
+- 2026-10-19: no release, os testes de banco saem do job `pacotes` para um job próprio, `testes-de-banco` (só
+  leitura, PostgreSQL 15 e 18, sem o Ryuk), e o `publicar` passa a esperá-lo: as dependências dos testes de banco
+  (Testcontainers, o cliente do Docker e o que eles trazem) não executam no job que gera os pacotes. O item 10 continua:
+  o `pacotes` testa sem banco e empacota.
