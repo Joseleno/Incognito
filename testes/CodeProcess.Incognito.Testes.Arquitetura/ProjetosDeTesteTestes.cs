@@ -184,10 +184,10 @@ public sealed class ProjetosDeTesteTestes
         var raiz = Repositorio.Raiz();
 
         // Pode suprimir: o .csproj que referencia o motor ou a suíte de conformidade (dialetos, CLI, testes que
-        // implementam ou consomem o contrato).
+        // implementam ou consomem o contrato). O .csproj usa a barra invertida, que o Linux não separa.
         var permitidos = Repositorio.Versionados("*.csproj")
             .Where(projeto => XDocument.Load(Path.Combine(raiz, projeto)).Descendants("ProjectReference")
-                .Select(referencia => Path.GetFileName((string?)referencia.Attribute("Include") ?? ""))
+                .Select(referencia => ((string?)referencia.Attribute("Include") ?? "").Replace('\\', '/').Split('/')[^1])
                 .Any(nome => nome is "CodeProcess.Incognito.Motor.csproj" or $"{Conformidade}.csproj"))
             .Append(Este)
             .Append("testes/CodeProcess.Incognito.Testes.Arquitetura/RegrasDeArquiteturaTestes.cs")
