@@ -23,6 +23,11 @@
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
+  <!-- Dialetos: o driver de cada banco só no projeto do dialeto. -->
+  <ItemGroup>
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
   <!-- Benchmarks (solução própria em benchmarks/) -->
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -39,6 +44,7 @@
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
     <PackageVersion Include="Corvus.Json.Validator" Version="5.7.5" />
     <PackageVersion Include="CsCheck" Version="4.9.1" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <PackageVersion Include="xunit.v3" Version="$(VersaoXunit)" />
     <PackageVersion Include="xunit.v3.assert" Version="$(VersaoXunit)" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="$(VersaoXunit)" />

@@ -45,6 +45,11 @@ public sealed class ProjetosDeTesteTestes
     private static readonly Regex _integracao = new(@"\bintegracao\b", RegexOptions.IgnoreCase);
     private static readonly Regex _lento = new(@"\blento\b", RegexOptions.IgnoreCase);
 
+    // O atributo que marca um tipo público de dialeto como parte do contrato experimental, aceito só no código dos
+    // dialetos: dentro do tipo marcado, o uso do contrato não avisa, então em outro lugar ele valeria como supressão.
+    private const string AtributoExperimental = "[Experimental(\"INCX001\")]";
+    private static readonly string[] _codigoDosDialetos = ["src/CodeProcess.Incognito.PostgreSql/", "src/CodeProcess.Incognito.SqlServer/"];
+
     // Onde se suprime um diagnóstico do compilador.
     private static readonly string[] _comConfiguracaoDeCompilacao =
         ["*.cs", "*.csproj", "*.props", "*.targets", "*.editorconfig", "*.globalconfig", "*.json", "*.yml", "*.yaml", "*.rsp", "*.ruleset"];
@@ -156,6 +161,76 @@ public sealed class ProjetosDeTesteTestes
     }
 
     [Fact]
+    public void Cada_dialeto_implementado_herda_a_suite_numa_unica_classe_selada()
+    {
+        // Pelo texto: o projeto de testes do dialeto traz o Testcontainers, que este projeto não referencia. Um dialeto
+        // conta como implementado quando o assembly dele tem um provedor; os outros não podem herdar a suíte ainda.
+        // Qualquer outra menção à suíte (uma base intermediária, um uso fora de declaração) também conta: a herança precisa
+        // ser direta, na única classe.
+        var heranca = new Regex(@"\b((?:public|internal|sealed|abstract|partial|file)\s+)*class\s+\w+\b[^{;]*?:\s*(?:global::)?(?:\w+\.)*ConformidadeDialetoTestes\s*<");
+        var mencao = new Regex(@"\bConformidadeDialetoTestes\s*<");
+        var achados = new List<string>();
+        foreach (var dialeto in _dialetos)
+        {
+            var nome = dialeto["CodeProcess.Incognito.Testes.".Length..];
+            var implementado = Assembly.Load(new AssemblyName($"CodeProcess.Incognito.{nome}")).GetTypes()
+                .Any(tipo => tipo.BaseType?.FullName == "CodeProcess.Incognito.Dialetos.ProvedorDialeto");
+            var textos = Repositorio.Versionados($"testes/{dialeto}/*.cs")
+                .Select(arquivo => (arquivo, texto: File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))))
+                .ToArray();
+            var classes = textos.SelectMany(par => heranca.Matches(par.texto).Select(casamento => (par.arquivo, casamento.Value))).ToArray();
+            var mencoes = textos.Sum(par => mencao.Count(par.texto));
+
+            if (classes.Length != (implementado ? 1 : 0) || mencoes != classes.Length)
+            {
+                achados.Add($"{dialeto}: {classes.Length} classes derivadas da suíte e {mencoes} menções a ela, esperada {(implementado ? 1 : 0)}");
+            }
+
+            achados.AddRange(classes.Where(classe => !Regex.IsMatch(classe.Value, @"\bsealed\b") || !Regex.IsMatch(classe.Value, @"\bpublic\b"))
+                .Select(classe => $"{classe.arquivo}: a classe derivada da suíte precisa ser public sealed (o xUnit não descobre as internas)"));
+        }
+
+        Assert.True(achados.Count == 0, $"Suíte de conformidade nos dialetos: {string.Join("; ", achados)}.");
+    }
+
+    [Fact]
+    public void Os_projetos_de_dialeto_so_tem_testes_de_banco()
+    {
+        // A fixture de assembly sobe o contêiner quando qualquer teste do projeto roda: um teste sem a categoria rodaria no
+        // job sem banco e o derrubaria. Cada [Fact] ou [Theory] leva o trait da suíte.
+        var teste = new Regex(@"\[(Fact|Theory)\b");
+        var trait = new Regex(@"\[Trait\(CategoriaDaSuite\.Nome, CategoriaDaSuite\.Valor\)\]");
+        var achados = _dialetos
+            .SelectMany(dialeto => Repositorio.Versionados($"testes/{dialeto}/*.cs"))
+            .Select(arquivo => (arquivo, texto: File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))))
+            .Where(par => teste.Count(par.texto) != trait.Count(par.texto))
+            .Select(par => par.arquivo)
+            .ToArray();
+
+        Assert.True(achados.Length == 0, $"Testes sem a categoria de banco num projeto de dialeto: {string.Join(", ", achados)}.");
+    }
+
+    [Theory]
+    [InlineData("Npgsql", "src/CodeProcess.Incognito.PostgreSql/")]
+    [InlineData("Microsoft.Data.SqlClient", "src/CodeProcess.Incognito.SqlServer/")]
+    [InlineData("Testcontainers", "testes/CodeProcess.Incognito.Testes.PostgreSql/", "testes/CodeProcess.Incognito.Testes.SqlServer/")]
+    public void Driver_e_conteiner_so_nos_projetos_do_dialeto(string pacote, params string[] pastas)
+    {
+        // Pelo PackageReference de qualquer arquivo do MSBuild (o pacote e os que começam com o nome dele); a versão
+        // central (PackageVersion) fica de fora. A referência transitiva, pelo ProjectReference ao dialeto, é permitida.
+        var raiz = Repositorio.Raiz();
+        var achados = Repositorio.Versionados("*.csproj").Concat(Repositorio.Versionados("*.props")).Concat(Repositorio.Versionados("*.targets"))
+            .Where(arquivo => !pastas.Any(pasta => arquivo.StartsWith(pasta, StringComparison.Ordinal)))
+            .Where(arquivo => XDocument.Load(Path.Combine(raiz, arquivo)).Descendants()
+                .Where(elemento => elemento.Name.LocalName == "PackageReference")
+                .Select(elemento => (string?)elemento.Attribute("Include") ?? (string?)elemento.Attribute("Update") ?? "")
+                .Any(nome => nome.Equals(pacote, StringComparison.OrdinalIgnoreCase) || nome.StartsWith(pacote + ".", StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        Assert.True(achados.Length == 0, $"{pacote} referenciado fora de {string.Join(" e ", pastas)}: {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
     public void A_suite_de_conformidade_e_biblioteca_com_classes_de_teste_abstratas()
     {
         // Uma classe concreta com testes numa biblioteca nunca roda; o xunit.v3 (ou o core) faria dela um executável de
@@ -194,10 +269,39 @@ public sealed class ProjetosDeTesteTestes
             .ToHashSet();
         var achados = _comConfiguracaoDeCompilacao
             .SelectMany(Repositorio.Versionados)
-            .Where(arquivo => !permitidos.Contains(arquivo) && !arquivo.StartsWith("src/CodeProcess.Incognito.Motor/Dialetos/", StringComparison.Ordinal) && File.ReadAllText(Path.Combine(raiz, arquivo)).Contains("INCX001", StringComparison.OrdinalIgnoreCase))
+            .Where(arquivo => !permitidos.Contains(arquivo) && !arquivo.StartsWith("src/CodeProcess.Incognito.Motor/Dialetos/", StringComparison.Ordinal)
+                && SemOAtributoDosDialetos(arquivo, File.ReadAllText(Path.Combine(raiz, arquivo))).Contains("INCX001", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         Assert.True(achados.Length == 0, $"INCX001 citado fora dos projetos que consomem o contrato de dialeto: {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
+    public void Os_codigos_de_erro_sao_unicos_em_todo_o_codigo()
+    {
+        // Os códigos INCnnnn são declarados em mais de um assembly (núcleo, motor, dialetos): um número repetido seria
+        // dois erros com o mesmo código.
+        var declaracao = new Regex(@"const\s+string\s+\w+\s*=\s*""(INC\d{4})""");
+        var raiz = Repositorio.Raiz();
+        var codigos = Repositorio.Versionados("src/*.cs")
+            .SelectMany(arquivo => declaracao.Matches(File.ReadAllText(Path.Combine(raiz, arquivo))).Select(casamento => (codigo: casamento.Groups[1].Value, arquivo)))
+            .ToArray();
+        var repetidos = codigos.GroupBy(par => par.codigo).Where(grupo => grupo.Count() > 1)
+            .Select(grupo => $"{grupo.Key} ({string.Join(", ", grupo.Select(par => par.arquivo))})")
+            .ToArray();
+
+        // Um código escrito direto (fora de uma constante) escaparia da conferência acima.
+        var literal = new Regex(@"""INC\d{4}""");
+        var soltos = Repositorio.Versionados("src/*.cs")
+            .SelectMany(arquivo => File.ReadAllLines(Path.Combine(raiz, arquivo))
+                .Select((linha, indice) => (linha, onde: $"{arquivo}:{indice + 1}"))
+                .Where(par => literal.IsMatch(par.linha) && !declaracao.IsMatch(par.linha)))
+            .Select(par => par.onde)
+            .ToArray();
+
+        Assert.Contains(codigos, par => par.codigo == "INC3101");
+        Assert.True(repetidos.Length == 0, $"Códigos de erro repetidos: {string.Join("; ", repetidos)}.");
+        Assert.True(soltos.Length == 0, $"Código de erro escrito fora de uma constante: {string.Join(", ", soltos)}.");
     }
 
     [Fact]
@@ -220,6 +324,12 @@ public sealed class ProjetosDeTesteTestes
         Assert.True(fora.Length == 0, $"Projeto fora do Incognito.slnx (o CI não o compila nem testa): {string.Join(", ", fora)}.");
         Assert.True(configuracao.Length == 0, $"Configuração de projeto no Incognito.slnx (pode tirar um projeto do build e dos testes): {string.Join(", ", configuracao)}.");
     }
+
+    // O texto do arquivo sem o atributo experimental exato, só no código dos dialetos.
+    private static string SemOAtributoDosDialetos(string arquivo, string texto) =>
+        _codigoDosDialetos.Any(pasta => arquivo.StartsWith(pasta, StringComparison.Ordinal))
+            ? texto.Replace(AtributoExperimental, "", StringComparison.Ordinal)
+            : texto;
 
     // As linhas dos arquivos versionados das pastas de testes/ que não podem citar a categoria (o arquivo desta guarda fica
     // de fora). Vale para qualquer arquivo da pasta: o .csproj também pode marcar o assembly inteiro.

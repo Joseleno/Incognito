@@ -88,13 +88,15 @@ jobs:
       - run: dotnet restore --locked-mode
       - run: dotnet build -c Release --no-restore
       # A data em UTC do commit da tag (nunca alterada) liga o teste que exige o catálogo normativo revisto nos 30 dias
-      # antes dela; a segunda execução reprova se esse teste for pulado ou deixar de existir.
+      # antes dela; a segunda execução reprova se esse teste for pulado ou deixar de existir. Sem os testes de banco, que
+      # rodam no job testes-de-banco: as dependências deles (Testcontainers e o cliente do Docker) não executam no job que
+      # gera os pacotes.
       - name: Testar
         run: |
           INCOGNITO_DATA_DO_RELEASE="$(TZ=UTC git log -1 --date=format-local:%Y-%m-%d --format=%cd "$GITHUB_SHA")"
           test -n "$INCOGNITO_DATA_DO_RELEASE"
           export INCOGNITO_DATA_DO_RELEASE
-          dotnet test -c Release --no-build
+          dotnet test -c Release --no-build --filter-not-trait "Categoria=Integracao"
           dotnet test --project testes/CodeProcess.Incognito.Testes -c Release --no-build \
             --filter-method "*.No_release_o_catalogo_foi_revisto_nos_30_dias_antes_do_commit" --fail-skips on --minimum-expected-tests 1
       - run: dotnet pack -c Release --no-build -o artifacts
@@ -125,6 +127,33 @@ jobs:
           if-no-files-found: error
 
   # Attestation num job à parte: só ele recebe a identidade OIDC, e nele roda apenas a action da attestation.
+  # Os testes de banco do dialeto, nas duas pontas do PostgreSQL suportado, num job sem permissão de escrita e separado
+  # do que gera os pacotes. Sem o Ryuk do Testcontainers (imagem sem digest com acesso ao socket do Docker), num runner
+  # descartado no fim. A publicação espera este job.
+  testes-de-banco:
+    needs: preparar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['15', '18']
+    env:
+      INCOGNITO_POSTGRES: ${{ matrix.postgres }}
+      TESTCONTAINERS_RYUK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore testes/CodeProcess.Incognito.Testes.PostgreSql --locked-mode
+      # O projeto ignora o código 8 (no job sem banco ele roda zero testes); aqui, zero testes sai com 9.
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --minimum-expected-tests 1
+
   atestar:
     needs: [preparar, pacotes]
     runs-on: ubuntu-24.04
@@ -172,7 +201,7 @@ jobs:
 
   # Só tag de lançamento chega aqui (teste em .github/scripts/testar-release.sh).
   publicar:
-    needs: [preparar, pacotes, atestar, validar-pacotes]
+    needs: [preparar, pacotes, testes-de-banco, atestar, validar-pacotes]
     if: needs.preparar.outputs.tipo == 'lancamento'
     runs-on: ubuntu-24.04
     timeout-minutes: 15

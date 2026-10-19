@@ -109,6 +109,14 @@
         "resolved": "10.0.12",
         "contentHash": "45cV+UeI0chPAIXrx9Wv7K4PJXuuIR2pnOur5MOAo6kOFclBHSLLDrvGAxMfWRMtUvpv/kQZkxlgaUN56jwzSQ=="
       },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "FU/IfjDfwaMuKr414SSQNTIti/69bHEMb+QKrskRb26oVqpx3lNFXMjs/RC9ZUuhBhcwDM2BwOgoMw+PZ+beqQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.0"
+        }
+      },
       "Microsoft.Extensions.Primitives": {
         "type": "Transitive",
         "resolved": "10.0.12",
@@ -230,13 +238,23 @@
       "codeprocess.incognito.postgresql": {
         "type": "Project",
         "dependencies": {
-          "CodeProcess.Incognito.Motor": "[1.0.0, )"
+          "CodeProcess.Incognito.Motor": "[1.0.0, )",
+          "Npgsql": "[10.0.3, )"
         }
       },
       "codeprocess.incognito.sqlserver": {
         "type": "Project",
         "dependencies": {
           "CodeProcess.Incognito.Motor": "[1.0.0, )"
+        }
+      },
+      "Npgsql": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "7nb5YzXuvWWJxB0J8DiyL3we+X4FOctZrt0fIBnucOIaIevFEEwGQVZKtiu9olXdlNAK1eNgqSral6r/jlhI4w==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.0"
         }
       },
       "xunit.v3.assert": {

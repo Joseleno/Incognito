@@ -3,10 +3,23 @@
   <!-- Só testes de banco (Categoria=Integracao), que o CI sem Docker filtra: lá este projeto roda zero testes. -->
   <PropertyGroup>
     <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 8</TestingPlatformCommandLineArguments>
+    <!-- Implementa e testa o contrato experimental de dialeto. -->
+    <NoWarn>$(NoWarn);INCX001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.PostgreSql\CodeProcess.Incognito.PostgreSql.csproj" />
+    <ProjectReference Include="..\CodeProcess.Incognito.Testes.Conformidade\CodeProcess.Incognito.Testes.Conformidade.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <!-- O esquema de conformidade e as imagens fixadas por digest (uma pasta por versão, atualizadas pelo Dependabot). -->
+  <ItemGroup>
+    <EmbeddedResource Include="esquema-de-conformidade.sql" LogicalName="esquema-de-conformidade.sql" />
+    <None Include="imagens\*\Dockerfile" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

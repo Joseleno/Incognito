@@ -1,1 +1,6 @@
 #nullable enable
+[INCX001]CodeProcess.Incognito.Dialetos.PostgreSql.ProvedorPostgreSql
+[INCX001]CodeProcess.Incognito.Dialetos.PostgreSql.ProvedorPostgreSql.ProvedorPostgreSql() -> void
+[INCX001]override CodeProcess.Incognito.Dialetos.PostgreSql.ProvedorPostgreSql.ConectarDestinoAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoDestino!>!
+[INCX001]override CodeProcess.Incognito.Dialetos.PostgreSql.ProvedorPostgreSql.ConectarOrigemAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoOrigem!>!
+[INCX001]override CodeProcess.Incognito.Dialetos.PostgreSql.ProvedorPostgreSql.Nome.get -> string!

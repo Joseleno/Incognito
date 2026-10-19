@@ -175,7 +175,10 @@ public sealed class TabelaEsquema
 [Experimental(ContratoExperimental.Diagnostico)]
 public enum SituacaoTipo
 {
-    /// <summary>Cópia direta e transformação quando compatível (<see cref="ColunaEsquema.Tipo"/> preenchido).</summary>
+    /// <summary>
+    /// Cópia direta e transformação quando compatível; <see cref="ColunaEsquema.Tipo"/> preenchido quando há representação
+    /// canônica (sem ela, como <c>time</c> e <c>interval</c> no PostgreSQL, só <c>nulo</c> ou <c>fixo</c>).
+    /// </summary>
     Suportado,
 
     /// <summary>Copiado como está; transformação só com <c>nulo</c> ou <c>fixo</c>.</summary>
@@ -240,7 +243,10 @@ public sealed class ColunaEsquema
         init => _situacao = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(Situacao), "Situação de tipo desconhecida.");
     }
 
-    /// <summary>A representação canônica do valor; nulo quando o tipo não é <see cref="SituacaoTipo.Suportado"/>.</summary>
+    /// <summary>
+    /// A representação canônica do valor, só em <see cref="SituacaoTipo.Suportado"/> e nem sempre nele; nula quando o tipo
+    /// não tem representação canônica (a coluna só aceita <c>nulo</c> ou <c>fixo</c>).
+    /// </summary>
     public TipoColuna? Tipo
     {
         get => _tipo;

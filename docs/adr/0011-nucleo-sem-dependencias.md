@@ -146,3 +146,9 @@ desde a primeira linha deles.
   continua sem nenhuma dependência. O assembly do motor passa a referenciar o núcleo e o YamlDotNet; o que o YamlDotNet
   usa por dentro fica fora da busca por `System.Net.Http` (a limitação acima): a versão fixada não depende de nenhum
   pacote e não referencia `System.Net.Http`, conferido no lock file e na revisão de cada atualização.
+- 2026-10-19: o dialeto `CodeProcess.Incognito.PostgreSql` ganhou o primeiro driver, o Npgsql (10.0.3, licença
+  PostgreSQL), com as dependências transitivas `Microsoft.Extensions.Logging.Abstractions` e
+  `Microsoft.Extensions.DependencyInjection.Abstractions` (MIT), conferidas na revisão de cada atualização. Só o dialeto o
+  referencia (teste de arquitetura sobre o `PackageReference` de todo arquivo do MSBuild, e o motor continua sem
+  driver); o `Npgsql.dll` é conferido à parte por não referenciar `System.Net.Http`, porque a busca acima não percorre
+  pacotes de terceiros.

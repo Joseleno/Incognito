@@ -76,6 +76,47 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Os testes de banco de cada dialeto, com Testcontainers (a fixture sobe o contêiner da versão pedida, com a imagem
+  # fixada por digest em testes/<projeto>/imagens/<versão>/Dockerfile). As duas pontas do PostgreSQL suportado em todo PR;
+  # as versões do meio também no push na develop e na main. Fixado no ubuntu-24.04, como o release.
+  integracao-postgresql:
+    name: integracao (postgresql ${{ matrix.postgres }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ${{ fromJSON(github.event_name == 'push' && '["15","16","17","18"]' || '["15","18"]') }}
+    env:
+      INCOGNITO_POSTGRES: ${{ matrix.postgres }}
+      # Sem o Ryuk do Testcontainers, que é uma imagem sem digest com acesso ao socket do Docker e publica a própria porta
+      # em todas as interfaces; o runner é descartado no fim.
+      TESTCONTAINERS_RYUK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: testes/CodeProcess.Incognito.Testes.PostgreSql/packages.lock.json
+      - run: dotnet restore testes/CodeProcess.Incognito.Testes.PostgreSql --locked-mode
+      # O projeto ignora o código 8 (no job sem banco ele roda zero testes); aqui, zero testes sai com 9.
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --filter-trait "Categoria=Integracao" --minimum-expected-tests 1
+
+  # Um nome estável, qualquer que seja a matriz, para o Ruleset exigir quando a integração passar a ser obrigatória:
+  # verde só se todas as versões passaram (falha também se a matriz for cancelada ou pulada).
+  integracao:
+    if: always()
+    needs: [integracao-postgresql]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "$RESULTADO" = success
+        env:
+          RESULTADO: ${{ needs.integracao-postgresql.result }}
+
   # Informativo. O núcleo não depende de banco nem de rede e precisa se comportar igual em todo sistema.
   nucleo-so:
     strategy:
