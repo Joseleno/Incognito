@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Testa o contrato experimental de dialeto e roda a suíte de conformidade contra um dialeto falso. -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);INCX001</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />
+    <ProjectReference Include="..\CodeProcess.Incognito.Testes.Conformidade\CodeProcess.Incognito.Testes.Conformidade.csproj" />
   </ItemGroup>
 
   <!-- Testes de propriedade (CsCheck) e o JSON Schema validado por um motor completo de draft-07 (só aqui). -->

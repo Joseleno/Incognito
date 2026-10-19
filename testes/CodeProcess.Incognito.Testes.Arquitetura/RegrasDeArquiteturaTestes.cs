@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace CodeProcess.Incognito.Testes.Arquitetura;
@@ -14,6 +15,7 @@ public sealed class RegrasDeArquiteturaTestes
     private const string SqlServer = "CodeProcess.Incognito.SqlServer";
     private const string EntityFrameworkCore = "CodeProcess.Incognito.EntityFrameworkCore";
     private const string Cli = "CodeProcess.Incognito.Cli";
+    private const string Dialetos = Nucleo + ".Dialetos";
 
     private static readonly string[] _driversEEfCore = ["Npgsql", "Microsoft.Data.SqlClient", "Microsoft.EntityFrameworkCore"];
 
@@ -119,9 +121,10 @@ public sealed class RegrasDeArquiteturaTestes
     [Fact]
     public void Tipos_publicos_do_motor_so_nascem_do_motor()
     {
-        // ADR 0017: o modelo produzido pelo motor (configuração, erros, plano) não tem construtor público.
+        // ADR 0017: o modelo produzido pelo motor (configuração, erros, plano) não tem construtor público. O contrato de
+        // dialeto fica de fora: o esquema lido é saída de um dialeto, que pode ser de fora, e tem construtor público.
         var comConstrutor = Tipos(Motor)
-            .Where(tipo => tipo.IsVisible && tipo.GetConstructors().Length > 0)
+            .Where(tipo => tipo.IsVisible && !NoContrato(tipo) && tipo.GetConstructors().Length > 0)
             .Select(tipo => tipo.FullName)
             .ToArray();
 
@@ -140,6 +143,40 @@ public sealed class RegrasDeArquiteturaTestes
             .ToArray();
 
         Assert.True(abertos.Length == 0, $"Tipos do contrato que se podem herdar sem serem contratos: {string.Join(", ", abertos)}.");
+    }
+
+    [Fact]
+    public void O_contrato_de_dialeto_e_experimental_e_so_tem_classes_seladas_ou_abstratas()
+    {
+        // O contrato muda até a 1.0 (INCX001); contratos de extensão como classes abstratas (ADR 0017), sem interface.
+        var tipos = Tipos(Motor).Where(tipo => tipo.IsVisible && NoContrato(tipo)).ToArray();
+
+        Assert.NotEmpty(tipos);
+        Assert.All(tipos, tipo =>
+        {
+            Assert.True(tipo.GetCustomAttribute<ExperimentalAttribute>()?.DiagnosticId == "INCX001", $"{tipo.Name} sem [Experimental(\"INCX001\")].");
+            Assert.False(tipo.IsInterface, $"{tipo.Name} é interface: o contrato de extensão é classe abstrata.");
+            Assert.True(!tipo.IsClass || tipo.IsSealed || tipo.IsAbstract, $"{tipo.Name} se pode herdar sem ser contrato.");
+            Assert.True(!tipo.IsAbstract || tipo.IsSealed || tipo.GetConstructors().Length == 0, $"{tipo.Name} é abstrato com construtor público.");
+        });
+    }
+
+    [Fact]
+    public void Nenhum_tipo_estavel_do_motor_expoe_o_contrato_de_dialeto()
+    {
+        // Um membro público fora do namespace experimental que use um tipo do contrato espalharia o INCX001 por quem só usa
+        // a parte estável.
+        const BindingFlags Todos = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var expostos = Tipos(Motor)
+            .Where(tipo => tipo.IsVisible && !NoContrato(tipo))
+            .SelectMany(tipo => tipo.GetMembers(Todos).Where(VisivelFora).SelectMany(TiposDoMembro)
+                .Append(tipo.BaseType).Concat(tipo.GetInterfaces()).OfType<Type>().SelectMany(Desembrulhar).Select(usado => (tipo, usado)))
+            .Where(par => NoContrato(par.usado))
+            .Select(par => $"{par.tipo.Name} usa {par.usado.Name}")
+            .Distinct()
+            .ToArray();
+
+        Assert.True(expostos.Length == 0, $"Tipos estáveis do motor que expõem o contrato de dialeto: {string.Join(", ", expostos)}.");
     }
 
     [Theory]
@@ -181,6 +218,29 @@ public sealed class RegrasDeArquiteturaTestes
             .SelectMany(Desembrulhar)
             .Concat(tipo.GetNestedTypes(Todos).SelectMany(TiposDaAssinatura));
     }
+
+    private static bool NoContrato(Type tipo) => tipo.Namespace is { } nome && (nome == Dialetos || nome.StartsWith(Dialetos + ".", StringComparison.Ordinal));
+
+    // Público ou protegido: o que quem herda de um tipo público também enxerga.
+    private static bool VisivelFora(MemberInfo membro) => membro switch
+    {
+        MethodBase metodo => metodo.IsPublic || metodo.IsFamily || metodo.IsFamilyOrAssembly,
+        FieldInfo campo => campo.IsPublic || campo.IsFamily || campo.IsFamilyOrAssembly,
+        PropertyInfo propriedade => propriedade.GetAccessors(nonPublic: true).Any(VisivelFora),
+        EventInfo evento => evento.AddMethod is { } adicionar && VisivelFora(adicionar),
+        Type aninhado => aninhado.IsNestedPublic || aninhado.IsNestedFamily || aninhado.IsNestedFamORAssem,
+        _ => false,
+    };
+
+    private static IEnumerable<Type> TiposDoMembro(MemberInfo membro) => membro switch
+    {
+        FieldInfo campo => [campo.FieldType],
+        PropertyInfo propriedade => [propriedade.PropertyType],
+        MethodInfo metodo => metodo.GetParameters().Select(parametro => parametro.ParameterType).Append(metodo.ReturnType),
+        ConstructorInfo construtor => construtor.GetParameters().Select(parametro => parametro.ParameterType),
+        EventInfo evento => evento.EventHandlerType is { } tipo ? [tipo] : [],
+        _ => [],
+    };
 
     // O tipo dos elementos de array, ponteiro e referência, e os argumentos de tipos genéricos.
     private static IEnumerable<Type> Desembrulhar(Type tipo)

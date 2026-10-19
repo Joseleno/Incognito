@@ -74,8 +74,8 @@ internal sealed class FabricaChavePix() : FabricaEmbutida("br.chave-pix", "chave
         return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, chavePix.Pseudonimizar, null);
     }
 
-    // O documento dentro da chave: o domínio, os parâmetros e a política de DV do domínio dele (decisão 49), e a política
-    // de malformado da chave (decisão 50), que o pseudonimizador da chave exige igual nos quatro.
+    // O documento dentro da chave: o domínio, os parâmetros e a política de DV do domínio dele, e a política
+    // de malformado da chave, que o pseudonimizador da chave exige igual nos quatro.
     private static RegraTransformacao Componente(RegraTransformacao doDominio, RegraTransformacao daChave) =>
         new(doDominio.Dominio)
         {

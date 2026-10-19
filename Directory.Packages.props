@@ -28,12 +28,20 @@
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
 
-  <!-- Testes -->
+  <!--
+    Testes. O xUnit numa versão só: o xunit.v3 nos projetos de teste e, na suíte de conformidade (biblioteca, sem
+    executável), o xunit.v3.extensibility.core e o xunit.v3.assert, que ele também traz.
+  -->
+  <PropertyGroup>
+    <VersaoXunit>4.0.1</VersaoXunit>
+  </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
     <PackageVersion Include="Corvus.Json.Validator" Version="5.7.5" />
     <PackageVersion Include="CsCheck" Version="4.9.1" />
-    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <PackageVersion Include="xunit.v3" Version="$(VersaoXunit)" />
+    <PackageVersion Include="xunit.v3.assert" Version="$(VersaoXunit)" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="$(VersaoXunit)" />
   </ItemGroup>
 
 </Project>

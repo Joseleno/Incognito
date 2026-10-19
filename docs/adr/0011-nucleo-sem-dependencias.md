@@ -2,7 +2,7 @@
 
 - Status: aceito
 - Data: 2026-10-15
-- Relacionados: [ADR 0001](0001-projeto-em-portugues.md) (namespace raiz e nomes que não colidem), [ADR 0004](0004-modos-efemero-e-reproduzivel.md) (o motor é dono da chave no `efemero`), [ADR 0013](0013-versao-do-transformador-e-vetores-fixos.md) (fachada fixa na versão 1), [ADR 0015](0015-apenas-net10.md) (alvo único e SDK fixado), ADR 0008 (dialetos em pacotes separados, a registrar), [ADR 0017](0017-contratos-de-extensao-e-tipos-do-modelo.md) (contratos de extensão como classes abstratas)
+- Relacionados: [ADR 0001](0001-projeto-em-portugues.md) (namespace raiz e nomes que não colidem), [ADR 0004](0004-modos-efemero-e-reproduzivel.md) (o motor é dono da chave no `efemero`), [ADR 0013](0013-versao-do-transformador-e-vetores-fixos.md) (fachada fixa na versão 1), [ADR 0015](0015-apenas-net10.md) (alvo único e SDK fixado), [ADR 0008](0008-dialetos-com-contrato-experimental-e-suite-de-conformidade.md) (dialetos em pacotes separados, com contrato experimental e suíte de conformidade), [ADR 0017](0017-contratos-de-extensao-e-tipos-do-modelo.md) (contratos de extensão como classes abstratas)
 
 ## Contexto
 
