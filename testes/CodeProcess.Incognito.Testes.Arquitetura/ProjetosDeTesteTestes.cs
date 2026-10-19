@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -164,50 +165,116 @@ public sealed class ProjetosDeTesteTestes
     public void Cada_dialeto_implementado_herda_a_suite_numa_unica_classe_selada()
     {
         // Pelo texto: o projeto de testes do dialeto traz o Testcontainers, que este projeto não referencia. Um dialeto
-        // conta como implementado quando o assembly dele tem um provedor; os outros não podem herdar a suíte ainda.
-        // Qualquer outra menção à suíte (uma base intermediária, um uso fora de declaração) também conta: a herança precisa
-        // ser direta, na única classe.
-        var heranca = new Regex(@"\b((?:public|internal|sealed|abstract|partial|file)\s+)*class\s+\w+\b[^{;]*?:\s*(?:global::)?(?:\w+\.)*ConformidadeDialetoTestes\s*<");
+        // conta como implementado quando o assembly dele tem um provedor concreto (também por uma base intermediária); os
+        // outros não podem herdar a suíte ainda. Qualquer outra menção à suíte (uma base intermediária, um uso fora de
+        // declaração) também conta: a herança precisa ser direta, na única classe, não genérica, declarada na coluna 0 de um
+        // arquivo com namespace de arquivo (então nunca aninhada; a compilação condicional e o <Compile> são recusados à
+        // parte). O texto não vê comentário nem o que o compilador tirou: o projeto do dialeto confere o mesmo no assembly
+        // compilado (ConferenciaDaSuite), numa chamada que esta regra exige.
+        var heranca = new Regex(@"^((?:public|internal|sealed|abstract|partial|file)\s+)*class\s+\w+\b[^{;]*?:\s*(?:global::)?(?:\w+\.)*ConformidadeDialetoTestes\s*<", RegexOptions.Multiline);
+        var namespaceDeArquivo = new Regex(@"^namespace\s+[\w.]+\s*;", RegexOptions.Multiline);
         var mencao = new Regex(@"\bConformidadeDialetoTestes\s*<");
+        var conferencia = new Regex(@"\bConferenciaDaSuite\.Conferir\s*\(");
         var achados = new List<string>();
         foreach (var dialeto in _dialetos)
         {
             var nome = dialeto["CodeProcess.Incognito.Testes.".Length..];
             var implementado = Assembly.Load(new AssemblyName($"CodeProcess.Incognito.{nome}")).GetTypes()
-                .Any(tipo => tipo.BaseType?.FullName == "CodeProcess.Incognito.Dialetos.ProvedorDialeto");
+                .Any(tipo => !tipo.IsAbstract && Provedor(tipo));
             var textos = Repositorio.Versionados($"testes/{dialeto}/*.cs")
                 .Select(arquivo => (arquivo, texto: File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))))
                 .ToArray();
-            var classes = textos.SelectMany(par => heranca.Matches(par.texto).Select(casamento => (par.arquivo, casamento.Value))).ToArray();
+            var classes = textos.SelectMany(par => heranca.Matches(par.texto).Select(casamento => (par.arquivo, casamento))).ToArray();
             var mencoes = textos.Sum(par => mencao.Count(par.texto));
+            var conferencias = textos.Sum(par => conferencia.Count(par.texto));
 
             if (classes.Length != (implementado ? 1 : 0) || mencoes != classes.Length)
             {
                 achados.Add($"{dialeto}: {classes.Length} classes derivadas da suíte e {mencoes} menções a ela, esperada {(implementado ? 1 : 0)}");
             }
 
-            achados.AddRange(classes.Where(classe => !Regex.IsMatch(classe.Value, @"\bsealed\b") || !Regex.IsMatch(classe.Value, @"\bpublic\b"))
+            if (conferencias != (implementado ? 1 : 0))
+            {
+                achados.Add($"{dialeto}: {conferencias} chamadas a ConferenciaDaSuite.Conferir, esperada {(implementado ? 1 : 0)}");
+            }
+
+            // Os modificadores pelo grupo deles, não pelo casamento inteiro (um parâmetro chamado @public não conta).
+            achados.AddRange(classes
+                .Where(classe =>
+                {
+                    var modificadores = classe.casamento.Groups[1].Captures.Select(captura => captura.Value.Trim()).ToArray();
+                    return !modificadores.Contains("sealed") || !modificadores.Contains("public");
+                })
                 .Select(classe => $"{classe.arquivo}: a classe derivada da suíte precisa ser public sealed (o xUnit não descobre as internas)"));
+            achados.AddRange(classes.Where(classe => Regex.IsMatch(classe.casamento.Value, @"\bclass\s+\w+\s*<"))
+                .Select(classe => $"{classe.arquivo}: a classe derivada da suíte não pode ser genérica (o xUnit não roda classe aberta)"));
+            achados.AddRange(classes.Where(classe => !namespaceDeArquivo.IsMatch(textos.Single(par => par.arquivo == classe.arquivo).texto))
+                .Select(classe => $"{classe.arquivo}: a classe derivada da suíte precisa estar num arquivo com namespace de arquivo"));
         }
 
         Assert.True(achados.Count == 0, $"Suíte de conformidade nos dialetos: {string.Join("; ", achados)}.");
     }
 
     [Fact]
+    public void Os_testes_dos_dialetos_nao_tem_compilacao_condicional()
+    {
+        // As regras que leem o texto (a classe derivada da suíte, a categoria de cada teste) não sabem o que o compilador
+        // vê: um #if false esconderia a declaração que elas contam.
+        var diretiva = new Regex(@"^\s*#\s*(if|elif|else|define|undef)\b", RegexOptions.Multiline);
+        var achados = _dialetos
+            .SelectMany(dialeto => Repositorio.Versionados($"testes/{dialeto}/*.cs"))
+            .Where(arquivo => diretiva.IsMatch(File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))))
+            .ToArray();
+
+        Assert.True(achados.Length == 0, $"Compilação condicional num projeto de testes de dialeto: {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
+    public void Os_testes_dos_dialetos_compilam_todo_arquivo_versionado()
+    {
+        // Um <Compile Remove> (ou os itens padrão desligados) tiraria um arquivo do compilador sem tirá-lo do texto que as
+        // regras leem. Nos arquivos do MSBuild que chegam aos projetos de testes: os de testes/ e os da raiz.
+        var raiz = Repositorio.Raiz();
+        var achados = ArquivosDoMsBuild()
+            .Where(arquivo => !arquivo.Contains('/', StringComparison.Ordinal) || arquivo.StartsWith("testes/", StringComparison.Ordinal))
+            .Where(arquivo => XDocument.Load(Path.Combine(raiz, arquivo)).Descendants()
+                .Any(elemento => elemento.Name.LocalName is "Compile" or "EnableDefaultCompileItems" or "EnableDefaultItems"))
+            .ToArray();
+
+        Assert.True(achados.Length == 0, $"Item Compile ou itens padrão desligados num arquivo do MSBuild dos testes: {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
     public void Os_projetos_de_dialeto_so_tem_testes_de_banco()
     {
         // A fixture de assembly sobe o contêiner quando qualquer teste do projeto roda: um teste sem a categoria rodaria no
-        // job sem banco e o derrubaria. Cada [Fact] ou [Theory] leva o trait da suíte.
-        var teste = new Regex(@"\[(Fact|Theory)\b");
-        var trait = new Regex(@"\[Trait\(CategoriaDaSuite\.Nome, CategoriaDaSuite\.Valor\)\]");
-        var achados = _dialetos
-            .SelectMany(dialeto => Repositorio.Versionados($"testes/{dialeto}/*.cs"))
-            .Select(arquivo => (arquivo, texto: File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))))
-            .Where(par => teste.Count(par.texto) != trait.Count(par.texto))
-            .Select(par => par.arquivo)
-            .ToArray();
+        // job sem banco e o derrubaria. Cada [Fact] ou [Theory] leva o trait da suíte no mesmo bloco de atributos (as linhas
+        // de atributo seguidas antes do método), não em outro método do arquivo. A linha do atributo de teste só tem
+        // atributos: com o método na mesma linha, o bloco seguinte seria de outro método. O nome qualificado, o sufixo
+        // Attribute e a lista de atributos também contam; um atributo derivado, só o assembly vê (ConferenciaDaSuite).
+        var teste = new Regex(@"[\[,]\s*(?:global::)?(?:\w+\.)*(?:Fact|Theory)(?:Attribute)?\s*[\](,]");
+        const string Trait = "[Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]";
+        var achados = new List<string>();
+        foreach (var arquivo in _dialetos.SelectMany(dialeto => Repositorio.Versionados($"testes/{dialeto}/*.cs")))
+        {
+            var linhas = File.ReadAllLines(Path.Combine(Repositorio.Raiz(), arquivo));
+            for (var indice = 0; indice < linhas.Length; indice++)
+            {
+                if (!teste.IsMatch(linhas[indice]))
+                {
+                    continue;
+                }
 
-        Assert.True(achados.Length == 0, $"Testes sem a categoria de banco num projeto de dialeto: {string.Join(", ", achados)}.");
+                var bloco = BlocoDeAtributos(linhas, indice);
+                var soAtributos = linhas[indice].Trim() is ['[', .., ']'];
+                if (!soAtributos || !bloco.Any(linha => linha.Trim() == Trait))
+                {
+                    achados.Add($"{arquivo}:{indice + 1}");
+                }
+            }
+        }
+
+        Assert.True(achados.Count == 0, $"Testes sem a categoria de banco num projeto de dialeto: {string.Join(", ", achados)}.");
     }
 
     [Theory]
@@ -216,18 +283,125 @@ public sealed class ProjetosDeTesteTestes
     [InlineData("Testcontainers", "testes/CodeProcess.Incognito.Testes.PostgreSql/", "testes/CodeProcess.Incognito.Testes.SqlServer/")]
     public void Driver_e_conteiner_so_nos_projetos_do_dialeto(string pacote, params string[] pastas)
     {
-        // Pelo PackageReference de qualquer arquivo do MSBuild (o pacote e os que começam com o nome dele); a versão
-        // central (PackageVersion) fica de fora. A referência transitiva, pelo ProjectReference ao dialeto, é permitida.
+        // Pelo PackageReference e pelo GlobalPackageReference de qualquer arquivo do MSBuild (o pacote e os que começam com o
+        // nome dele); a versão central (PackageVersion) fica de fora. A referência transitiva é conferida pelos lock files.
         var raiz = Repositorio.Raiz();
-        var achados = Repositorio.Versionados("*.csproj").Concat(Repositorio.Versionados("*.props")).Concat(Repositorio.Versionados("*.targets"))
+        var achados = ArquivosDoMsBuild()
             .Where(arquivo => !pastas.Any(pasta => arquivo.StartsWith(pasta, StringComparison.Ordinal)))
-            .Where(arquivo => XDocument.Load(Path.Combine(raiz, arquivo)).Descendants()
-                .Where(elemento => elemento.Name.LocalName == "PackageReference")
-                .Select(elemento => (string?)elemento.Attribute("Include") ?? (string?)elemento.Attribute("Update") ?? "")
+            .Where(arquivo => ReferenciasDePacote(XDocument.Load(Path.Combine(raiz, arquivo)))
                 .Any(nome => nome.Equals(pacote, StringComparison.OrdinalIgnoreCase) || nome.StartsWith(pacote + ".", StringComparison.OrdinalIgnoreCase)))
             .ToArray();
 
         Assert.True(achados.Length == 0, $"{pacote} referenciado fora de {string.Join(" e ", pastas)}: {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
+    public void As_referencias_de_pacote_tem_o_nome_escrito()
+    {
+        // Um nome montado por propriedade ou item ($(...), @(...), %(...)) escaparia da regra acima.
+        var raiz = Repositorio.Raiz();
+        var achados = ArquivosDoMsBuild()
+            .SelectMany(arquivo => ReferenciasDePacote(XDocument.Load(Path.Combine(raiz, arquivo)))
+                .Where(nome => nome.Contains("$(", StringComparison.Ordinal) || nome.Contains("@(", StringComparison.Ordinal) || nome.Contains("%(", StringComparison.Ordinal))
+                .Select(nome => $"{arquivo} ({nome})"))
+            .ToArray();
+
+        Assert.True(achados.Length == 0, $"Referência de pacote com nome montado por propriedade ou item: {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
+    public void Todo_projeto_tem_lock_file_versionado()
+    {
+        // As regras sobre pacotes transitivos leem os lock files: um projeto sem eles escaparia. Um projeto por pasta: o
+        // segundo usaria packages.<projeto>.lock.json, que nem o CI nem estas regras leem.
+        var locks = Repositorio.Versionados("*packages.lock.json").ToHashSet(StringComparer.Ordinal);
+        var projetos = Repositorio.Versionados("*.csproj");
+        var semLock = projetos
+            .Where(projeto => !locks.Contains(Path.GetDirectoryName(projeto)!.Replace('\\', '/') + "/packages.lock.json"))
+            .ToArray();
+        var pastasComMaisDeUm = projetos.GroupBy(projeto => Path.GetDirectoryName(projeto)!.Replace('\\', '/')).Where(pasta => pasta.Count() > 1).Select(pasta => pasta.Key).ToArray();
+        var outrosLocks = Repositorio.Versionados("*.lock.json").Where(arquivo => Path.GetFileName(arquivo) != "packages.lock.json").ToArray();
+
+        Assert.True(semLock.Length == 0, $"Projeto sem packages.lock.json versionado: {string.Join(", ", semLock)}.");
+        Assert.True(pastasComMaisDeUm.Length == 0, $"Pasta com mais de um projeto: {string.Join(", ", pastasComMaisDeUm)}.");
+        Assert.True(outrosLocks.Length == 0, $"Lock file com outro nome, que nenhuma regra lê: {string.Join(", ", outrosLocks)}.");
+    }
+
+    [Theory]
+    [InlineData("Npgsql", "codeprocess.incognito.postgresql", "src/CodeProcess.Incognito.PostgreSql/")]
+    [InlineData("Microsoft.Data.SqlClient", "codeprocess.incognito.sqlserver", "src/CodeProcess.Incognito.SqlServer/")]
+    [InlineData("Testcontainers", "", "testes/CodeProcess.Incognito.Testes.PostgreSql/", "testes/CodeProcess.Incognito.Testes.SqlServer/")]
+    public void Driver_e_conteiner_so_chegam_pelo_projeto_do_dialeto(string pacote, string projetoDoDialeto, params string[] pastas)
+    {
+        // Pelo grafo do lock file de cada projeto fora das pastas permitidas: o pacote (ou um que começa com o nome dele) só
+        // pode ser alcançado através do projeto do dialeto. Um pacote que traz o driver por baixo (como o
+        // Microsoft.EntityFrameworkCore.SqlServer traz o Microsoft.Data.SqlClient) é pego aqui.
+        var raiz = Repositorio.Raiz();
+        var achados = new List<string>();
+        foreach (var lockFile in Repositorio.Versionados("*packages.lock.json").Where(arquivo => !pastas.Any(pasta => arquivo.StartsWith(pasta, StringComparison.Ordinal))))
+        {
+            using var documento = JsonDocument.Parse(File.ReadAllText(Path.Combine(raiz, lockFile)));
+            foreach (var alvo in documento.RootElement.GetProperty("dependencies").EnumerateObject())
+            {
+                var pacotes = alvo.Value.EnumerateObject().ToDictionary(
+                    entrada => entrada.Name,
+                    entrada => (
+                        Tipo: entrada.Value.TryGetProperty("type", out var tipo) ? tipo.GetString() : null,
+                        Dependencias: entrada.Value.TryGetProperty("dependencies", out var dependencias) ? dependencias.EnumerateObject().Select(dependencia => dependencia.Name).ToArray() : []),
+                    StringComparer.OrdinalIgnoreCase);
+                var raizes = pacotes.Where(par => par.Value.Tipo is "Direct" or "Project" && !par.Key.Equals(projetoDoDialeto, StringComparison.OrdinalIgnoreCase)).Select(par => par.Key);
+                foreach (var origem in raizes)
+                {
+                    var alcancados = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var pendentes = new Queue<string>([origem]);
+                    while (pendentes.TryDequeue(out var atual))
+                    {
+                        if (atual.Equals(projetoDoDialeto, StringComparison.OrdinalIgnoreCase) || !alcancados.Add(atual))
+                        {
+                            continue;
+                        }
+
+                        if (!pacotes.TryGetValue(atual, out var entrada))
+                        {
+                            achados.Add($"{lockFile} ({alvo.Name}): {atual}, dependência de outro pacote, sem entrada no lock");
+                            continue;
+                        }
+
+                        foreach (var dependencia in entrada.Dependencias)
+                        {
+                            pendentes.Enqueue(dependencia);
+                        }
+                    }
+
+                    achados.AddRange(alcancados
+                        .Where(nome => nome.Equals(pacote, StringComparison.OrdinalIgnoreCase) || nome.StartsWith(pacote + ".", StringComparison.OrdinalIgnoreCase))
+                        .Select(nome => $"{lockFile} ({alvo.Name}): {nome} por {origem}"));
+                }
+            }
+        }
+
+        Assert.True(achados.Count == 0, $"{pacote} alcançado fora do projeto do dialeto: {string.Join(", ", achados.Distinct())}.");
+    }
+
+    [Fact]
+    public void O_projeto_de_um_dialeto_nao_chega_ao_outro()
+    {
+        // Uma ProjectReference sem uso de tipo não fica no assembly (o compilador não grava a referência), mas o pacote
+        // declara a dependência: pelo lock do projeto de cada dialeto.
+        var raiz = Repositorio.Raiz();
+        var achados = new List<string>();
+        foreach (var pasta in _codigoDosDialetos)
+        {
+            var lockFile = pasta + "packages.lock.json";
+            using var documento = JsonDocument.Parse(File.ReadAllText(Path.Combine(raiz, lockFile)));
+            var outros = _codigoDosDialetos.Where(outra => outra != pasta).Select(outra => outra["src/".Length..^1]).ToArray();
+            achados.AddRange(documento.RootElement.GetProperty("dependencies").EnumerateObject()
+                .SelectMany(alvo => alvo.Value.EnumerateObject().Select(entrada => (alvo: alvo.Name, entrada.Name)))
+                .Where(par => outros.Contains(par.Name, StringComparer.OrdinalIgnoreCase))
+                .Select(par => $"{lockFile} ({par.alvo}): {par.Name}"));
+        }
+
+        Assert.True(achados.Count == 0, $"Projeto de dialeto que chega ao de outro dialeto: {string.Join(", ", achados)}.");
     }
 
     [Fact]
@@ -323,6 +497,50 @@ public sealed class ProjetosDeTesteTestes
 
         Assert.True(fora.Length == 0, $"Projeto fora do Incognito.slnx (o CI não o compila nem testa): {string.Join(", ", fora)}.");
         Assert.True(configuracao.Length == 0, $"Configuração de projeto no Incognito.slnx (pode tirar um projeto do build e dos testes): {string.Join(", ", configuracao)}.");
+    }
+
+    private static IEnumerable<string> ArquivosDoMsBuild() =>
+        Repositorio.Versionados("*.csproj").Concat(Repositorio.Versionados("*.props")).Concat(Repositorio.Versionados("*.targets"));
+
+    // O nome de cada referência de pacote (PackageReference e GlobalPackageReference), pelo Include ou pelo Update, um por
+    // item da lista separada por ponto e vírgula.
+    private static IEnumerable<string> ReferenciasDePacote(XDocument documento) =>
+        documento.Descendants()
+            .Where(elemento => elemento.Name.LocalName is "PackageReference" or "GlobalPackageReference")
+            .SelectMany(elemento => ((string?)elemento.Attribute("Include") ?? (string?)elemento.Attribute("Update") ?? "").Split(';'))
+            .Select(nome => nome.Trim());
+
+    // Se o tipo deriva do provedor de dialeto, direto ou por uma base intermediária (pelo nome: o contrato é experimental).
+    private static bool Provedor(Type tipo)
+    {
+        for (var atual = tipo.BaseType; atual is not null; atual = atual.BaseType)
+        {
+            if (atual.FullName == "CodeProcess.Incognito.Dialetos.ProvedorDialeto")
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // As linhas de atributo seguidas em volta da linha (para cima e para baixo), até a primeira que não é atributo.
+    private static string[] BlocoDeAtributos(string[] linhas, int indice)
+    {
+        static bool Atributo(string linha) => linha.TrimStart().StartsWith('[');
+        var inicio = indice;
+        while (inicio > 0 && Atributo(linhas[inicio - 1]))
+        {
+            inicio--;
+        }
+
+        var fim = indice;
+        while (fim < linhas.Length - 1 && Atributo(linhas[fim + 1]))
+        {
+            fim++;
+        }
+
+        return linhas[inicio..(fim + 1)];
     }
 
     // O texto do arquivo sem o atributo experimental exato, só no código dos dialetos.

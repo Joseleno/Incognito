@@ -67,6 +67,29 @@ public sealed class ContratoDeDialetoTestes
     }
 
     [Fact]
+    public void A_estrutura_nova_da_tabela_e_da_coluna_copia_as_listas_e_recusa_nulos_e_vazios()
+    {
+        var nome = new NomeObjeto("loja", "ficha");
+        var pais = new List<NomeObjeto> { new("loja", "endereco") };
+        var chave = new List<string> { "canal" };
+        var tabela = new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = pais, ChaveParticao = new ChaveParticao { Colunas = chave } };
+        pais.Clear();
+        chave.Clear();
+
+        Assert.Single(tabela.OutrosPais);
+        Assert.Equal(["canal"], tabela.ChaveParticao!.Colunas);
+        Assert.Empty(new TabelaEsquema { Nome = nome, Colunas = [] }.OutrosPais);
+        Assert.Null(new TabelaEsquema { Nome = nome, Colunas = [] }.Extensao);
+        Assert.Equal("OutrosPais", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = [null!] }).ParamName);
+        Assert.Equal("OutrosPais", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = null! }).ParamName);
+        Assert.Equal("Extensao", Assert.Throws<ArgumentException>(() => new TabelaEsquema { Nome = nome, Colunas = [], Extensao = "" }).ParamName);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentException>(() => new ChaveParticao { Colunas = [""] }).ParamName);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentNullException>(() => new ChaveParticao { Colunas = null! }).ParamName);
+        Assert.Throws<ArgumentException>(() => new ColunaEsquema { Nome = "id", TipoNativo = "loja.codigo", Situacao = SituacaoTipo.ComRessalva, TipoBase = "" });
+        Assert.Null(new ColunaEsquema { Nome = "id", TipoNativo = "text", Situacao = SituacaoTipo.Suportado }.TipoBase);
+    }
+
+    [Fact]
     public async Task O_descarte_do_dialeto_roda_uma_vez_so()
     {
         var dialeto = new OrigemContada();

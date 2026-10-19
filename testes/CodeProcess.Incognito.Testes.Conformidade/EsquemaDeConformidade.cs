@@ -15,6 +15,13 @@ namespace CodeProcess.Incognito.Testes.Conformidade;
 public sealed class EsquemaDeConformidade
 {
     /// <summary>
+    /// Toda tabela e toda sequence do esquema de conformidade (fora o esquema <c>incognito</c>), escritas à mão a partir
+    /// do script que cria o esquema, nunca copiadas da saída do leitor: a suíte as compara com a leitura da origem e do
+    /// destino.
+    /// </summary>
+    public required Inventario Inventario { get; init; }
+
+    /// <summary>
     /// Colunas que cobrem a matriz de tipos (ao menos uma suportada, uma com ressalva e uma suportada por exclusão),
     /// com a situação e o tipo canônico esperados.
     /// </summary>
@@ -56,6 +63,94 @@ public sealed class EsquemaDeConformidade
     /// <summary>Uma tabela que a fixture cria no esquema <c>incognito</c> (como o diário), para a suíte conferir que o leitor a deixa de fora.</summary>
     public required NomeObjeto ObjetoDoIncognito { get; init; }
 }
+
+/// <summary>O inventário do esquema de conformidade.</summary>
+/// <param name="Tabelas">Todas as tabelas, em qualquer ordem.</param>
+/// <param name="Sequences">Todas as sequences, com as colunas que as usam.</param>
+public sealed record Inventario(IReadOnlyList<TabelaInventariada> Tabelas, IReadOnlyList<SequenceEsperada> Sequences);
+
+/// <summary>
+/// Uma tabela do inventário: a estrutura que o modelo tem e os nomes dos objetos filhos. O que é semântico (a situação do
+/// tipo, por exemplo) tem fato próprio sobre casos escolhidos.
+/// </summary>
+public sealed class TabelaInventariada
+{
+    /// <summary>O nome.</summary>
+    public required NomeObjeto Nome { get; init; }
+
+    /// <summary>O tipo (padrão: comum).</summary>
+    public TipoTabela Tipo { get; init; }
+
+    /// <summary>A particionada ou a primeira mãe.</summary>
+    public NomeObjeto? Pai { get; init; }
+
+    /// <summary>As outras mães, na ordem da declaração.</summary>
+    public IReadOnlyList<NomeObjeto> OutrosPais { get; init; } = [];
+
+    /// <summary>O histórico de uma temporal.</summary>
+    public NomeObjeto? Historico { get; init; }
+
+    /// <summary>A chave de partição; nula se a tabela não é particionada.</summary>
+    public ChaveParticaoEsperada? ChaveParticao { get; init; }
+
+    /// <summary>Se é estrangeira.</summary>
+    public bool Estrangeira { get; init; }
+
+    /// <summary>A extensão que adotou a tabela.</summary>
+    public string? Extensao { get; init; }
+
+    /// <summary>Se tem segurança por linha.</summary>
+    public bool SegurancaDeLinha { get; init; }
+
+    /// <summary>As colunas, na ordem do catálogo.</summary>
+    public required IReadOnlyList<ColunaInventariada> Colunas { get; init; }
+
+    /// <summary>A chave primária, na ordem da chave.</summary>
+    public IReadOnlyList<string> ChavePrimaria { get; init; } = [];
+
+    /// <summary>As chaves estrangeiras, em qualquer ordem.</summary>
+    public IReadOnlyList<ChaveEstrangeiraInventariada> ChavesEstrangeiras { get; init; } = [];
+
+    /// <inheritdoc/>
+    public override string ToString() => Nome.ToString();
+}
+
+/// <summary>Uma coluna do inventário.</summary>
+public sealed class ColunaInventariada
+{
+    /// <summary>O nome.</summary>
+    public required string Nome { get; init; }
+
+    /// <summary>O tipo como o banco o nomeia.</summary>
+    public required string TipoNativo { get; init; }
+
+    /// <summary>Se aceita NULL (padrão: sim).</summary>
+    public bool Anulavel { get; init; } = true;
+
+    /// <summary>A identity.</summary>
+    public IdentidadeColuna Identidade { get; init; }
+
+    /// <summary>A geração.</summary>
+    public GeracaoColuna Geracao { get; init; }
+
+    /// <summary>O tipo do fim da cadeia de domínios.</summary>
+    public string? TipoBase { get; init; }
+
+    /// <inheritdoc/>
+    public override string ToString() => Nome;
+}
+
+/// <summary>Uma chave estrangeira do inventário.</summary>
+/// <param name="Nome">O nome da restrição.</param>
+/// <param name="Colunas">As colunas, na ordem da chave.</param>
+/// <param name="Referenciada">A tabela referenciada.</param>
+/// <param name="ColunasReferenciadas">As colunas referenciadas, na mesma ordem.</param>
+public sealed record ChaveEstrangeiraInventariada(string Nome, IReadOnlyList<string> Colunas, NomeObjeto Referenciada, IReadOnlyList<string> ColunasReferenciadas);
+
+/// <summary>Uma chave de partição.</summary>
+/// <param name="Colunas">As colunas citadas, na ordem do modelo.</param>
+/// <param name="ColunasIncompletas">Se a chave cita mais do que as colunas.</param>
+public sealed record ChaveParticaoEsperada(IReadOnlyList<string> Colunas, bool ColunasIncompletas = false);
 
 /// <summary>Uma coluna da matriz de tipos.</summary>
 /// <param name="Coluna">A coluna.</param>

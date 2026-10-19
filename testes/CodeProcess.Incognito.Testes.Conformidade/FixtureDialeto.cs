@@ -3,13 +3,14 @@ using CodeProcess.Incognito.Dialetos;
 namespace CodeProcess.Incognito.Testes.Conformidade;
 
 /// <summary>
-/// O que cada dialeto fornece à suíte: um par de bancos por teste, com o esquema de conformidade criado na origem, e a
-/// declaração do que a suíte deve ler dele. Uma por classe de teste (<c>IClassFixture</c>); o servidor (contêiner)
-/// fica numa fixture de assembly do projeto do dialeto.
+/// O que cada dialeto fornece à suíte: um par de bancos por teste, os dois com o esquema de conformidade, e a declaração
+/// do que a suíte deve ler dele. Uma por classe de teste (<c>IClassFixture</c>); o servidor (contêiner) fica numa
+/// fixture de assembly do projeto do dialeto.
 /// </summary>
 /// <remarks>
-/// A origem é aberta com um usuário só de leitura e o destino com o dono do banco, nunca com o administrador do
-/// servidor, que passaria em tudo sem provar segurança por linha, máscara nem dono.
+/// A origem é aberta com um usuário só de leitura e o destino com o dono do banco (dono também dos objetos do esquema,
+/// fora os de um terceiro papel), nunca com o administrador do servidor, que passaria em tudo sem provar segurança por
+/// linha, máscara nem dono.
 /// </remarks>
 public abstract class FixtureDialeto
 {
@@ -17,8 +18,8 @@ public abstract class FixtureDialeto
     public abstract EsquemaDeConformidade Esperado { get; }
 
     /// <summary>
-    /// Cria um par de bancos novo (origem com o esquema de conformidade, destino vazio) e os conecta. Nomes únicos, que
-    /// nunca vêm do nome do teste.
+    /// Cria um par de bancos novo (origem e destino com o esquema de conformidade; a origem lida por um usuário só de
+    /// leitura, o destino pelo dono) e os conecta. Nomes únicos, que nunca vêm do nome do teste.
     /// </summary>
     /// <param name="cancelamento">Cancela a criação.</param>
     /// <returns>O par, que o teste descarta.</returns>

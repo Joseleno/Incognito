@@ -59,6 +59,37 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public void A_classe_da_suite_e_selada_e_de_primeiro_nivel()
+    {
+        // Uma classe aninhada ou aberta pode nunca ser descoberta (ou rodar duas vezes por herança) sem ninguém notar.
+        var classe = GetType();
+
+        Assert.True(classe.IsSealed && !classe.IsNested, $"Suíte: a classe {classe.FullName} precisa ser selada e de primeiro nível.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_esquema_e_lido_sem_perdas()
+    {
+        Assert.True(Esperado.Inventario.Tabelas.Count > 0, "Inventário: a fixture precisa declarar as tabelas do esquema de conformidade.");
+
+        // O mesmo esquema nos dois lados: a origem lida por um usuário só de leitura, o destino pelo dono.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var origem = await Par.Origem.Esquema.LerAsync(cancelamento).ConfigureAwait(false);
+        var destino = await Par.Destino.Esquema.LerAsync(cancelamento).ConfigureAwait(false);
+        var diferencas = ComparacaoDoInventario.Diferencas(origem, Esperado.Inventario).Select(diferenca => "origem: " + diferenca)
+            .Concat(ComparacaoDoInventario.Diferencas(destino, Esperado.Inventario).Select(diferenca => "destino: " + diferenca))
+            .ToArray();
+
+        Assert.True(diferencas.Length == 0, $"Inventário: {string.Join("; ", diferencas)}.");
+
+        // O inventário não diz tudo (a situação do tipo, por exemplo, tem fato próprio só na origem): com o mesmo esquema,
+        // o destino tem de sair igual à origem em tudo o que o modelo diz.
+        Assert.True(DespejoDoModelo.Texto(origem) == DespejoDoModelo.Texto(destino), "Inventário: o destino, com o mesmo esquema, foi lido diferente da origem.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task O_esquema_lido_e_consistente()
     {
         var esquema = await LerOrigemAsync();
@@ -266,8 +297,8 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_leitura_do_esquema_e_estavel()
     {
-        var primeira = Resumo(await LerOrigemAsync());
-        var segunda = Resumo(await LerOrigemAsync());
+        var primeira = DespejoDoModelo.Texto(await LerOrigemAsync());
+        var segunda = DespejoDoModelo.Texto(await LerOrigemAsync());
 
         Assert.True(primeira == segunda, "Leitura estável: duas leituras seguidas do mesmo esquema deram resultados diferentes.");
     }
@@ -369,6 +400,41 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
                 yield return $"pai de {tabela.Nome} ({tabela.Tipo}) ausente, sobrando ou fora do esquema";
             }
 
+            // A partição é de uma particionada (ou de uma intermediária, que é partição); a herdeira, de tabelas comuns ou
+            // herdeiras (o banco não deixa herdar de particionada nem de partição).
+            TipoTabela[] tiposDasMaes = tabela.Tipo == TipoTabela.Particao ? [TipoTabela.Particionada, TipoTabela.Particao] : [TipoTabela.Comum, TipoTabela.Herdeira];
+            if (precisaDePai
+                && new[] { tabela.Pai }.Concat(tabela.OutrosPais).Any(mae => mae is not null && tabelas.TryGetValue(mae, out var lida) && !tiposDasMaes.Contains(lida.Tipo)))
+            {
+                yield return $"pai de {tabela.Nome} ({tabela.Tipo}) de tipo que não pode ter filha desse tipo";
+            }
+
+            if ((tabela.OutrosPais.Count > 0 && tabela.Tipo != TipoTabela.Herdeira)
+                || tabela.OutrosPais.Any(pai => pai.Equals(tabela.Pai) || !tabelas.ContainsKey(pai))
+                || Repetidos(tabela.OutrosPais).Any())
+            {
+                yield return $"outros pais de {tabela.Nome} ({tabela.Tipo}) fora de herdeira, repetidos, com o pai ou fora do esquema";
+            }
+
+            // A particionada tem chave, e a intermediária (partição que é pai de partição) também; ninguém mais tem.
+            var particionada = tabela.Tipo == TipoTabela.Particionada
+                || esquema.Tabelas.Any(filha => filha.Tipo == TipoTabela.Particao && tabela.Nome.Equals(filha.Pai));
+            if (particionada != (tabela.ChaveParticao is not null))
+            {
+                yield return $"chave de partição de {tabela.Nome} ({tabela.Tipo}) ausente ou sobrando";
+            }
+
+            if (tabela.ChaveParticao is { } chaveParticao
+                && (chaveParticao.Colunas.Any(coluna => !colunas.Contains(coluna)) || Repetidos(chaveParticao.Colunas).Any()))
+            {
+                yield return $"chave de partição de {tabela.Nome} com coluna que não existe ou repetida";
+            }
+
+            if (tabela.ChaveParticao is { Colunas.Count: 0, ColunasIncompletas: false })
+            {
+                yield return $"chave de partição de {tabela.Nome} sem coluna e marcada completa";
+            }
+
             var precisaDeHistorico = tabela.Tipo == TipoTabela.Temporal;
             if (precisaDeHistorico != (tabela.Historico is not null)
                 || (tabela.Historico is not null && (!tabelas.TryGetValue(tabela.Historico, out var historico) || historico.Tipo != TipoTabela.HistoricoDeTemporal)))
@@ -389,6 +455,11 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
             foreach (var coluna in tabela.Colunas.Where(coluna => coluna.Tipo is not null && coluna.Situacao != SituacaoTipo.Suportado))
             {
                 yield return $"coluna {tabela.Nome}.{coluna.Nome} com tipo canônico fora de 'suportado'";
+            }
+
+            foreach (var repetida in Repetidos(tabela.ChavesEstrangeiras.Select(chave => chave.Nome)))
+            {
+                yield return $"chave {repetida} de {tabela.Nome} repetida";
             }
 
             foreach (var chave in tabela.ChavesEstrangeiras)
@@ -431,19 +502,4 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
     private static string Linhagem(IdentidadeLida identidade) =>
         string.Join(";", identidade.Linhagem.OrderBy(par => par.Key, StringComparer.Ordinal).Select(par => $"{par.Key}={par.Value}"));
 
-    // Tudo o que o modelo diz, em texto, para comparar duas leituras.
-    private static string Resumo(EsquemaBanco esquema) => string.Join(
-        "\n",
-        esquema.Tabelas.Select(tabela => string.Join(
-            "|",
-            tabela.Nome,
-            tabela.Tipo,
-            tabela.Pai,
-            tabela.Historico,
-            tabela.SegurancaDeLinha,
-            string.Join(",", tabela.ChavePrimaria),
-            string.Join(";", tabela.Colunas.Select(c => $"{c.Nome}:{c.TipoNativo}:{c.Situacao}:{c.Tipo}:{c.Anulavel}:{c.Geracao}:{c.Identidade}:{c.Mascarada}")),
-            string.Join(";", tabela.ChavesEstrangeiras.Select(f => $"{f.Nome}:{string.Join(",", f.Colunas)}:{f.Referenciada}:{string.Join(",", f.ColunasReferenciadas)}"))))
-            .Concat(esquema.Sequences.Select(s => $"{s.Nome}:{string.Join(",", s.Colunas)}"))
-            .Concat(esquema.ObjetosResiduais.Select(o => $"{o.Nome}:{o.Tipo}")));
 }

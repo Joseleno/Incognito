@@ -116,3 +116,20 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   de parâmetros, sem pool na conexão de controle, em UTF-8, sem senha em claro, só o `pg_catalog` no caminho de busca
   e, na origem, transações só de leitura), confere a sessão depois de abrir e recusa mais de um servidor. Os testes do
   dialeto rodam no job `integracao` do CI, nas versões suportadas, e no release.
+- 2026-10-19: a fixture declara também o **inventário** do esquema de conformidade, escrito à mão a partir do script
+  que o cria (nunca copiado da saída do leitor): toda tabela, com tipo, pais, chave de partição, estrangeira, extensão,
+  segurança por linha, colunas na ordem (tipo nativo, anulável, identity, geração, tipo base), chave primária e chaves
+  estrangeiras inteiras (colunas, tabela e colunas referenciadas), e toda sequence com as colunas que a usam. O fato
+  `O_esquema_e_lido_sem_perdas` compara a leitura por nome, nos dois lados: **origem e destino têm o mesmo esquema**
+  (dois bancos-modelo; no do destino a posse passa ao dono, conferida por uma guarda que não depende do leitor, e um
+  terceiro papel sem login fica com alguns objetos), a origem lida pelo usuário só de leitura e o destino pelo dono, e o
+  destino tem de sair igual à origem em tudo o que o modelo diz (a situação dos tipos inclusive, que o inventário não
+  traz: ela fica para o modelo semântico). A consistência confere também as outras mães e o tipo delas, a chave de
+  partição (sem coluna, só marcada incompleta) e chaves estrangeiras sem repetição; a leitura estável compara as duas
+  leituras pelas propriedades públicas do modelo; e a classe derivada da suíte precisa ser selada e de primeiro nível. O
+  projeto de testes do dialeto confere no próprio assembly compilado a classe da suíte e a categoria de cada teste (a
+  regra de arquitetura lê o texto, que um `<Compile Remove>` ou um comentário enganam), e o banco-modelo confere,
+  antes dos testes, que o sentinela está em cada lugar do esquema que o declara. Além do mapa de defeitos, os testes do
+  motor alteram **cada propriedade de cada tipo do modelo** do esquema, por reflexão, num objeto do banco falso completo,
+  e reordenam as listas cuja ordem é do contrato, exigindo que algum fato da suíte falhe citando o objeto: um campo novo
+  do modelo sem fato que o confira quebra sozinho, e a reconstrução sem alteração passa em tudo.
