@@ -1,18 +1,28 @@
--- Esquema de conformidade do PostgreSQL, criado pelo administrador no banco-modelo que cada teste clona. Só dados
--- sintéticos. O texto zqSENTINELAqz aparece em default, CHECK, predicado de índice, comentários, linhas (com estatística),
--- large object, limite de partição, expressão de coluna gerada, política de segurança por linha e materialized view:
--- nenhuma leitura do esquema pode devolvê-lo.
+-- Esquema de conformidade do PostgreSQL, criado pelo administrador nos dois bancos-modelo que cada teste clona (no da
+-- origem fica tudo do administrador; no do destino, a posse passa ao dono). Só dados sintéticos. O texto zqSENTINELAqz
+-- aparece em default de coluna e de domínio, valor de coluna acrescentada com default (attmissingval), CHECK, predicado de
+-- índice e de exclusão, expressão da chave de partição, comentários (tabela, coluna, índice, restrição, trigger e
+-- colação), linhas (com estatística comum e estendida), large object, limite de partição, expressão de coluna gerada,
+-- política de segurança por linha, materialized view, corpo de função, argumentos e WHEN de trigger, opções de foreign
+-- table, de servidor e de mapeamento de usuário, regras de colação (16+) e, em minúsculas e curto (o BCP 47 limita a 8), no
+-- locale de uma colação ICU: nenhuma leitura do esquema pode devolvê-lo. A presenca-do-sentinela.sql confere que ele está
+-- em cada um desses lugares.
 
 CREATE EXTENSION citext;
 CREATE EXTENSION lo;
 CREATE EXTENSION file_fdw;
 CREATE SERVER arquivos FOREIGN DATA WRAPPER file_fdw;
 
+-- Um wrapper sem validador, que aceita opções livres: o sentinela nas opções do servidor e do mapeamento de usuário.
+CREATE FOREIGN DATA WRAPPER sem_validador;
+CREATE SERVER remoto FOREIGN DATA WRAPPER sem_validador OPTIONS (host 'zqSENTINELAqz-servidor');
+CREATE USER MAPPING FOR incognito_dono SERVER remoto OPTIONS (password 'zqSENTINELAqz-mapeamento');
+
 CREATE SCHEMA loja;
 
 -- Matriz de tipos.
 CREATE TYPE loja.situacao AS ENUM ('aberto', 'fechado');
-CREATE DOMAIN loja.codigo AS text CHECK (VALUE <> 'zqSENTINELAqz');
+CREATE DOMAIN loja.codigo AS text DEFAULT 'zqSENTINELAqz-padrao' CHECK (VALUE <> 'zqSENTINELAqz');
 
 CREATE TABLE loja.tipos (
     id bigint PRIMARY KEY,
@@ -32,6 +42,7 @@ CREATE TABLE loja.tipos (
     hora_com_fuso timetz,
     duracao interval,
     email citext,
+    emails citext[],
     dados jsonb,
     documento json,
     marcacao xml,
@@ -49,10 +60,40 @@ CREATE TABLE loja.tipos (
 );
 COMMENT ON TABLE loja.tipos IS 'zqSENTINELAqz';
 COMMENT ON COLUMN loja.tipos.texto IS 'zqSENTINELAqz';
+COMMENT ON CONSTRAINT ck_tipos_texto ON loja.tipos IS 'zqSENTINELAqz';
 CREATE UNIQUE INDEX ix_tipos_curto ON loja.tipos (curto) WHERE curto <> 'zqSENTINELAqz';
+COMMENT ON INDEX loja.ix_tipos_curto IS 'zqSENTINELAqz';
+CREATE STATISTICS loja.est_tipos (mcv) ON texto, curto FROM loja.tipos;
 
--- Foreign table: colunas não suportadas. O arquivo é do contêiner e nunca é lido.
-CREATE FOREIGN TABLE loja.externa (linha text) SERVER arquivos OPTIONS (filename '/dev/null');
+-- Domínios: sobre domínio (o tipo base é o fim da cadeia), sobre oid e array de lo (não suportados como o oid e o lo), e
+-- arrays de oid e de lo.
+CREATE DOMAIN loja.codigo_curto AS loja.codigo CHECK (length(VALUE) < 20);
+CREATE DOMAIN loja.ref_objeto AS oid;
+CREATE DOMAIN loja.lista_lo AS lo[];
+CREATE TABLE loja.objetos (
+    id bigint PRIMARY KEY,
+    codigo loja.codigo_curto,
+    referencia loja.ref_objeto,
+    referencias oid[],
+    anexos lo[],
+    lista loja.lista_lo
+);
+
+-- Domínios que uma extensão adotou: um com o nome do citext e outro com nome qualquer, nenhum deles o citext.
+CREATE DOMAIN loja.citext AS text;
+ALTER EXTENSION citext ADD DOMAIN loja.citext;
+CREATE DOMAIN loja.texto_adotado AS text;
+ALTER EXTENSION citext ADD DOMAIN loja.texto_adotado;
+CREATE TABLE loja.imitacoes (parecido loja.citext, adotado loja.texto_adotado);
+
+-- Tabela que uma extensão adotou.
+CREATE TABLE loja.da_extensao (id integer);
+ALTER EXTENSION citext ADD TABLE loja.da_extensao;
+
+-- Foreign table: colunas não suportadas, fora a gerada (fora da cópia, como em qualquer tabela). O arquivo é do contêiner
+-- e nunca é lido.
+CREATE FOREIGN TABLE loja.externa (linha text, tamanho integer GENERATED ALWAYS AS (length(linha)) STORED)
+    SERVER arquivos OPTIONS (filename '/dev/null');
 
 -- Colunas geradas (a virtual só existe do 18 em diante).
 CREATE TABLE loja.calculos (
@@ -75,6 +116,10 @@ CREATE TABLE loja.contadores (
     serie serial
 );
 
+-- Identity numa particionada: a coluna da partição só é identity do 17 em diante, e a sequence é só do pai.
+CREATE TABLE loja.eventos (id bigint GENERATED ALWAYS AS IDENTITY, tipo integer NOT NULL) PARTITION BY LIST (tipo);
+CREATE TABLE loja.eventos_1 PARTITION OF loja.eventos FOR VALUES IN (1);
+
 -- Particionada com FK para outra tabela (copiada em cada partição), referenciada por uma FK composta com a ordem da chave
 -- diferente da ordem das colunas, e uma sequence compartilhada por duas tabelas (o default também é copiado em cada
 -- partição).
@@ -88,6 +133,10 @@ CREATE TABLE loja.pedidos (
 ) PARTITION BY LIST (loja);
 CREATE TABLE loja.pedidos_1 PARTITION OF loja.pedidos FOR VALUES IN (1);
 CREATE TABLE loja.pedidos_2 PARTITION OF loja.pedidos FOR VALUES IN (2);
+
+-- Partição anexada com sequence própria: a coluna dela usa outra sequence, não a do pai.
+CREATE TABLE loja.pedidos_9 (loja integer NOT NULL, id bigint NOT NULL, numero bigserial);
+ALTER TABLE loja.pedidos ATTACH PARTITION loja.pedidos_9 FOR VALUES IN (9);
 CREATE TABLE loja.regioes (nome text NOT NULL) PARTITION BY LIST (nome);
 CREATE TABLE loja.regioes_sentinela PARTITION OF loja.regioes FOR VALUES IN ('zqSENTINELAqz');
 CREATE TABLE loja.itens (
@@ -117,14 +166,49 @@ CREATE TABLE loja.vendas (ano integer NOT NULL, mes integer NOT NULL) PARTITION 
 CREATE TABLE loja.vendas_2026 PARTITION OF loja.vendas FOR VALUES IN (2026) PARTITION BY LIST (mes);
 CREATE TABLE loja.vendas_2026_01 PARTITION OF loja.vendas_2026 FOR VALUES IN (1);
 
--- Herança múltipla: a primeira mãe é a apontada.
+-- Chave de partição com colunas fora da ordem delas e uma expressão (as colunas da expressão contam, na ordem da tabela),
+-- e pela linha inteira (cita todas).
+CREATE TABLE loja.agenda (dia date NOT NULL, sala text, nota text, turno text)
+    PARTITION BY RANGE (sala, dia, (CASE WHEN turno = nota OR nota = 'zqSENTINELAqz' THEN 1 ELSE 2 END));
+CREATE TABLE loja.agenda_toda PARTITION OF loja.agenda
+    FOR VALUES FROM (MINVALUE, MINVALUE, MINVALUE) TO (MAXVALUE, MAXVALUE, MAXVALUE);
+CREATE TABLE loja.arquivo_morto (id bigint, dados text) PARTITION BY LIST ((arquivo_morto IS NULL));
+
+-- Particionada sem coluna nenhuma: a chave pela linha inteira não impede o DROP COLUMN.
+CREATE TABLE loja.sem_colunas (apagada integer) PARTITION BY LIST ((sem_colunas IS NULL));
+ALTER TABLE loja.sem_colunas DROP COLUMN apagada;
+
+-- Partição estrangeira (a particionada não pode ter índice único).
+CREATE TABLE loja.leituras (origem text NOT NULL, valor text) PARTITION BY LIST (origem);
+CREATE FOREIGN TABLE loja.leituras_arquivo PARTITION OF loja.leituras FOR VALUES IN ('arquivo')
+    SERVER arquivos OPTIONS (filename '/dev/null', null 'zqSENTINELAqz');
+
+-- Herança múltipla: a primeira mãe é a apontada, e as outras saem na ordem da declaração.
 CREATE TABLE loja.contato (canal text);
 CREATE TABLE loja.endereco (cidade text);
-CREATE TABLE loja.ficha () INHERITS (loja.contato, loja.endereco);
+CREATE TABLE loja.documento (numero text);
+CREATE TABLE loja.ficha () INHERITS (loja.contato, loja.endereco, loja.documento);
+
+-- Herança que perdeu a primeira mãe: o banco não renumera as outras (2 e 3), e a primeira passa a ser a de menor número.
+CREATE TABLE loja.mae_um (um text);
+CREATE TABLE loja.mae_dois (dois text);
+CREATE TABLE loja.mae_tres (tres text);
+CREATE TABLE loja.sem_a_primeira () INHERITS (loja.mae_um, loja.mae_dois, loja.mae_tres);
+ALTER TABLE loja.sem_a_primeira NO INHERIT loja.mae_um;
 
 -- Domínio NOT NULL: a coluna ainda aceita NULL em casos documentados, então continua anulável.
 CREATE DOMAIN loja.obrigatorio AS text NOT NULL;
 CREATE TABLE loja.com_dominio (valor loja.obrigatorio);
+
+-- Sequences: uma com OWNED BY e sem default (nenhuma coluna a usa) e uma pelo default de domínios (a coluna com default
+-- próprio não a usa, nem a do domínio criado sobre outro antes de o outro ganhar o default: o banco não sobe a cadeia).
+CREATE SEQUENCE loja.seq_avulsa OWNED BY loja.objetos.id;
+CREATE SEQUENCE loja.seq_protocolo;
+CREATE DOMAIN loja.protocolo AS bigint DEFAULT nextval('loja.seq_protocolo');
+CREATE DOMAIN loja.numero_base AS bigint;
+CREATE DOMAIN loja.numero_derivado AS loja.numero_base;
+ALTER DOMAIN loja.numero_base SET DEFAULT nextval('loja.seq_protocolo');
+CREATE TABLE loja.protocolos (numero loja.protocolo, proprio loja.protocolo DEFAULT 0, base loja.numero_base, derivado loja.numero_derivado);
 
 -- No 18, um NOT NULL ainda não validado (a coluna tem NULL).
 DO $$
@@ -146,6 +230,49 @@ CREATE TABLE loja.segredos (id bigint PRIMARY KEY, conteudo text);
 ALTER TABLE loja.segredos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY p_segredos ON loja.segredos USING (conteudo <> 'zqSENTINELAqz');
 
+-- Função e trigger com o sentinela no corpo, nos argumentos e no WHEN.
+CREATE FUNCTION loja.conferir() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.conteudo = 'zqSENTINELAqz-corpo' THEN
+        RETURN NULL;
+    END IF;
+    RETURN NEW;
+END
+$$;
+CREATE TRIGGER tg_segredos BEFORE INSERT ON loja.segredos
+    FOR EACH ROW WHEN (NEW.conteudo <> 'zqSENTINELAqz-quando') EXECUTE FUNCTION loja.conferir('zqSENTINELAqz-argumento');
+COMMENT ON TRIGGER tg_segredos ON loja.segredos IS 'zqSENTINELAqz';
+
+-- Exclusão com predicado (gist sobre range, sem extensão).
+CREATE TABLE loja.reservas (
+    sala integer,
+    periodo int4range,
+    nota text,
+    CONSTRAINT ex_reservas EXCLUDE USING gist (periodo WITH &&) WHERE (nota <> 'zqSENTINELAqz')
+);
+
+-- Colações: ICU com o sentinela curto numa subtag privada e, do 16 em diante, com regras.
+CREATE COLLATION loja.colacao_sentinela (provider = icu, locale = 'und-x-zqsentin');
+COMMENT ON COLLATION loja.colacao_sentinela IS 'zqSENTINELAqz';
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::integer >= 160000 THEN
+        EXECUTE 'CREATE COLLATION loja.colacao_regras (provider = icu, locale = ''und'', rules = ''&a < zqSENTINELAqz'')';
+    END IF;
+END
+$$;
+
+-- Objetos de um terceiro papel (nem o leitor nem o dono), que no destino continuam dele.
+CREATE TABLE loja.alheia (id bigint PRIMARY KEY);
+ALTER TABLE loja.alheia OWNER TO incognito_outro;
+CREATE MATERIALIZED VIEW loja.resumo_alheio AS SELECT count(*) AS total FROM loja.alheia;
+ALTER MATERIALIZED VIEW loja.resumo_alheio OWNER TO incognito_outro;
+DO $$
+BEGIN
+    EXECUTE format('ALTER LARGE OBJECT %s OWNER TO incognito_outro', lo_from_bytea(0, convert_to('zqSENTINELAqz-alheio', 'UTF8')));
+END
+$$;
+
 -- Um esquema de usuário que começa com "pg" (só o prefixo pg_ é do sistema), sem nenhum privilégio para o leitor: a leitura
 -- pelo catálogo o vê.
 CREATE SCHEMA pgdados;
@@ -155,11 +282,15 @@ CREATE TABLE pgdados.clientes (id bigint PRIMARY KEY);
 CREATE SCHEMA incognito;
 CREATE TABLE incognito.execucao (id uuid PRIMARY KEY);
 CREATE SEQUENCE incognito.seq_interna;
+CREATE MATERIALIZED VIEW incognito.resumo AS SELECT 1 AS total;
 
 -- O leitor da origem: só leitura, nunca dono.
 GRANT USAGE ON SCHEMA loja TO incognito_leitor;
 GRANT SELECT ON ALL TABLES IN SCHEMA loja TO incognito_leitor;
 
--- Linhas com o sentinela e a estatística delas (pg_stats guarda valores reais das colunas).
-INSERT INTO loja.tipos (id, texto, curto) VALUES (1, 'zqSENTINELAqz-linha', 'zqSENTINELAqz-l');
+-- Linhas com o sentinela e a estatística delas (pg_stats e pg_statistic_ext_data guardam valores reais das colunas: o
+-- texto repetido vai para os valores mais comuns e os curtos distintos, para o histograma; com uma linha só, nenhum dos
+-- dois), e uma coluna acrescentada com default sobre as linhas (o valor fica em attmissingval).
+INSERT INTO loja.tipos (id, texto, curto) VALUES (1, 'zqSENTINELAqz-linha', 'zqSENTINELAqz-l1'), (2, 'zqSENTINELAqz-linha', 'zqSENTINELAqz-l2');
+ALTER TABLE loja.tipos ADD COLUMN observacao text DEFAULT 'zqSENTINELAqz-faltante';
 ANALYZE loja.tipos;

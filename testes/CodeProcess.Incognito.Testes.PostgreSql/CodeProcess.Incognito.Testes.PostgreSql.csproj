@@ -16,9 +16,12 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
 
-  <!-- O esquema de conformidade e as imagens fixadas por digest (uma pasta por versão, atualizadas pelo Dependabot). -->
+  <!-- O esquema de conformidade, a posse do destino com a guarda dela e as imagens fixadas por digest (uma pasta por versão, atualizadas pelo Dependabot). -->
   <ItemGroup>
     <EmbeddedResource Include="esquema-de-conformidade.sql" LogicalName="esquema-de-conformidade.sql" />
+    <EmbeddedResource Include="posse-do-destino.sql" LogicalName="posse-do-destino.sql" />
+    <EmbeddedResource Include="guarda-de-posse.sql" LogicalName="guarda-de-posse.sql" />
+    <EmbeddedResource Include="presenca-do-sentinela.sql" LogicalName="presenca-do-sentinela.sql" />
     <None Include="imagens\*\Dockerfile" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

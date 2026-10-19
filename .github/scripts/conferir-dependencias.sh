@@ -2,8 +2,9 @@
 # Garante que o dotnet restore --locked-mode do CI cobre todo binário que entra no build:
 # 1. todo projeto versionado tem packages.lock.json versionado ao lado: sem ele, o locked-mode gera um lock
 #    novo e não trava nada;
-# 2. nenhum arquivo do MSBuild muda onde fica o lock, desliga a trava, sobrepõe a versão central, baixa pacote
-#    fora do grafo, referencia DLL ou analisador por caminho, ou executa código próprio no build.
+# 2. nenhum arquivo versionado (o MSBuild importa arquivo de qualquer extensão; fora a documentação em Markdown e
+#    este script) muda onde fica o lock, desliga a trava, sobrepõe a versão central, baixa pacote fora do grafo,
+#    referencia DLL ou analisador por caminho, ou executa código próprio no build.
 # Única exceção: o RestorePackagesWithLockFile do Directory.Build.props da raiz, que liga o lock.
 set -euo pipefail
 export LC_ALL=C
@@ -24,7 +25,7 @@ while IFS= read -r projeto; do
 done <<< "$projetos"
 
 proibidas='NuGetLockFilePath|RestorePackagesWithLockFile|RestoreLockedMode|RestoreForceEvaluate|VersionOverride|PackageDownload|HintPath|<Reference[[:space:]>]|<Analyzer[[:space:]>]|UsingTask|DownloadFile|<Exec[[:space:]>]'
-achados="$(git grep -nIiE "$proibidas" -- '*.csproj' '*.fsproj' '*.vbproj' '*.proj' '*.props' '*.targets' '*.rsp' \
+achados="$(git grep -nIiE "$proibidas" -- . ':!*.md' ':!.github/scripts/conferir-dependencias.sh' \
   | grep -vE '^Directory\.Build\.props:[0-9]+:[[:space:]]*<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>[[:space:]]*$' || true)"
 if [[ -n "$achados" ]]; then
   falhar "configuração do MSBuild que escapa do lock:"

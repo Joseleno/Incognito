@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 
 namespace CodeProcess.Incognito.Testes.Arquitetura;
 
@@ -18,6 +20,11 @@ public sealed class RegrasDeArquiteturaTestes
     private const string Dialetos = Nucleo + ".Dialetos";
 
     private static readonly string[] _driversEEfCore = ["Npgsql", "Microsoft.Data.SqlClient", "Microsoft.EntityFrameworkCore"];
+
+    // O HTTP do runtime e os invólucros dele (WebRequest, WebClient, o JSON sobre o HttpClient, o cliente de WebSocket),
+    // pelo assembly e pelos tipos: uma biblioteca netstandard os alcança pelo netstandard, por encaminhamento de tipo.
+    private static readonly string[] _assembliesDeHttp = ["System.Net.Http", "System.Net.Requests", "System.Net.WebClient", "System.Net.Http.Json", "System.Net.WebSockets.Client"];
+    private static readonly string[] _tiposDeHttp = ["System.Net.WebRequest", "System.Net.HttpWebRequest", "System.Net.WebClient", "System.Net.WebSockets.ClientWebSocket"];
 
     // Cpf, Cnpj e Email colidem com tipos que já existem em muitos projetos brasileiros; Dominio, com o namespace de
     // projetos DDD.
@@ -62,19 +69,49 @@ public sealed class RegrasDeArquiteturaTestes
     [InlineData(SqlServer)]
     public void Nucleo_motor_e_dialetos_nao_usam_System_Net_Http(string assembly)
     {
-        var nomes = ReferenciasTransitivasDoProjeto(assembly).Select(referencia => referencia.Name);
+        var nomes = ReferenciasTransitivasDoProjeto(assembly).Select(referencia => referencia.Name).Intersect(_assembliesDeHttp);
 
-        Assert.DoesNotContain("System.Net.Http", nomes);
+        Assert.Empty(nomes);
+    }
+
+    [Theory]
+    [InlineData(PostgreSql, "Npgsql")]
+    [InlineData(SqlServer, null)]
+    public void Nenhum_assembly_de_terceiros_que_vai_com_o_dialeto_usa_System_Net_Http(string dialeto, string? driver)
+    {
+        // A regra acima não percorre pacotes de terceiros, que vão junto em todo uso do dialeto: aqui o fecho inteiro das
+        // referências, a partir do dialeto, por todo assembly fora do runtime (o driver e as dependências dele).
+        var visitados = new HashSet<string>(StringComparer.Ordinal) { dialeto };
+        var pendentes = new Queue<string>([dialeto]);
+        var usam = new List<string>();
+        while (pendentes.TryDequeue(out var atual))
+        {
+            foreach (var referencia in Referencias(atual))
+            {
+                if (_assembliesDeHttp.Contains(referencia.Name))
+                {
+                    usam.Add($"{atual} ({referencia.Name})");
+                }
+                else if (!ParteDoRuntime(referencia) && visitados.Add(referencia.Name!))
+                {
+                    pendentes.Enqueue(referencia.Name!);
+                }
+            }
+
+            usam.AddRange(TiposDeHttpReferenciados(Assembly.Load(new AssemblyName(atual))).Select(tipo => $"{atual} ({tipo})"));
+        }
+
+        Assert.True(driver is null || visitados.Contains(driver), $"O fecho de {dialeto} não chegou ao driver {driver}.");
+        Assert.True(usam.Count == 0, $"Assemblies que vão com {dialeto} e usam System.Net.Http: {string.Join(", ", usam)}.");
     }
 
     [Fact]
-    public void O_driver_do_dialeto_PostgreSql_nao_usa_System_Net_Http()
+    public void A_leitura_dos_tipos_referenciados_acha_o_HttpClient()
     {
-        // A regra acima não percorre pacotes de terceiros; o driver vai junto em todo uso do dialeto.
-        var nomes = Referencias("Npgsql").Select(referencia => referencia.Name);
+        // O controle da regra acima: este assembly referencia o HttpClient só aqui, e a leitura dos metadados o acha.
+        Assert.Equal("HttpClient", typeof(System.Net.Http.HttpClient).Name);
 
-        Assert.Contains("Npgsql", Referencias(PostgreSql).Select(referencia => referencia.Name));
-        Assert.DoesNotContain("System.Net.Http", nomes);
+        Assert.Contains("System.Net.Http.HttpClient", TiposDeHttpReferenciados(typeof(RegrasDeArquiteturaTestes).Assembly));
     }
 
     [Theory]
@@ -311,6 +348,20 @@ public sealed class RegrasDeArquiteturaTestes
     }
 
     /// <summary>Um assembly é do runtime quando está no diretório do framework compartilhado Microsoft.NETCore.App.</summary>
+    // Os tipos de HTTP que o assembly referencia, pelos metadados, qualquer que seja o assembly que os resolve.
+    private static string[] TiposDeHttpReferenciados(Assembly assembly)
+    {
+        using var arquivo = File.OpenRead(assembly.Location);
+        using var pe = new PEReader(arquivo);
+        var metadados = pe.GetMetadataReader();
+        return metadados.TypeReferences
+            .Select(manipulador => metadados.GetTypeReference(manipulador))
+            .Select(tipo => metadados.GetString(tipo.Namespace) + "." + metadados.GetString(tipo.Name))
+            .Where(nome => nome.StartsWith("System.Net.Http.", StringComparison.Ordinal) || _tiposDeHttp.Contains(nome))
+            .Distinct()
+            .ToArray();
+    }
+
     private static bool ParteDoRuntime(AssemblyName referencia)
     {
         var diretorioDoRuntime = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

@@ -36,6 +36,32 @@ public enum Defeito
     BancoErrado,
     LinhagemVazia,
     InventaRecursos,
+
+    // O inventário: cada um mexe num objeto que nenhum outro caso declara.
+    InventarioVazio,
+    TabelaOmitida,
+    TabelaOmitidaNoDestino,
+    ColunaAMais,
+    ColunaAMenos,
+    ColunasForaDeOrdem,
+    PropriedadeDeColunaTrocada,
+    ChaveEstrangeiraRepetida,
+    ChaveEstrangeiraComReferenciadaErrada,
+    ChavePrimariaForaDeOrdem,
+    TipoDeTabelaTrocado,
+    SequenceOmitida,
+    SituacaoTrocadaNoDestino,
+
+    // A estrutura que só a consistência e o inventário conferem.
+    OutroPaiForaDoEsquema,
+    ChaveDeParticaoAusente,
+    ChaveDeParticaoComColunaInexistente,
+    ChaveDeParticaoVaziaCompleta,
+    MaeDeTipoErrado,
+
+    // A classe concreta da suíte aninhada em outra, ou aberta.
+    SuiteAninhada,
+    SuiteAberta,
 }
 
 /// <summary>
@@ -55,7 +81,12 @@ internal static class BancoFalso
     {
         var tabelas = new List<TabelaEsquema>
         {
-            Tabela("tipos", Texto("texto"), Comum("dados", "jsonb", SituacaoTipo.ComRessalva), Comum("versao", "rowversion", SituacaoTipo.SuportadoPorExclusao)),
+            Tabela(
+                "tipos",
+                Texto("texto"),
+                Comum("dados", "jsonb", SituacaoTipo.ComRessalva),
+                Comum("versao", "rowversion", SituacaoTipo.SuportadoPorExclusao),
+                new ColunaEsquema { Nome = "codigo", TipoNativo = "loja.codigo", Situacao = SituacaoTipo.ComRessalva, TipoBase = "text" }),
             Tabela("Cliente", Texto("nome")),
             Tabela("cliente", Texto("nome")),
             Tabela("select", Texto("nome")),
@@ -64,13 +95,14 @@ internal static class BancoFalso
             {
                 Nome = Nome("pedidos"),
                 Tipo = completo ? TipoTabela.Particionada : TipoTabela.Comum,
-                Colunas = [Inteiro("loja"), Inteiro("id"), Inteiro("numero")],
+                ChaveParticao = completo ? new ChaveParticao { Colunas = ["loja", "id"] } : null,
+                Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")],
                 ChavePrimaria = ["loja", "id"],
             },
             new()
             {
                 Nome = Nome("itens"),
-                Colunas = [Inteiro("pedido"), Inteiro("loja"), Inteiro("numero")],
+                Colunas = [Inteiro("pedido", anulavel: false), Inteiro("loja", anulavel: false), Inteiro("numero")],
                 ChavesEstrangeiras =
                 [
                     new() { Nome = "fk_itens_pedidos", Colunas = ["loja", "pedido"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["loja", "id"] },
@@ -83,26 +115,51 @@ internal static class BancoFalso
         {
             tabelas.AddRange(
             [
-                new() { Nome = Nome("pedidos_2025"), Tipo = TipoTabela.Particao, Pai = Nome("pedidos"), Colunas = [Inteiro("loja"), Inteiro("id"), Inteiro("numero")] },
-                new() { Nome = Nome("pedidos_2026"), Tipo = TipoTabela.Particao, Pai = Nome("pedidos"), Colunas = [Inteiro("loja"), Inteiro("id"), Inteiro("numero")] },
+                new() { Nome = Nome("pedidos_2025"), Tipo = TipoTabela.Particao, Pai = Nome("pedidos"), Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")] },
+                new() { Nome = Nome("pedidos_2026"), Tipo = TipoTabela.Particao, Pai = Nome("pedidos"), Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")] },
                 Tabela("pessoa", Texto("nome")),
                 new() { Nome = Nome("funcionario"), Tipo = TipoTabela.Herdeira, Pai = Nome("pessoa"), Colunas = [Texto("nome"), Texto("cargo")] },
+                Tabela("contato", Texto("canal")),
+                Tabela("endereco", Texto("cidade")),
+                Tabela("telefone", Texto("numero")),
+                new()
+                {
+                    Nome = Nome("ficha"),
+                    Tipo = TipoTabela.Herdeira,
+                    Pai = Nome("contato"),
+                    OutrosPais = [Nome("endereco"), Nome("telefone")],
+                    Colunas = [Texto("canal"), Texto("cidade"), Texto("numero")],
+                    ChavesEstrangeiras = [new() { Nome = "fk_ficha_contato", Colunas = ["canal"], Referenciada = Nome("contato"), ColunasReferenciadas = ["canal"] }],
+                },
                 Tabela("calculos", Inteiro("base"), new ColunaEsquema { Nome = "dobro", TipoNativo = "integer", Situacao = SituacaoTipo.SuportadoPorExclusao, Geracao = GeracaoColuna.Armazenada }),
+                Tabela("contadores", new ColunaEsquema { Nome = "sempre", TipoNativo = "bigint", Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Inteiro, Identidade = IdentidadeColuna.Sempre }),
                 new() { Nome = Nome("contratos"), Tipo = TipoTabela.Temporal, Historico = Nome("contratos_historico"), Colunas = [Texto("numero")] },
                 new() { Nome = Nome("contratos_historico"), Tipo = TipoTabela.HistoricoDeTemporal, Colunas = [Texto("numero")] },
                 new() { Nome = Nome("segredos"), SegurancaDeLinha = true, Colunas = [Texto("valor")] },
                 Tabela("contatos", new ColunaEsquema { Nome = "email", TipoNativo = "text", Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Texto, Mascarada = true }),
+                new() { Nome = Nome("externa"), Estrangeira = true, Colunas = [Comum("linha", "text", SituacaoTipo.NaoSuportado)] },
+                new() { Nome = Nome("da_extensao"), Extensao = "extensao_falsa", Colunas = [Inteiro("id")] },
             ]);
         }
 
         return tabelas;
     }
 
-    internal static List<SequenceEsquema> Sequences(bool completo) =>
-    [
-        new() { Nome = Nome("seq_numero"), Colunas = completo ? [Coluna("pedidos", "numero"), Coluna("itens", "numero")] : [Coluna("pedidos", "numero")] },
-        new() { Nome = new NomeObjeto("incognito", "seq_execucao"), Colunas = [] },
-    ];
+    internal static List<SequenceEsquema> Sequences(bool completo)
+    {
+        var sequences = new List<SequenceEsquema>
+        {
+            new() { Nome = Nome("seq_numero"), Colunas = completo ? [Coluna("pedidos", "numero"), Coluna("itens", "numero")] : [Coluna("pedidos", "numero")] },
+            new() { Nome = new NomeObjeto("incognito", "seq_execucao"), Colunas = [] },
+        };
+        if (completo)
+        {
+            sequences.Add(new() { Nome = Nome("seq_avulsa"), Colunas = [] });
+            sequences.Add(new() { Nome = Nome("contadores_sempre_seq"), Colunas = [Coluna("contadores", "sempre")] });
+        }
+
+        return sequences;
+    }
 
     internal static List<ObjetoResidual> Residuais(bool completo) =>
         completo ? [new() { Nome = Nome("resumo_vendas"), Tipo = TipoObjetoResidual.VisaoMaterializada }] : [];
@@ -110,6 +167,7 @@ internal static class BancoFalso
     /// <summary>O que a fixture declara sobre o banco.</summary>
     internal static EsquemaDeConformidade Esperado(bool completo, Defeito defeito) => new()
     {
+        Inventario = defeito == Defeito.InventarioVazio ? new Inventario([], []) : Inventario(completo),
         Tipos = defeito == Defeito.TiposSemCobertura
             ? [new(Coluna("tipos", "texto"), SituacaoTipo.Suportado, TipoColuna.Texto)]
             :
@@ -117,6 +175,7 @@ internal static class BancoFalso
                 new(Coluna("tipos", "texto"), SituacaoTipo.Suportado, TipoColuna.Texto),
                 new(Coluna("tipos", "dados"), SituacaoTipo.ComRessalva, null),
                 new(Coluna("tipos", "versao"), SituacaoTipo.SuportadoPorExclusao, null),
+                new(Coluna("tipos", "codigo"), SituacaoTipo.ComRessalva, null),
             ],
         Particao = completo
             ? Caso.Presente(new Hierarquia(Nome("pedidos"), [Nome("pedidos_2025"), Nome("pedidos_2026")]))
@@ -144,52 +203,80 @@ internal static class BancoFalso
         ObjetoDoIncognito = defeito == Defeito.IncognitoForaDoEsquema ? Nome("execucao") : new NomeObjeto("incognito", "execucao"),
     };
 
+    // O inventário do falso é a projeção do banco certo (no dialeto de verdade, ele é escrito à mão a partir do DDL).
+    private static Inventario Inventario(bool completo) => new(
+        [
+            .. Tabelas(completo).Where(tabela => tabela.Nome.Esquema != "incognito").Select(tabela => new TabelaInventariada
+            {
+                Nome = tabela.Nome,
+                Tipo = tabela.Tipo,
+                Pai = tabela.Pai,
+                OutrosPais = tabela.OutrosPais,
+                Historico = tabela.Historico,
+                ChaveParticao = tabela.ChaveParticao is { } chave ? new ChaveParticaoEsperada(chave.Colunas, chave.ColunasIncompletas) : null,
+                Estrangeira = tabela.Estrangeira,
+                Extensao = tabela.Extensao,
+                SegurancaDeLinha = tabela.SegurancaDeLinha,
+                Colunas =
+                [
+                    .. tabela.Colunas.Select(coluna => new ColunaInventariada
+                    {
+                        Nome = coluna.Nome,
+                        TipoNativo = coluna.TipoNativo,
+                        Anulavel = coluna.Anulavel,
+                        Identidade = coluna.Identidade,
+                        Geracao = coluna.Geracao,
+                        TipoBase = coluna.TipoBase,
+                    }),
+                ],
+                ChavePrimaria = tabela.ChavePrimaria,
+                ChavesEstrangeiras = [.. tabela.ChavesEstrangeiras.Select(chave => new ChaveEstrangeiraInventariada(chave.Nome, chave.Colunas, chave.Referenciada, chave.ColunasReferenciadas))],
+            }),
+        ],
+        [.. Sequences(completo).Where(sequence => sequence.Nome.Esquema != "incognito").Select(sequence => new SequenceEsperada(sequence.Nome, sequence.Colunas))]);
+
     private static TabelaEsquema Tabela(string nome, params ColunaEsquema[] colunas) => new() { Nome = Nome(nome), Colunas = colunas };
 
-    private static ColunaEsquema Texto(string nome) => new() { Nome = nome, TipoNativo = "text", Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Texto };
+    private static ColunaEsquema Texto(string nome) => new() { Nome = nome, TipoNativo = "text", Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Texto, Anulavel = true };
 
-    private static ColunaEsquema Inteiro(string nome) => new() { Nome = nome, TipoNativo = "bigint", Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Inteiro };
+    private static ColunaEsquema Inteiro(string nome, bool anulavel = true) =>
+        new() { Nome = nome, TipoNativo = "bigint", Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Inteiro, Anulavel = anulavel };
 
-    private static ColunaEsquema Comum(string nome, string tipoNativo, SituacaoTipo situacao) => new() { Nome = nome, TipoNativo = tipoNativo, Situacao = situacao };
+    private static ColunaEsquema Comum(string nome, string tipoNativo, SituacaoTipo situacao) => new() { Nome = nome, TipoNativo = tipoNativo, Situacao = situacao, Anulavel = true };
 }
 
-/// <summary>O dialeto falso: lê o banco em memória e aplica o defeito pedido.</summary>
-internal sealed class ProvedorFalso(bool completo, Defeito defeito) : ProvedorDialeto
+/// <summary>O dialeto falso: lê o banco em memória e aplica o defeito pedido e a perturbação, se há.</summary>
+internal sealed class ProvedorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, EsquemaBanco>? perturbar) : ProvedorDialeto
 {
     public override string Nome => "falso";
 
     public override Task<DialetoOrigem> ConectarOrigemAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), completo, defeito));
+        Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: false), defeito));
 
     public override Task<DialetoDestino> ConectarDestinoAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), defeito));
+        Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: true), defeito));
 }
 
-internal sealed class OrigemFalsa(string banco, bool completo, Defeito defeito) : DialetoOrigem
+internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, Defeito defeito) : DialetoOrigem
 {
-    public override LeitorEsquema Esquema { get; } = new LeitorFalso(completo, defeito);
+    public override LeitorEsquema Esquema { get; } = leitor;
 
     public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, defeito);
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape);
 }
 
-// O destino da suíte começa vazio.
-internal sealed class DestinoFalso(string banco, Defeito defeito) : DialetoDestino
+// O destino da suíte tem o mesmo esquema da origem, lido pelo dono.
+internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, Defeito defeito) : DialetoDestino
 {
-    public override LeitorEsquema Esquema { get; } = new LeitorVazio();
+    public override LeitorEsquema Esquema { get; } = leitor;
 
     public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, defeito);
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape or Defeito.CitacaoErradaNoDestino);
 }
 
-internal sealed class LeitorVazio : LeitorEsquema
-{
-    public override Task<EsquemaBanco> LerAsync(CancellationToken cancelamento) => Task.FromResult(new EsquemaBanco { Tabelas = [] });
-}
-
-internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquema
+internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, EsquemaBanco>? perturbar, bool destino) : LeitorEsquema
 {
     private int _leituras;
 
@@ -219,7 +306,8 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquem
             tabelas.Reverse();
         }
 
-        return Task.FromResult(new EsquemaBanco { Tabelas = tabelas, Sequences = sequences, ObjetosResiduais = residuais });
+        var esquema = new EsquemaBanco { Tabelas = tabelas, Sequences = sequences, ObjetosResiduais = residuais };
+        return Task.FromResult(perturbar is null ? esquema : perturbar(esquema));
     }
 
     private void Aplicar(List<TabelaEsquema> tabelas, List<SequenceEsquema> sequences, List<ObjetoResidual> residuais)
@@ -227,7 +315,7 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquem
         switch (defeito)
         {
             case Defeito.TipoMalClassificado:
-                TrocarColuna(tabelas, "tipos", "dados", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Texto });
+                TrocarColuna(tabelas, "tipos", "dados", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Texto, Anulavel = c.Anulavel });
                 break;
             case Defeito.TipoCanonicoForaDoSuportado:
                 TrocarColuna(tabelas, "calculos", "dobro", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = c.Situacao, Geracao = c.Geracao, Tipo = TipoColuna.Inteiro });
@@ -239,10 +327,10 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquem
                 Trocar(tabelas, "funcionario", tabela => Com(tabela, semPai: true));
                 break;
             case Defeito.SequenceComUmaColuna:
-                sequences[0] = new SequenceEsquema { Nome = sequences[0].Nome, Colunas = [sequences[0].Colunas[0]] };
+                TrocarSequence(sequences, "seq_numero", s => new SequenceEsquema { Nome = s.Nome, Colunas = [s.Colunas[0]] });
                 break;
             case Defeito.SequenceComColunaRepetida:
-                sequences[0] = new SequenceEsquema { Nome = sequences[0].Nome, Colunas = [.. sequences[0].Colunas, sequences[0].Colunas[0]] };
+                TrocarSequence(sequences, "seq_numero", s => new SequenceEsquema { Nome = s.Nome, Colunas = [.. s.Colunas, s.Colunas[0]] });
                 break;
             case Defeito.GeradaNaoMarcada:
                 TrocarColuna(tabelas, "calculos", "dobro", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = c.Situacao });
@@ -251,10 +339,10 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquem
                 TrocarColuna(tabelas, "calculos", "dobro", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = SituacaoTipo.Suportado, Tipo = TipoColuna.Inteiro, Geracao = c.Geracao });
                 break;
             case Defeito.ChaveForaDeOrdem:
-                TrocarChave(tabelas, f => new ChaveEstrangeira { Nome = f.Nome, Colunas = [.. f.Colunas.Reverse()], Referenciada = f.Referenciada, ColunasReferenciadas = [.. f.ColunasReferenciadas.Reverse()] });
+                TrocarChave(tabelas, f => [new ChaveEstrangeira { Nome = f.Nome, Colunas = [.. f.Colunas.Reverse()], Referenciada = f.Referenciada, ColunasReferenciadas = [.. f.ColunasReferenciadas.Reverse()] }]);
                 break;
             case Defeito.ChaveDesbalanceada:
-                TrocarChave(tabelas, f => new ChaveEstrangeira { Nome = f.Nome, Colunas = f.Colunas, Referenciada = f.Referenciada, ColunasReferenciadas = [f.ColunasReferenciadas[0]] });
+                TrocarChave(tabelas, f => [new ChaveEstrangeira { Nome = f.Nome, Colunas = f.Colunas, Referenciada = f.Referenciada, ColunasReferenciadas = [f.ColunasReferenciadas[0]] }]);
                 break;
             case Defeito.TabelaDuplicada:
                 tabelas.Add(tabelas.Single(tabela => tabela.Nome.Equals(BancoFalso.Nome("itens"))));
@@ -269,10 +357,59 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquem
                 Trocar(tabelas, "segredos", tabela => Com(tabela, semSeguranca: true));
                 break;
             case Defeito.MascaraAusente:
-                TrocarColuna(tabelas, "contatos", "email", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = c.Situacao, Tipo = c.Tipo });
+                TrocarColuna(tabelas, "contatos", "email", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = c.Situacao, Tipo = c.Tipo, Anulavel = c.Anulavel });
                 break;
             case Defeito.NomeNaCaixaErrada:
                 Trocar(tabelas, "Cliente", tabela => new TabelaEsquema { Nome = BancoFalso.Nome("CLIENTE"), Colunas = tabela.Colunas });
+                break;
+            case Defeito.TabelaOmitida:
+            case Defeito.TabelaOmitidaNoDestino when destino:
+                tabelas.RemoveAll(tabela => tabela.Nome.Equals(BancoFalso.Nome("da_extensao")));
+                break;
+            case Defeito.ColunaAMais:
+                Trocar(tabelas, "endereco", tabela => Com(tabela, colunas: [.. tabela.Colunas, Copiar(tabela.Colunas[0], "bairro")]));
+                break;
+            case Defeito.ColunaAMenos:
+                Trocar(tabelas, "ficha", tabela => Com(tabela, colunas: [tabela.Colunas[0]]));
+                break;
+            case Defeito.ColunasForaDeOrdem:
+                Trocar(tabelas, "ficha", tabela => Com(tabela, colunas: [.. tabela.Colunas.Reverse()]));
+                break;
+            case Defeito.PropriedadeDeColunaTrocada:
+                TrocarColuna(tabelas, "contato", "canal", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = c.Situacao, Tipo = c.Tipo, Anulavel = !c.Anulavel });
+                break;
+            case Defeito.ChaveEstrangeiraRepetida:
+                TrocarChave(tabelas, f => [f, f]);
+                break;
+            case Defeito.ChaveEstrangeiraComReferenciadaErrada:
+                TrocarChave(tabelas, f => [new ChaveEstrangeira { Nome = f.Nome, Colunas = f.Colunas, Referenciada = BancoFalso.Nome("ficha"), ColunasReferenciadas = f.ColunasReferenciadas }], "ficha");
+                break;
+            case Defeito.ChavePrimariaForaDeOrdem:
+                Trocar(tabelas, "pedidos", tabela => Com(tabela, chavePrimaria: [.. tabela.ChavePrimaria.Reverse()]));
+                break;
+            case Defeito.TipoDeTabelaTrocado:
+                Trocar(tabelas, "contadores", tabela => Com(tabela, tipo: TipoTabela.Herdeira));
+                break;
+            case Defeito.SituacaoTrocadaNoDestino when destino:
+                TrocarColuna(tabelas, "tipos", "dados", c => new ColunaEsquema { Nome = c.Nome, TipoNativo = c.TipoNativo, Situacao = SituacaoTipo.NaoSuportado, Anulavel = c.Anulavel });
+                break;
+            case Defeito.SequenceOmitida:
+                sequences.RemoveAll(sequence => sequence.Nome.Equals(BancoFalso.Nome("seq_avulsa")));
+                break;
+            case Defeito.OutroPaiForaDoEsquema:
+                Trocar(tabelas, "ficha", tabela => Com(tabela, outrosPais: [BancoFalso.Nome("endereco_antigo")]));
+                break;
+            case Defeito.ChaveDeParticaoAusente:
+                Trocar(tabelas, "pedidos", tabela => Com(tabela, semChaveParticao: true));
+                break;
+            case Defeito.ChaveDeParticaoComColunaInexistente:
+                Trocar(tabelas, "pedidos", tabela => Com(tabela, chaveParticao: new ChaveParticao { Colunas = ["filial"] }));
+                break;
+            case Defeito.ChaveDeParticaoVaziaCompleta:
+                Trocar(tabelas, "pedidos", tabela => Com(tabela, chaveParticao: new ChaveParticao { Colunas = [] }));
+                break;
+            case Defeito.MaeDeTipoErrado:
+                Trocar(tabelas, "ficha", tabela => Com(tabela, outrosPais: [BancoFalso.Nome("endereco"), BancoFalso.Nome("pedidos_2025")]));
                 break;
         }
     }
@@ -289,22 +426,36 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito) : LeitorEsquem
         tabelas[indice] = trocar(tabelas[indice]);
     }
 
+    private static void TrocarSequence(List<SequenceEsquema> sequences, string nome, Func<SequenceEsquema, SequenceEsquema> trocar)
+    {
+        var indice = sequences.FindIndex(sequence => sequence.Nome.Equals(BancoFalso.Nome(nome)));
+        sequences[indice] = trocar(sequences[indice]);
+    }
+
     private static void TrocarColuna(List<TabelaEsquema> tabelas, string tabela, string coluna, Func<ColunaEsquema, ColunaEsquema> trocar) =>
         Trocar(tabelas, tabela, lida => Com(lida, colunas: [.. lida.Colunas.Select(c => c.Nome == coluna ? trocar(c) : c)]));
 
-    private static void TrocarChave(List<TabelaEsquema> tabelas, Func<ChaveEstrangeira, ChaveEstrangeira> trocar) =>
-        Trocar(tabelas, "itens", tabela => Com(tabela, chaves: [.. tabela.ChavesEstrangeiras.Select(trocar)]));
+    private static void TrocarChave(List<TabelaEsquema> tabelas, Func<ChaveEstrangeira, IEnumerable<ChaveEstrangeira>> trocar, string tabela = "itens") =>
+        Trocar(tabelas, tabela, lida => Com(lida, chaves: [.. lida.ChavesEstrangeiras.SelectMany(trocar)]));
+
+    private static ColunaEsquema Copiar(ColunaEsquema coluna, string nome) =>
+        new() { Nome = nome, TipoNativo = coluna.TipoNativo, Situacao = coluna.Situacao, Tipo = coluna.Tipo, Anulavel = coluna.Anulavel };
 
     private static TabelaEsquema Com(
         TabelaEsquema tabela, IReadOnlyList<ColunaEsquema>? colunas = null, IReadOnlyList<ChaveEstrangeira>? chaves = null,
-        bool semPai = false, bool semHistorico = false, bool semSeguranca = false) => new()
+        IReadOnlyList<NomeObjeto>? outrosPais = null, ChaveParticao? chaveParticao = null, IReadOnlyList<string>? chavePrimaria = null, TipoTabela? tipo = null,
+        bool semPai = false, bool semHistorico = false, bool semSeguranca = false, bool semChaveParticao = false) => new()
         {
             Nome = tabela.Nome,
-            Tipo = tabela.Tipo,
+            Tipo = tipo ?? tabela.Tipo,
             Pai = semPai ? null : tabela.Pai,
+            OutrosPais = outrosPais ?? tabela.OutrosPais,
             Historico = semHistorico ? null : tabela.Historico,
+            ChaveParticao = semChaveParticao ? null : chaveParticao ?? tabela.ChaveParticao,
+            Estrangeira = tabela.Estrangeira,
+            Extensao = tabela.Extensao,
             Colunas = colunas ?? tabela.Colunas,
-            ChavePrimaria = tabela.ChavePrimaria,
+            ChavePrimaria = chavePrimaria ?? tabela.ChavePrimaria,
             ChavesEstrangeiras = chaves ?? tabela.ChavesEstrangeiras,
             SegurancaDeLinha = !semSeguranca && tabela.SegurancaDeLinha,
         };
@@ -332,10 +483,10 @@ internal sealed class SqlFalso(bool semEscape) : DialetoSql
         "\"" + (semEscape ? identificador : identificador.Replace("\"", "\"\"", StringComparison.Ordinal)) + "\"";
 }
 
-/// <summary>A fixture do dialeto falso: um par de bancos em memória por teste.</summary>
-internal sealed class FixtureFalsa(bool completo, Defeito defeito) : FixtureDialeto
+/// <summary>A fixture do dialeto falso: um par de bancos em memória por teste, com o mesmo esquema nos dois lados.</summary>
+internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaBanco, EsquemaBanco>? perturbar = null) : FixtureDialeto
 {
-    private readonly ProvedorFalso _provedor = new(completo, defeito);
+    private readonly ProvedorFalso _provedor = new(completo, defeito, perturbar);
 
     public override EsquemaDeConformidade Esperado { get; } = BancoFalso.Esperado(completo, defeito);
 

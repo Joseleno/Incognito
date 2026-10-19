@@ -8,18 +8,23 @@ namespace CodeProcess.Incognito.Testes.PostgreSql;
 
 /// <summary>
 /// O servidor dos testes: um contêiner por execução (fixture de assembly), na versão de <c>INCOGNITO_POSTGRES</c> (padrão
-/// 18), com a imagem fixada por digest no <c>Dockerfile</c> da versão. Cria os logins dos testes e o banco-modelo com o
-/// esquema de conformidade, que cada teste clona.
+/// 18), com a imagem fixada por digest no <c>Dockerfile</c> da versão. Cria os papéis dos testes e os dois bancos-modelo com
+/// o esquema de conformidade, que cada teste clona: o da origem, todo do administrador, e o do destino, todo do dono.
 /// </summary>
 /// <remarks>
 /// Três logins: o administrador do contêiner (monta e apaga), <c>incognito_leitor</c> (lê a origem, nunca dono) e
-/// <c>incognito_dono</c> (dono do destino), os dois últimos sem superusuário. Senhas aleatórias por execução, com o
-/// sentinela: nenhuma saída pode trazê-las.
+/// <c>incognito_dono</c> (dono do destino), os dois últimos sem superusuário; e <c>incognito_outro</c>, sem login, dono de
+/// alguns objetos nos dois bancos. Senhas aleatórias por execução, com o sentinela: nenhuma saída pode trazê-las.
 /// </remarks>
 public sealed class ServidorPostgreSql : IAsyncLifetime
 {
     /// <summary>Texto que nenhuma saída do dialeto pode trazer (está nas senhas e no esquema de conformidade).</summary>
     public const string Sentinela = "zqSENTINELAqz";
+
+    /// <summary>
+    /// O sentinela onde só cabem 8 letras minúsculas (a subtag privada do locale de uma colação ICU, que o BCP 47 limita).
+    /// </summary>
+    public const string SentinelaCurto = "zqsentin";
 
     /// <summary>O login que lê a origem.</summary>
     public const string Leitor = "incognito_leitor";
@@ -27,15 +32,19 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     /// <summary>O login dono do destino.</summary>
     public const string Dono = "incognito_dono";
 
+    /// <summary>O papel sem login, nem leitor nem dono, que tem alguns objetos do esquema de conformidade.</summary>
+    public const string Outro = "incognito_outro";
+
     private const string Administrador = "postgres";
     private const int VersaoPadrao = 18;
 
-    // Um clone por vez: o PostgreSQL recusa clonar um modelo com conexão aberta, e os clones em série deixam a falha, se
-    // houver, num teste só.
+    // Um clone por vez: em série, uma falha de clonagem (o PostgreSQL recusa clonar um modelo com outra conexão, como a
+    // de um autovacuum que não o larga a tempo) fica num teste só.
     private readonly SemaphoreSlim _clonagem = new(1, 1);
     private readonly string _senhaAdministrador = NovaSenha();
     private PostgreSqlContainer? _conteiner;
-    private string? _modelo;
+    private string? _modeloOrigem;
+    private string? _modeloDestino;
 
     /// <summary>A senha do leitor.</summary>
     public string SenhaLeitor { get; } = NovaSenha();
@@ -46,7 +55,7 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     /// <summary>A versão do servidor (<c>server_version_num</c>).</summary>
     public int Versao { get; private set; }
 
-    /// <summary>Sobe o contêiner, cria os logins e o banco-modelo.</summary>
+    /// <summary>Sobe o contêiner, cria os papéis e os bancos-modelo.</summary>
     /// <returns>A tarefa.</returns>
     public async ValueTask InitializeAsync()
     {
@@ -65,15 +74,27 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
         Versao = versao;
         await ExecutarAsync(
             Administrador,
-            $"CREATE ROLE {Leitor} LOGIN PASSWORD '{SenhaLeitor}'; CREATE ROLE {Dono} LOGIN PASSWORD '{SenhaDono}';",
+            $"CREATE ROLE {Leitor} LOGIN PASSWORD '{SenhaLeitor}'; CREATE ROLE {Dono} LOGIN PASSWORD '{SenhaDono}'; CREATE ROLE {Outro};",
             cancelamento);
 
-        _modelo = NovoNome("modelo");
-        await ExecutarAsync(Administrador, $"CREATE DATABASE {_modelo}", cancelamento);
-        await ExecutarAsync(_modelo, LerEsquemaDeConformidade(), cancelamento);
+        _modeloOrigem = NovoNome("modelo_origem");
+        await ExecutarAsync(Administrador, $"CREATE DATABASE {_modeloOrigem}", cancelamento);
+        await ExecutarAsync(_modeloOrigem, LerRecurso("esquema-de-conformidade.sql"), cancelamento);
+        await ConferirAsync(_modeloOrigem, "presenca-do-sentinela.sql", "Lugares do esquema de conformidade sem o sentinela", cancelamento);
 
-        // As conexões do administrador não ficam em pool: fechadas aqui, o modelo pode ser clonado.
-        await ExecutarAsync(Administrador, $"ALTER DATABASE {_modelo} ALLOW_CONNECTIONS false", cancelamento);
+        // O mesmo esquema, com a posse passada ao dono e conferida por uma guarda que não depende do leitor.
+        _modeloDestino = NovoNome("modelo_destino");
+        await ExecutarAsync(Administrador, $"CREATE DATABASE {_modeloDestino}", cancelamento);
+        await ExecutarAsync(_modeloDestino, LerRecurso("esquema-de-conformidade.sql"), cancelamento);
+        await ExecutarAsync(_modeloDestino, LerRecurso("posse-do-destino.sql"), cancelamento);
+        await ConferirAsync(_modeloDestino, "guarda-de-posse.sql", "Objetos do destino que continuam do administrador (acrescentar à posse-do-destino.sql)", cancelamento);
+        await ConferirAsync(_modeloDestino, "presenca-do-sentinela.sql", "Lugares do esquema de conformidade sem o sentinela no destino", cancelamento);
+
+        // As conexões do administrador não ficam em pool: fechadas aqui, os modelos podem ser clonados.
+        await ExecutarAsync(
+            Administrador,
+            $"ALTER DATABASE {_modeloOrigem} ALLOW_CONNECTIONS false; ALTER DATABASE {_modeloDestino} ALLOW_CONNECTIONS false",
+            cancelamento);
     }
 
     /// <summary>Para o contêiner.</summary>
@@ -88,34 +109,16 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
         _clonagem.Dispose();
     }
 
-    /// <summary>Clona o banco-modelo num banco novo (a origem de um teste).</summary>
+    /// <summary>Clona o banco-modelo da origem num banco novo (a origem de um teste).</summary>
     /// <param name="cancelamento">Cancela a criação.</param>
     /// <returns>O nome do banco.</returns>
-    public async Task<string> ClonarModeloAsync(CancellationToken cancelamento)
-    {
-        var nome = NovoNome("origem");
-        await _clonagem.WaitAsync(cancelamento);
-        try
-        {
-            await ExecutarAsync(Administrador, $"CREATE DATABASE {nome} TEMPLATE {_modelo}", cancelamento);
-        }
-        finally
-        {
-            _clonagem.Release();
-        }
+    public Task<string> ClonarModeloAsync(CancellationToken cancelamento) => ClonarAsync("origem", _modeloOrigem, "", cancelamento);
 
-        return nome;
-    }
-
-    /// <summary>Cria um banco vazio do dono (o destino de um teste).</summary>
+    /// <summary>Clona o banco-modelo do destino num banco novo do dono (o destino de um teste).</summary>
     /// <param name="cancelamento">Cancela a criação.</param>
     /// <returns>O nome do banco.</returns>
-    public async Task<string> CriarDestinoAsync(CancellationToken cancelamento)
-    {
-        var nome = NovoNome("destino");
-        await ExecutarAsync(Administrador, $"CREATE DATABASE {nome} OWNER {Dono}", cancelamento);
-        return nome;
-    }
+    /// <remarks>O clone não herda o dono do modelo: o dono vem no CREATE DATABASE.</remarks>
+    public Task<string> CriarDestinoAsync(CancellationToken cancelamento) => ClonarAsync("destino", _modeloDestino, $" OWNER {Dono}", cancelamento);
 
     /// <summary>Apaga o banco, derrubando as conexões que sobrarem.</summary>
     /// <param name="banco">O banco.</param>
@@ -233,12 +236,48 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
 
     private static string NovoNome(string papel) => $"inc_{papel}_{Guid.NewGuid():N}";
 
-    private static string LerEsquemaDeConformidade()
+    private static string LerRecurso(string nome)
     {
-        using var recurso = typeof(ServidorPostgreSql).Assembly.GetManifestResourceStream("esquema-de-conformidade.sql")
-            ?? throw new InvalidOperationException("Esquema de conformidade não embutido.");
+        using var recurso = typeof(ServidorPostgreSql).Assembly.GetManifestResourceStream(nome)
+            ?? throw new InvalidOperationException($"{nome} não embutido.");
         using var leitor = new StreamReader(recurso);
         return leitor.ReadToEnd();
+    }
+
+    // Um clone por vez, atrás do mesmo semáforo para os dois modelos.
+    private async Task<string> ClonarAsync(string papel, string? modelo, string complemento, CancellationToken cancelamento)
+    {
+        var nome = NovoNome(papel);
+        await _clonagem.WaitAsync(cancelamento);
+        try
+        {
+            await ExecutarAsync(Administrador, $"CREATE DATABASE {nome} TEMPLATE {modelo}{complemento}", cancelamento);
+        }
+        finally
+        {
+            _clonagem.Release();
+        }
+
+        return nome;
+    }
+
+    // Falha se a conferência do recurso devolve alguma linha: objeto do esquema que sobrou com o administrador (o destino
+    // seria lido por um dono que não é dono de tudo) ou lugar sem o sentinela (o canário não provaria nada ali).
+    private async Task ConferirAsync(string banco, string recurso, string problema, CancellationToken cancelamento)
+    {
+        await using var conexao = await AbrirComoAdministradorAsync(banco, cancelamento);
+        await using var comando = new NpgsqlCommand(LerRecurso(recurso), conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento);
+        var achados = new List<string>();
+        while (await leitor.ReadAsync(cancelamento))
+        {
+            achados.Add(leitor.GetString(0));
+        }
+
+        if (achados.Count > 0)
+        {
+            throw new InvalidOperationException($"{problema}: {string.Join(", ", achados)}.");
+        }
     }
 
     private PostgreSqlContainer Conteiner() => _conteiner ?? throw new InvalidOperationException("O servidor ainda não subiu.");

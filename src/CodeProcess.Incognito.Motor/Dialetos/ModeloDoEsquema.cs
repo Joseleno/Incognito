@@ -139,6 +139,8 @@ public sealed class TabelaEsquema
     private readonly IReadOnlyList<ColunaEsquema> _colunas = [];
     private readonly IReadOnlyList<string> _chavePrimaria = [];
     private readonly IReadOnlyList<ChaveEstrangeira> _chavesEstrangeiras = [];
+    private readonly IReadOnlyList<NomeObjeto> _outrosPais = [];
+    private readonly string? _extensao;
 
     /// <summary>O nome.</summary>
     public required NomeObjeto Nome { get => _nome; init => _nome = value ?? throw new ArgumentNullException(nameof(Nome)); }
@@ -152,8 +154,44 @@ public sealed class TabelaEsquema
     /// </summary>
     public NomeObjeto? Pai { get; init; }
 
+    /// <summary>
+    /// As outras mães de uma herdeira de herança múltipla, na ordem da declaração: <see cref="Pai"/> é a primeira mãe, e
+    /// estas são as demais. Vazia nas outras tabelas (não conferido aqui, como <see cref="Pai"/>).
+    /// </summary>
+    public IReadOnlyList<NomeObjeto> OutrosPais { get => _outrosPais; init => _outrosPais = Lista.Copiar(value, nameof(OutrosPais)); }
+
     /// <summary>O histórico de uma temporal; nulo nas outras (não conferido aqui, como <see cref="Pai"/>).</summary>
     public NomeObjeto? Historico { get; init; }
+
+    /// <summary>
+    /// A chave de partição de uma particionada, também da partição intermediária (que é particionada); nula nas outras
+    /// (não conferido aqui, como <see cref="Pai"/>).
+    /// </summary>
+    public ChaveParticao? ChaveParticao { get; init; }
+
+    /// <summary>
+    /// Se é uma tabela estrangeira (foreign table, também como partição): os dados ficam fora do banco, e as colunas não
+    /// são suportadas (a gerada fica fora da cópia, como em qualquer tabela).
+    /// </summary>
+    public bool Estrangeira { get; init; }
+
+    /// <summary>
+    /// A extensão que adotou a tabela, se há. Só para mensagem: o dono do banco pode fazer uma extensão adotar qualquer
+    /// tabela, que continua classificada e copiada como as outras.
+    /// </summary>
+    public string? Extensao
+    {
+        get => _extensao;
+        init
+        {
+            if (value is not null)
+            {
+                ArgumentException.ThrowIfNullOrEmpty(value, nameof(Extensao));
+            }
+
+            _extensao = value;
+        }
+    }
 
     /// <summary>As colunas, na ordem do catálogo.</summary>
     public required IReadOnlyList<ColunaEsquema> Colunas { get => _colunas; init => _colunas = Lista.Copiar(value, nameof(Colunas)); }
@@ -169,6 +207,27 @@ public sealed class TabelaEsquema
     /// no SQL Server): falha segura, a contagem de linhas não a detecta.
     /// </summary>
     public bool SegurancaDeLinha { get; init; }
+}
+
+/// <summary>As colunas que decidem a partição: tratar uma delas pode mudar a linha de partição ou recusá-la.</summary>
+[Experimental(ContratoExperimental.Diagnostico)]
+public sealed class ChaveParticao
+{
+    private readonly IReadOnlyList<string> _colunas = [];
+
+    /// <summary>
+    /// As colunas citadas pela chave, sem repetição: primeiro as que são elementos da chave, na ordem dela; depois as
+    /// citadas pelas expressões da chave, na ordem das colunas da tabela. Vazia só com <see cref="ColunasIncompletas"/>,
+    /// se a chave só cita o que o dialeto não sabe dizer (não conferido aqui: a suíte de conformidade e o motor conferem).
+    /// </summary>
+    public required IReadOnlyList<string> Colunas { get => _colunas; init => _colunas = Lista.CopiarNomes(value, nameof(Colunas)); }
+
+    /// <summary>
+    /// Se a chave cita mais do que <see cref="Colunas"/> (a linha inteira numa expressão, ou uma expressão que o dialeto
+    /// não decompõe): quem usa a chave a trata como se citasse todas as colunas. Uma função chamada pela expressão que leia
+    /// outras tabelas continua invisível.
+    /// </summary>
+    public bool ColunasIncompletas { get; init; }
 }
 
 /// <summary>A situação de um tipo de coluna na matriz de tipos.</summary>
@@ -229,12 +288,19 @@ public sealed class ColunaEsquema
     private readonly TipoColuna? _tipo;
     private readonly GeracaoColuna _geracao;
     private readonly IdentidadeColuna _identidade;
+    private readonly string? _tipoBase;
 
     /// <summary>O nome, como o catálogo o guarda.</summary>
     public required string Nome { get => _nome; init => _nome = Texto(value); }
 
     /// <summary>O tipo como o banco o nomeia (<c>character varying</c>, <c>nvarchar</c>).</summary>
     public required string TipoNativo { get => _tipoNativo; init => _tipoNativo = Texto(value); }
+
+    /// <summary>
+    /// O tipo do fim da cadeia de domínios (tipo de alias no SQL Server), como o banco o nomeia, numa coluna cujo tipo é
+    /// domínio; nulo nas outras.
+    /// </summary>
+    public string? TipoBase { get => _tipoBase; init => _tipoBase = value is null ? null : Texto(value); }
 
     /// <summary>A situação do tipo na matriz de tipos.</summary>
     public required SituacaoTipo Situacao
@@ -320,7 +386,11 @@ public sealed class SequenceEsquema
     /// <summary>O nome.</summary>
     public required NomeObjeto Nome { get => _nome; init => _nome = value ?? throw new ArgumentNullException(nameof(Nome)); }
 
-    /// <summary>As colunas que tiram valor dela (pelo default ou pela identity); vazia se nenhuma.</summary>
+    /// <summary>
+    /// As colunas que tiram valor dela (pelo default, também o de um domínio, ou pela identity), como o catálogo as liga;
+    /// vazia se nenhuma. Um uso que o banco não registra fica de fora: o nome da sequence em texto
+    /// (<c>nextval('s'::text)</c> no PostgreSQL) ou dentro de uma função chamada pelo default.
+    /// </summary>
     public IReadOnlyList<ReferenciaColuna> Colunas { get => _colunas; init => _colunas = Lista.Copiar(value, nameof(Colunas)); }
 }
 

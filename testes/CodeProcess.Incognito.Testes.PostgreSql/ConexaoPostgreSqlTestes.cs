@@ -179,26 +179,57 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
-    public async Task Nada_lido_do_esquema_nem_da_identidade_traz_o_sentinela()
+    public async Task O_dialeto_descartado_recusa_ler_o_esquema()
     {
-        // O sentinela está em todo texto opaco e nos dados do esquema de conformidade (a lista no começo do .sql).
         var cancelamento = TestContext.Current.CancellationToken;
         var banco = await servidor.ClonarModeloAsync(cancelamento);
         try
         {
-            await using var origem = await _provedor.ConectarOrigemAsync(
+            var origem = await _provedor.ConectarOrigemAsync(
                 new SegredoConexao(servidor.StringDeConexao(banco, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
-            var textos = new List<string>();
-            Coletar(await origem.Esquema.LerAsync(cancelamento), textos);
-            Coletar(await origem.Identidade.LerAsync(cancelamento), textos);
-            textos.Add(origem.ToString()!);
+            var leitor = origem.Esquema;
+            await origem.DisposeAsync();
 
-            Assert.NotEmpty(textos);
-            Assert.DoesNotContain(textos, texto => texto.Contains(ServidorPostgreSql.Sentinela, StringComparison.Ordinal));
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => leitor.LerAsync(cancelamento));
         }
         finally
         {
             await servidor.ApagarAsync(banco);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task Nada_lido_do_esquema_nem_da_identidade_traz_o_sentinela()
+    {
+        // O sentinela está em todo texto opaco e nos dados do esquema de conformidade (a lista no começo do .sql). Também no
+        // destino, lido pelo dono, que vê mais do catálogo que o leitor (o corpo das funções e as opções de foreign table
+        // dele, por exemplo).
+        var cancelamento = TestContext.Current.CancellationToken;
+        var bancoOrigem = await servidor.ClonarModeloAsync(cancelamento);
+        var bancoDestino = await servidor.CriarDestinoAsync(cancelamento);
+        try
+        {
+            await using var origem = await _provedor.ConectarOrigemAsync(
+                new SegredoConexao(servidor.StringDeConexao(bancoOrigem, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
+            await using var destino = await _provedor.ConectarDestinoAsync(
+                new SegredoConexao(servidor.StringDeConexao(bancoDestino, ServidorPostgreSql.Dono, servidor.SenhaDono)), cancelamento);
+            var textos = new List<string>();
+            foreach (var dialeto in new DialetoBanco[] { origem, destino })
+            {
+                Coletar(await dialeto.Esquema.LerAsync(cancelamento), textos);
+                Coletar(await dialeto.Identidade.LerAsync(cancelamento), textos);
+                textos.Add(dialeto.ToString()!);
+            }
+
+            Assert.NotEmpty(textos);
+            Assert.DoesNotContain(textos, texto => texto.Contains(ServidorPostgreSql.Sentinela, StringComparison.Ordinal));
+            Assert.DoesNotContain(textos, texto => texto.Contains(ServidorPostgreSql.SentinelaCurto, StringComparison.Ordinal));
+        }
+        finally
+        {
+            await servidor.ApagarAsync(bancoOrigem);
+            await servidor.ApagarAsync(bancoDestino);
         }
     }
 
