@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Reflection;
 using CodeProcess.Incognito.Dialetos;
 using CodeProcess.Incognito.Dialetos.PostgreSql;
 using CodeProcess.Incognito.Testes.Conformidade;
@@ -8,8 +6,8 @@ using Npgsql;
 namespace CodeProcess.Incognito.Testes.PostgreSql;
 
 /// <summary>
-/// O que o dialeto PostgreSQL faz além da suíte: o que recusa na string de conexão, o que impõe por cima dela, a versão
-/// mínima e o sentinela, que nenhuma saída traz.
+/// O que o dialeto PostgreSQL faz além da suíte: o que recusa na string de conexão, o que impõe por cima dela e a versão
+/// mínima. O sentinela, que nenhuma leitura traz, é fato da suíte.
 /// </summary>
 /// <param name="servidor">O servidor (fixture de assembly).</param>
 public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
@@ -200,41 +198,6 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
-    public async Task Nada_lido_do_esquema_nem_da_identidade_traz_o_sentinela()
-    {
-        // O sentinela está em todo texto opaco e nos dados do esquema de conformidade (a lista no começo do .sql). Também no
-        // destino, lido pelo dono, que vê mais do catálogo que o leitor (o corpo das funções e as opções de foreign table
-        // dele, por exemplo).
-        var cancelamento = TestContext.Current.CancellationToken;
-        var bancoOrigem = await servidor.ClonarModeloAsync(cancelamento);
-        var bancoDestino = await servidor.CriarDestinoAsync(cancelamento);
-        try
-        {
-            await using var origem = await _provedor.ConectarOrigemAsync(
-                new SegredoConexao(servidor.StringDeConexao(bancoOrigem, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
-            await using var destino = await _provedor.ConectarDestinoAsync(
-                new SegredoConexao(servidor.StringDeConexao(bancoDestino, ServidorPostgreSql.Dono, servidor.SenhaDono)), cancelamento);
-            var textos = new List<string>();
-            foreach (var dialeto in new DialetoBanco[] { origem, destino })
-            {
-                Coletar(await dialeto.Esquema.LerAsync(cancelamento), textos);
-                Coletar(await dialeto.Identidade.LerAsync(cancelamento), textos);
-                textos.Add(dialeto.ToString()!);
-            }
-
-            Assert.NotEmpty(textos);
-            Assert.DoesNotContain(textos, texto => texto.Contains(ServidorPostgreSql.Sentinela, StringComparison.Ordinal));
-            Assert.DoesNotContain(textos, texto => texto.Contains(ServidorPostgreSql.SentinelaCurto, StringComparison.Ordinal));
-        }
-        finally
-        {
-            await servidor.ApagarAsync(bancoOrigem);
-            await servidor.ApagarAsync(bancoDestino);
-        }
-    }
-
-    [Fact]
-    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task Servidor_abaixo_do_15_e_recusado_pela_versao()
     {
         var cancelamento = TestContext.Current.CancellationToken;
@@ -250,41 +213,4 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
     }
 
     private static SegredoConexao ComSentinela(string conexao) => new(conexao.Replace(Senha, ServidorPostgreSql.NovaSenha(), StringComparison.Ordinal));
-
-    // Todo texto alcançável pelas propriedades públicas, inclusive o ToString de cada objeto.
-    private static void Coletar(object? valor, List<string> textos)
-    {
-        switch (valor)
-        {
-            case null:
-                return;
-            case string texto:
-                textos.Add(texto);
-                return;
-            case IDictionary dicionario:
-                foreach (DictionaryEntry par in dicionario)
-                {
-                    Coletar(par.Key, textos);
-                    Coletar(par.Value, textos);
-                }
-
-                return;
-            case IEnumerable itens:
-                foreach (var item in itens)
-                {
-                    Coletar(item, textos);
-                }
-
-                return;
-            case Enum or ValueType:
-                textos.Add(valor.ToString()!);
-                return;
-        }
-
-        textos.Add(valor.ToString()!);
-        foreach (var propriedade in valor.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(propriedade => propriedade.GetIndexParameters().Length == 0))
-        {
-            Coletar(propriedade.GetValue(valor), textos);
-        }
-    }
 }

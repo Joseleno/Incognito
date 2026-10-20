@@ -23,4 +23,10 @@ internal static class CodigosPostgreSql
 
     /// <summary>Uma partição com <c>DETACH ... CONCURRENTLY</c> interrompido, que a leitura pelo pai não enxerga.</summary>
     internal const string ParticaoPendente = "INC3105";
+
+    /// <summary>A medida do comportamento de uma colação falhou, ou a colação mudou no catálogo durante a leitura.</summary>
+    internal const string MedidaDeColacao = "INC3106";
+
+    /// <summary>O catálogo tem um valor que o dialeto não conhece (de uma versão do PostgreSQL mais nova).</summary>
+    internal const string CatalogoDesconhecido = "INC3107";
 }

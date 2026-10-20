@@ -24,6 +24,14 @@ public abstract class FixtureDialeto
     /// <param name="cancelamento">Cancela a criação.</param>
     /// <returns>O par, que o teste descarta.</returns>
     public abstract ValueTask<ParDeBancos> CriarParAsync(CancellationToken cancelamento);
+
+    /// <summary>
+    /// Cria um par como o de <see cref="CriarParAsync"/>, mas lido nos dois lados pelo administrador do servidor, que vê
+    /// canais do catálogo que o leitor e o dono não veem. Só o fato do sentinela o usa.
+    /// </summary>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>O par, que o teste descarta.</returns>
+    public abstract ValueTask<ParDeBancos> CriarParPrivilegiadoAsync(CancellationToken cancelamento);
 }
 
 /// <summary>Os dois bancos de um teste, conectados.</summary>

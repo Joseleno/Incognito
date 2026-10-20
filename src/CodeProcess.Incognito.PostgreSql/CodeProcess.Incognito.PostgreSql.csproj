@@ -14,4 +14,9 @@
     <PackageReference Include="Npgsql" />
   </ItemGroup>
 
+  <!-- A sanitização dos erros do banco, testada sem provocar o erro de verdade. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CodeProcess.Incognito.Testes.PostgreSql" />
+  </ItemGroup>
+
 </Project>

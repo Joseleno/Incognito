@@ -16,6 +16,20 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     private const string Texto = "text";
     private const string Inteiro = "integer";
     private const string Grande = "bigint";
+    private const string Variavel = "character varying";
+
+    // A colação padrão dos bancos da fixture (o modelo vem do template1 da imagem, em libc), declarada uma vez e nunca
+    // deduzida do tipo nativo; e a "C" do catálogo, a do tipo name.
+    private static readonly ColacaoEsperada _padrao = ColacaoEsperada.Determinista("default", null);
+    private static readonly ColacaoEsperada _c = ColacaoEsperada.Determinista("C", "pg_catalog");
+
+    // As faixas dos inteiros pela documentação do PostgreSQL, aplicadas pelo tipo nativo; domínio e array declaram à mão.
+    private static readonly Dictionary<string, FaixaEsperada> _faixas = new(StringComparer.Ordinal)
+    {
+        ["smallint"] = FaixaEsperada.Pequeno,
+        [Inteiro] = FaixaEsperada.Inteiro,
+        [Grande] = FaixaEsperada.Grande,
+    };
 
     private readonly ProvedorPostgreSql _provedor = new();
 
@@ -23,7 +37,17 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     public override EsquemaDeConformidade Esperado { get; } = Declarar(servidor.Versao);
 
     /// <inheritdoc/>
-    public override async ValueTask<ParDeBancos> CriarParAsync(CancellationToken cancelamento)
+    public override ValueTask<ParDeBancos> CriarParAsync(CancellationToken cancelamento) =>
+        CriarAsync(
+            banco => servidor.StringDeConexao(banco, ServidorPostgreSql.Leitor, servidor.SenhaLeitor),
+            banco => servidor.StringDeConexao(banco, ServidorPostgreSql.Dono, servidor.SenhaDono),
+            cancelamento);
+
+    /// <inheritdoc/>
+    public override ValueTask<ParDeBancos> CriarParPrivilegiadoAsync(CancellationToken cancelamento) =>
+        CriarAsync(servidor.StringDeConexaoDoAdministrador, servidor.StringDeConexaoDoAdministrador, cancelamento);
+
+    private async ValueTask<ParDeBancos> CriarAsync(Func<string, string> conexaoDaOrigem, Func<string, string> conexaoDoDestino, CancellationToken cancelamento)
     {
         var bancoOrigem = await servidor.ClonarModeloAsync(cancelamento);
         string? bancoDestino = null;
@@ -31,10 +55,8 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
         try
         {
             bancoDestino = await servidor.CriarDestinoAsync(cancelamento);
-            origem = await _provedor.ConectarOrigemAsync(
-                new SegredoConexao(servidor.StringDeConexao(bancoOrigem, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
-            var destino = await _provedor.ConectarDestinoAsync(
-                new SegredoConexao(servidor.StringDeConexao(bancoDestino, ServidorPostgreSql.Dono, servidor.SenhaDono)), cancelamento);
+            origem = await _provedor.ConectarOrigemAsync(new SegredoConexao(conexaoDaOrigem(bancoOrigem)), cancelamento);
+            var destino = await _provedor.ConectarDestinoAsync(new SegredoConexao(conexaoDoDestino(bancoDestino)), cancelamento);
             var apagar = bancoDestino;
             return new ParDeBancos(origem, destino, bancoOrigem, bancoDestino, async () =>
             {
@@ -80,76 +102,24 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             new(Coluna("calculos", "dobro"), GeracaoColuna.Armazenada),
             .. dezoito ? [new ColunaGeradaEsperada(Coluna("calculos", "triplo"), GeracaoColuna.Virtual)] : Array.Empty<ColunaGeradaEsperada>(),
             new(Coluna("externa", "tamanho"), GeracaoColuna.Armazenada),
+            new(Coluna("textos", "email_min"), GeracaoColuna.Armazenada),
+            new(Coluna("textos", "junto"), GeracaoColuna.Armazenada),
+            new(Coluna("numeros", "constante"), GeracaoColuna.Armazenada),
         ];
         return new()
         {
             Inventario = Inventariar(versao),
-            Tipos =
-            [
-                Suportado("pequeno", TipoColuna.Inteiro),
-                Suportado("inteiro", TipoColuna.Inteiro),
-                Suportado("id", TipoColuna.Inteiro),
-                Suportado("valor", TipoColuna.Decimal),
-                Suportado("texto", TipoColuna.Texto),
-                Suportado("curto", TipoColuna.Texto),
-                Suportado("fixo", TipoColuna.Texto),
-                Suportado("ativo", TipoColuna.Booleano),
-                Suportado("dia", TipoColuna.Data),
-                Suportado("momento", TipoColuna.DataHora),
-                Suportado("instante", TipoColuna.DataHoraComFuso),
-                Suportado("identificador", TipoColuna.Uuid),
-                Suportado("conteudo", TipoColuna.Binario),
-                Suportado("email", TipoColuna.Texto),
-                Suportado("hora", null),
-                Suportado("hora_com_fuso", null),
-                Suportado("duracao", null),
-                ComRessalva("emails"),
-                ComRessalva("dados"),
-                ComRessalva("documento"),
-                ComRessalva("marcacao"),
-                ComRessalva("preco"),
-                ComRessalva("situacao"),
-                ComRessalva("codigo"),
-                ComRessalva("faixa"),
-                ComRessalva("lista"),
-                ComRessalva("real"),
-                ComRessalva("dupla"),
-                ComRessalva("endereco"),
-                new(Coluna("tipos", "anexo"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("tipos", "referencia"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("objetos", "codigo"), SituacaoTipo.ComRessalva, null),
-                new(Coluna("objetos", "referencia"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("objetos", "referencias"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("objetos", "anexos"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("objetos", "lista"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("imitacoes", "parecido"), SituacaoTipo.ComRessalva, null),
-                new(Coluna("imitacoes", "adotado"), SituacaoTipo.ComRessalva, null),
-                new(Coluna("externa", "linha"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("externa", "tamanho"), SituacaoTipo.SuportadoPorExclusao, null),
-                new(Coluna("leituras_arquivo", "valor"), SituacaoTipo.NaoSuportado, null),
-                new(Coluna("calculos", "dobro"), SituacaoTipo.SuportadoPorExclusao, null),
+            Inexistentes = new Dictionary<Enum, string> { [UnidadeComprimento.UnidadesUtf16] = "o PostgreSQL não mede em UTF-16" },
 
-                // Domínios fora da tabela de tipos, colunas de partição e de herdeira e o esquema que começa com "pg".
-                new(Coluna("protocolos", "numero"), SituacaoTipo.ComRessalva, null),
-                new(Coluna("protocolos", "derivado"), SituacaoTipo.ComRessalva, null),
-                new(Coluna("com_dominio", "valor"), SituacaoTipo.ComRessalva, null),
-                new(Coluna("pedidos_9", "numero"), SituacaoTipo.Suportado, TipoColuna.Inteiro),
-                new(Coluna("eventos_1", "id"), SituacaoTipo.Suportado, TipoColuna.Inteiro),
-                new(Coluna("sem_a_primeira", "um"), SituacaoTipo.Suportado, TipoColuna.Texto),
-                new(new ReferenciaColuna(new NomeObjeto("pgdados", "clientes"), "id"), SituacaoTipo.Suportado, TipoColuna.Inteiro),
-            ],
+            // A versão é a do servidor, lida pelo administrador: o Dependabot sobe a secundária das imagens.
+            Propriedades = Caso.Presente(new PropriedadesEsperadas(new Version(versao / 10000, versao % 10000), new CodificacaoEsperada("UTF8", true, true, 4), _padrao)),
+            Sentinelas = [ServidorPostgreSql.Sentinela, ServidorPostgreSql.SentinelaCurto],
             Particao = Caso.Presente(new Hierarquia(Nome("pedidos"), [Nome("pedidos_1"), Nome("pedidos_2"), Nome("pedidos_9")])),
             Heranca = Caso.Presente(new Hierarquia(Nome("pessoa"), [Nome("funcionario")])),
             SequenceCompartilhada = Caso.Presente(new SequenceEsperada(Nome("seq_numero"), [Coluna("itens", "numero"), Coluna("pedidos", "numero")])),
             ColunasGeradas = Caso.Presente<IReadOnlyList<ColunaGeradaEsperada>>(geradas),
             ChaveEstrangeiraComposta = new(Nome("itens"), "fk_itens_pedidos", ["loja", "pedido"], Nome("pedidos"), ["loja", "id"]),
             Temporal = Caso.Inexistente<TemporalEsperada>("o PostgreSQL não tem tabela temporal"),
-            ObjetosResiduais =
-            [
-                new(Nome("resumo_vendas"), TipoObjetoResidual.VisaoMaterializada),
-                new(Nome("resumo_alheio"), TipoObjetoResidual.VisaoMaterializada),
-                new(new NomeObjeto("pg_catalog", "pg_largeobject"), TipoObjetoResidual.ObjetosGrandes),
-            ],
             SegurancaDeLinha = Caso.Presente(Nome("segredos")),
             Mascara = Caso.Inexistente<ReferenciaColuna>("o PostgreSQL não tem máscara dinâmica"),
             NomesExatos = [Nome("Cliente"), Nome("cliente"), Nome("select"), Nome("nota fiscal")],
@@ -158,16 +128,27 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
         };
     }
 
-    // Escrito à mão a partir do esquema-de-conformidade.sql, nunca copiado da saída do leitor. O tipo nativo é o do
-    // format_type com o caminho de busca só no pg_catalog (os tipos de extensão e de domínio saem com o esquema).
+    // Escrito à mão a partir do esquema-de-conformidade.sql, nunca copiado da saída do leitor: a classe de cada coluna pela
+    // matriz de tipos da especificação, a semântica pelo DDL. O tipo nativo é o do format_type com o caminho de busca só no
+    // pg_catalog (os tipos de extensão e de domínio saem com o esquema).
     private static Inventario Inventariar(int versao)
     {
+        var dezesseis = versao >= 160000;
         var dezessete = versao >= 170000;
         var dezoito = versao >= 180000;
-        ColunaInventariada[] pedido = [Col("loja", Inteiro, nula: false), Col("id", Grande, nula: false), Col("numero", Grande)];
-        ColunaInventariada[] venda = [Col("ano", Inteiro, nula: false), Col("mes", Inteiro, nula: false)];
-        ColunaInventariada[] agenda = [Col("dia", "date", nula: false), Col("sala", Texto), Col("nota", Texto), Col("turno", Texto)];
-        ColunaInventariada[] leitura = [Col("origem", Texto, nula: false), Col("valor", Texto)];
+        var suportadoInteiro = Classe.Suportado(TipoColuna.Inteiro);
+        var suportadoTexto = Classe.Suportado(TipoColuna.Texto);
+        ColunaInventariada[] pedido = [Col("loja", Inteiro, suportadoInteiro, nula: false), Col("id", Grande, suportadoInteiro, nula: false), Col("numero", Grande, suportadoInteiro)];
+        ColunaInventariada[] venda = [Col("ano", Inteiro, suportadoInteiro, nula: false), Col("mes", Inteiro, suportadoInteiro, nula: false)];
+        ColunaInventariada[] agenda =
+        [
+            Col("dia", "date", Classe.Suportado(TipoColuna.Data), nula: false),
+            ColTexto("sala", Texto, suportadoTexto),
+            ColTexto("nota", Texto, suportadoTexto),
+            ColTexto("turno", Texto, suportadoTexto),
+        ];
+        ColunaInventariada[] leitura = [ColTexto("origem", Texto, suportadoTexto, nula: false), ColTexto("valor", Texto, suportadoTexto)];
+        ColunaInventariada[] leituraArquivo = [ColTexto("origem", Texto, Classe.NaoSuportado, nula: false), ColTexto("valor", Texto, Classe.NaoSuportado)];
         TabelaInventariada[] tabelas =
         [
             new()
@@ -175,38 +156,38 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("tipos"),
                 Colunas =
                 [
-                    Col("id", Grande, nula: false),
-                    Col("pequeno", "smallint"),
-                    Col("inteiro", Inteiro),
-                    Col("valor", "numeric"),
-                    Col("texto", Texto, nula: false),
-                    Col("curto", "character varying"),
-                    Col("fixo", "character"),
-                    Col("ativo", "boolean"),
-                    Col("dia", "date"),
-                    Col("momento", "timestamp without time zone"),
-                    Col("instante", "timestamp with time zone"),
-                    Col("identificador", "uuid"),
-                    Col("conteudo", "bytea"),
-                    Col("hora", "time without time zone"),
-                    Col("hora_com_fuso", "time with time zone"),
-                    Col("duracao", "interval"),
-                    Col("email", "public.citext"),
-                    Col("emails", "public.citext[]"),
-                    Col("dados", "jsonb"),
-                    Col("documento", "json"),
-                    Col("marcacao", "xml"),
-                    Col("preco", "money"),
-                    Col("situacao", "loja.situacao"),
-                    Col("codigo", "loja.codigo", tipoBase: Texto),
-                    Col("faixa", "int4range"),
-                    Col("lista", "integer[]"),
-                    Col("real", "real"),
-                    Col("dupla", "double precision"),
-                    Col("endereco", "inet"),
-                    Col("anexo", "public.lo", tipoBase: "oid"),
-                    Col("referencia", "oid"),
-                    Col("observacao", Texto),
+                    Col("id", Grande, suportadoInteiro, nula: false),
+                    Col("pequeno", "smallint", suportadoInteiro),
+                    Col("inteiro", Inteiro, suportadoInteiro),
+                    Col("valor", "numeric", Classe.Suportado(TipoColuna.Decimal), precisao: 12, escala: 2),
+                    ColTexto("texto", Texto, suportadoTexto, nula: false),
+                    ColTexto("curto", Variavel, suportadoTexto, comprimento: 20),
+                    ColTexto("fixo", "character", suportadoTexto, comprimento: 3, espacoFinal: true),
+                    Col("ativo", "boolean", Classe.Suportado(TipoColuna.Booleano)),
+                    Col("dia", "date", Classe.Suportado(TipoColuna.Data)),
+                    Col("momento", "timestamp without time zone", Classe.Suportado(TipoColuna.DataHora)),
+                    Col("instante", "timestamp with time zone", Classe.Suportado(TipoColuna.DataHoraComFuso)),
+                    Col("identificador", "uuid", Classe.Suportado(TipoColuna.Uuid)),
+                    Col("conteudo", "bytea", Classe.Suportado(TipoColuna.Binario), comprimento: new(null, UnidadeComprimento.Bytes)),
+                    Col("hora", "time without time zone", Classe.SemTipo),
+                    Col("hora_com_fuso", "time with time zone", Classe.SemTipo),
+                    Col("duracao", "interval", Classe.SemTipo),
+                    ColTexto("email", "public.citext", suportadoTexto, caixa: true),
+                    ColTexto("emails", "public.citext[]", Classe.Ressalva, caixa: true),
+                    Col("dados", "jsonb", Classe.Ressalva),
+                    Col("documento", "json", Classe.Ressalva),
+                    Col("marcacao", "xml", Classe.Ressalva),
+                    Col("preco", "money", Classe.Ressalva),
+                    Col("situacao", "loja.situacao", Classe.Ressalva),
+                    ColTexto("codigo", "loja.codigo", Classe.Ressalva, tipoBase: Texto, restrita: true),
+                    Col("faixa", "int4range", Classe.Ressalva),
+                    Col("lista", "integer[]", Classe.Ressalva, faixa: FaixaEsperada.Inteiro),
+                    Col("real", "real", Classe.Ressalva),
+                    Col("dupla", "double precision", Classe.Ressalva),
+                    Col("endereco", "inet", Classe.Ressalva),
+                    Col("anexo", "public.lo", Classe.NaoSuportado, tipoBase: "oid"),
+                    Col("referencia", "oid", Classe.NaoSuportado),
+                    ColTexto("observacao", Texto, suportadoTexto),
                 ],
                 ChavePrimaria = ["id"],
             },
@@ -215,27 +196,40 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("objetos"),
                 Colunas =
                 [
-                    Col("id", Grande, nula: false),
-                    Col("codigo", "loja.codigo_curto", tipoBase: Texto),
-                    Col("referencia", "loja.ref_objeto", tipoBase: "oid"),
-                    Col("referencias", "oid[]"),
-                    Col("anexos", "public.lo[]"),
-                    Col("lista", "loja.lista_lo", tipoBase: "public.lo[]"),
+                    Col("id", Grande, suportadoInteiro, nula: false),
+                    ColTexto("codigo", "loja.codigo_curto", Classe.Ressalva, tipoBase: Texto, restrita: true),
+                    Col("referencia", "loja.ref_objeto", Classe.NaoSuportado, tipoBase: "oid"),
+                    Col("referencias", "oid[]", Classe.NaoSuportado),
+                    Col("anexos", "public.lo[]", Classe.NaoSuportado),
+                    Col("lista", "loja.lista_lo", Classe.NaoSuportado, tipoBase: "public.lo[]"),
                 ],
                 ChavePrimaria = ["id"],
             },
-            new() { Nome = Nome("imitacoes"), Colunas = [Col("parecido", "loja.citext", tipoBase: Texto), Col("adotado", "loja.texto_adotado", tipoBase: Texto)] },
-            new() { Nome = Nome("da_extensao"), Extensao = "citext", Colunas = [Col("id", Inteiro)] },
-            new() { Nome = Nome("externa"), Estrangeira = true, Colunas = [Col("linha", Texto), Col("tamanho", Inteiro, geracao: GeracaoColuna.Armazenada)] },
+            new()
+            {
+                Nome = Nome("imitacoes"),
+                Colunas = [ColTexto("parecido", "loja.citext", Classe.Ressalva, tipoBase: Texto), ColTexto("adotado", "loja.texto_adotado", Classe.Ressalva, tipoBase: Texto)],
+            },
+            new() { Nome = Nome("da_extensao"), Extensao = "citext", Colunas = [Col("id", Inteiro, suportadoInteiro)] },
+            new()
+            {
+                Nome = Nome("externa"),
+                Estrangeira = true,
+                Colunas =
+                [
+                    ColTexto("linha", Texto, Classe.NaoSuportado),
+                    Col("tamanho", Inteiro, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new(["linha"])),
+                ],
+            },
             new()
             {
                 Nome = Nome("calculos"),
                 Colunas =
                 [
-                    Col("id", Grande, nula: false),
-                    Col("valor", Inteiro, nula: false),
-                    Col("dobro", Inteiro, geracao: GeracaoColuna.Armazenada),
-                    .. dezoito ? [Col("triplo", Inteiro, geracao: GeracaoColuna.Virtual)] : Array.Empty<ColunaInventariada>(),
+                    Col("id", Grande, suportadoInteiro, nula: false),
+                    Col("valor", Inteiro, suportadoInteiro, nula: false),
+                    Col("dobro", Inteiro, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new(["valor"])),
+                    .. dezoito ? [Col("triplo", Inteiro, Classe.Exclusao, geracao: GeracaoColuna.Virtual, referencias: new(["valor"]))] : Array.Empty<ColunaInventariada>(),
                 ],
                 ChavePrimaria = ["id"],
             },
@@ -244,9 +238,9 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("contadores"),
                 Colunas =
                 [
-                    Col("sempre", Grande, nula: false, identidade: IdentidadeColuna.Sempre),
-                    Col("por_padrao", Grande, nula: false, identidade: IdentidadeColuna.PorPadrao),
-                    Col("serie", Inteiro, nula: false),
+                    Col("sempre", Grande, suportadoInteiro, nula: false, identidade: IdentidadeColuna.Sempre),
+                    Col("por_padrao", Grande, suportadoInteiro, nula: false, identidade: IdentidadeColuna.PorPadrao),
+                    Col("serie", Inteiro, suportadoInteiro, nula: false),
                 ],
                 ChavePrimaria = ["sempre"],
             },
@@ -255,7 +249,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("eventos"),
                 Tipo = TipoTabela.Particionada,
                 ChaveParticao = new(["tipo"]),
-                Colunas = [Col("id", Grande, nula: false, identidade: IdentidadeColuna.Sempre), Col("tipo", Inteiro, nula: false)],
+                Colunas = [Col("id", Grande, suportadoInteiro, nula: false, identidade: IdentidadeColuna.Sempre), Col("tipo", Inteiro, suportadoInteiro, nula: false)],
             },
             new()
             {
@@ -264,11 +258,11 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Pai = Nome("eventos"),
                 Colunas =
                 [
-                    Col("id", Grande, nula: false, identidade: dezessete ? IdentidadeColuna.Sempre : IdentidadeColuna.Nenhuma),
-                    Col("tipo", Inteiro, nula: false),
+                    Col("id", Grande, suportadoInteiro, nula: false, identidade: dezessete ? IdentidadeColuna.Sempre : IdentidadeColuna.Nenhuma),
+                    Col("tipo", Inteiro, suportadoInteiro, nula: false),
                 ],
             },
-            new() { Nome = Nome("lojas"), Colunas = [Col("id", Inteiro, nula: false)], ChavePrimaria = ["id"] },
+            new() { Nome = Nome("lojas"), Colunas = [Col("id", Inteiro, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
             new()
             {
                 Nome = Nome("pedidos"),
@@ -280,22 +274,53 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             },
             Particao("pedidos_1", "pedidos", pedido, ["loja", "id"]),
             Particao("pedidos_2", "pedidos", pedido, ["loja", "id"]),
-            Particao("pedidos_9", "pedidos", [Col("loja", Inteiro, nula: false), Col("id", Grande, nula: false), Col("numero", Grande, nula: false)], ["loja", "id"]),
-            new() { Nome = Nome("regioes"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["nome"]), Colunas = [Col("nome", Texto, nula: false)] },
-            Particao("regioes_sentinela", "regioes", [Col("nome", Texto, nula: false)]),
+            Particao(
+                "pedidos_9",
+                "pedidos",
+                [Col("loja", Inteiro, suportadoInteiro, nula: false), Col("id", Grande, suportadoInteiro, nula: false), Col("numero", Grande, suportadoInteiro, nula: false)],
+                ["loja", "id"]),
+            new() { Nome = Nome("regioes"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["nome"]), Colunas = [ColTexto("nome", Texto, suportadoTexto, nula: false)] },
+            Particao("regioes_sentinela", "regioes", [ColTexto("nome", Texto, suportadoTexto, nula: false)]),
             new()
             {
                 Nome = Nome("itens"),
-                Colunas = [Col("pedido", Grande, nula: false), Col("loja", Inteiro, nula: false), Col("numero", Grande), Col("produto", Texto)],
+                Colunas =
+                [
+                    Col("pedido", Grande, suportadoInteiro, nula: false),
+                    Col("loja", Inteiro, suportadoInteiro, nula: false),
+                    Col("numero", Grande, suportadoInteiro),
+                    ColTexto("produto", Texto, suportadoTexto),
+                ],
                 ChavesEstrangeiras = [new("fk_itens_pedidos", ["loja", "pedido"], Nome("pedidos"), ["loja", "id"])],
             },
-            new() { Nome = Nome("pessoa"), Colunas = [Col("id", Grande), Col("apelido", Texto)] },
-            new() { Nome = Nome("funcionario"), Tipo = TipoTabela.Herdeira, Pai = Nome("pessoa"), Colunas = [Col("id", Grande), Col("apelido", Texto), Col("matricula", Inteiro)] },
-            new() { Nome = Nome("Cliente"), Colunas = [Col("id", Grande, nula: false)], ChavePrimaria = ["id"] },
-            new() { Nome = Nome("cliente"), Colunas = [Col("id", Grande, nula: false)], ChavePrimaria = ["id"] },
-            new() { Nome = Nome("select"), Colunas = [Col("from", Texto), Col("coluna com espaço", Texto), Col("a\"b", Texto), Col("valor €", Texto)] },
-            new() { Nome = Nome("nota fiscal"), Colunas = [Col("id", Grande)] },
-            new() { Nome = Nome("chave_invertida"), Colunas = [Col("a", Inteiro, nula: false), Col("b", Inteiro, nula: false)], ChavePrimaria = ["b", "a"] },
+            new() { Nome = Nome("pessoa"), Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("apelido", Texto, suportadoTexto)] },
+            new()
+            {
+                Nome = Nome("funcionario"),
+                Tipo = TipoTabela.Herdeira,
+                Pai = Nome("pessoa"),
+                Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("apelido", Texto, suportadoTexto), Col("matricula", Inteiro, suportadoInteiro)],
+            },
+            new() { Nome = Nome("Cliente"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
+            new() { Nome = Nome("cliente"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
+            new()
+            {
+                Nome = Nome("select"),
+                Colunas =
+                [
+                    ColTexto("from", Texto, suportadoTexto),
+                    ColTexto("coluna com espaço", Texto, suportadoTexto),
+                    ColTexto("a\"b", Texto, suportadoTexto),
+                    ColTexto("valor €", Texto, suportadoTexto),
+                ],
+            },
+            new() { Nome = Nome("nota fiscal"), Colunas = [Col("id", Grande, suportadoInteiro)] },
+            new()
+            {
+                Nome = Nome("chave_invertida"),
+                Colunas = [Col("a", Inteiro, suportadoInteiro, nula: false), Col("b", Inteiro, suportadoInteiro, nula: false)],
+                ChavePrimaria = ["b", "a"],
+            },
             new() { Nome = Nome("vendas"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["ano"]), Colunas = venda },
             new() { Nome = Nome("vendas_2026"), Tipo = TipoTabela.Particao, Pai = Nome("vendas"), ChaveParticao = new(["mes"]), Colunas = venda },
             Particao("vendas_2026_01", "vendas_2026", venda),
@@ -306,50 +331,104 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("arquivo_morto"),
                 Tipo = TipoTabela.Particionada,
                 ChaveParticao = new([], ColunasIncompletas: true),
-                Colunas = [Col("id", Grande), Col("dados", Texto)],
+                Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("dados", Texto, suportadoTexto)],
             },
             new() { Nome = Nome("sem_colunas"), Tipo = TipoTabela.Particionada, ChaveParticao = new([], ColunasIncompletas: true), Colunas = [] },
             new() { Nome = Nome("leituras"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["origem"]), Colunas = leitura },
-            new() { Nome = Nome("leituras_arquivo"), Tipo = TipoTabela.Particao, Pai = Nome("leituras"), Estrangeira = true, Colunas = leitura },
-            new() { Nome = Nome("contato"), Colunas = [Col("canal", Texto)] },
-            new() { Nome = Nome("endereco"), Colunas = [Col("cidade", Texto)] },
-            new() { Nome = Nome("documento"), Colunas = [Col("numero", Texto)] },
+            new() { Nome = Nome("leituras_arquivo"), Tipo = TipoTabela.Particao, Pai = Nome("leituras"), Estrangeira = true, Colunas = leituraArquivo },
+            new() { Nome = Nome("contato"), Colunas = [ColTexto("canal", Texto, suportadoTexto)] },
+            new() { Nome = Nome("endereco"), Colunas = [ColTexto("cidade", Texto, suportadoTexto)] },
+            new() { Nome = Nome("documento"), Colunas = [ColTexto("numero", Texto, suportadoTexto)] },
             new()
             {
                 Nome = Nome("ficha"),
                 Tipo = TipoTabela.Herdeira,
                 Pai = Nome("contato"),
                 OutrosPais = [Nome("endereco"), Nome("documento")],
-                Colunas = [Col("canal", Texto), Col("cidade", Texto), Col("numero", Texto)],
+                Colunas = [ColTexto("canal", Texto, suportadoTexto), ColTexto("cidade", Texto, suportadoTexto), ColTexto("numero", Texto, suportadoTexto)],
             },
-            new() { Nome = Nome("mae_um"), Colunas = [Col("um", Texto)] },
-            new() { Nome = Nome("mae_dois"), Colunas = [Col("dois", Texto)] },
-            new() { Nome = Nome("mae_tres"), Colunas = [Col("tres", Texto)] },
+            new() { Nome = Nome("mae_um"), Colunas = [ColTexto("um", Texto, suportadoTexto)] },
+            new() { Nome = Nome("mae_dois"), Colunas = [ColTexto("dois", Texto, suportadoTexto)] },
+            new() { Nome = Nome("mae_tres"), Colunas = [ColTexto("tres", Texto, suportadoTexto)] },
             new()
             {
                 Nome = Nome("sem_a_primeira"),
                 Tipo = TipoTabela.Herdeira,
                 Pai = Nome("mae_dois"),
                 OutrosPais = [Nome("mae_tres")],
-                Colunas = [Col("um", Texto), Col("dois", Texto), Col("tres", Texto)],
+                Colunas = [ColTexto("um", Texto, suportadoTexto), ColTexto("dois", Texto, suportadoTexto), ColTexto("tres", Texto, suportadoTexto)],
             },
-            new() { Nome = Nome("com_dominio"), Colunas = [Col("valor", "loja.obrigatorio", tipoBase: Texto)] },
+            new() { Nome = Nome("com_dominio"), Colunas = [ColTexto("valor", "loja.obrigatorio", Classe.Ressalva, tipoBase: Texto)] },
             new()
             {
                 Nome = Nome("protocolos"),
                 Colunas =
                 [
-                    Col("numero", "loja.protocolo", tipoBase: Grande),
-                    Col("proprio", "loja.protocolo", tipoBase: Grande),
-                    Col("base", "loja.numero_base", tipoBase: Grande),
-                    Col("derivado", "loja.numero_derivado", tipoBase: Grande),
+                    Col("numero", "loja.protocolo", Classe.Ressalva, tipoBase: Grande, faixa: FaixaEsperada.Grande),
+                    Col("proprio", "loja.protocolo", Classe.Ressalva, tipoBase: Grande, faixa: FaixaEsperada.Grande),
+                    Col("base", "loja.numero_base", Classe.Ressalva, tipoBase: Grande, faixa: FaixaEsperada.Grande),
+                    Col("derivado", "loja.numero_derivado", Classe.Ressalva, tipoBase: Grande, faixa: FaixaEsperada.Grande),
                 ],
             },
-            .. dezoito ? [new TabelaInventariada { Nome = Nome("pendente"), Colunas = [Col("valor", Texto)] }] : Array.Empty<TabelaInventariada>(),
-            new() { Nome = Nome("segredos"), SegurancaDeLinha = true, Colunas = [Col("id", Grande, nula: false), Col("conteudo", Texto)], ChavePrimaria = ["id"] },
-            new() { Nome = Nome("reservas"), Colunas = [Col("sala", Inteiro), Col("periodo", "int4range"), Col("nota", Texto)] },
-            new() { Nome = Nome("alheia"), Colunas = [Col("id", Grande, nula: false)], ChavePrimaria = ["id"] },
-            new() { Nome = new NomeObjeto("pgdados", "clientes"), Colunas = [Col("id", Grande, nula: false)], ChavePrimaria = ["id"] },
+            .. dezoito ? [new TabelaInventariada { Nome = Nome("pendente"), Colunas = [ColTexto("valor", Texto, suportadoTexto)] }] : Array.Empty<TabelaInventariada>(),
+            new()
+            {
+                Nome = Nome("segredos"),
+                SegurancaDeLinha = true,
+                Colunas = [Col("id", Grande, suportadoInteiro, nula: false), ColTexto("conteudo", Texto, suportadoTexto)],
+                ChavePrimaria = ["id"],
+            },
+            new() { Nome = Nome("reservas"), Colunas = [Col("sala", Inteiro, suportadoInteiro), Col("periodo", "int4range", Classe.Ressalva), ColTexto("nota", Texto, suportadoTexto)] },
+            new()
+            {
+                Nome = Nome("textos"),
+                Colunas =
+                [
+                    ColTexto("limitado", Variavel, suportadoTexto, comprimento: 10),
+                    ColTexto("livre", Variavel, suportadoTexto),
+                    ColTexto("fixo", "character", suportadoTexto, comprimento: 3, espacoFinal: true),
+                    ColTexto("fixos", "character[]", Classe.Ressalva, comprimento: 3, espacoFinal: true),
+                    ColTexto("um", "character", suportadoTexto, comprimento: 1, espacoFinal: true),
+                    ColTexto("listas", "character varying[]", Classe.Ressalva, comprimento: 10),
+                    ColTexto("do_dominio", "loja.d_varchar", Classe.Ressalva, tipoBase: Variavel, comprimento: 12),
+                    ColTexto("do_dominio_de_dominio", "loja.d_d_varchar", Classe.Ressalva, tipoBase: Variavel, comprimento: 12),
+                    ColTexto("dominio_de_lista", "loja.d_lista", Classe.Ressalva, tipoBase: "character varying[]", comprimento: 5),
+                    ColTexto("lista_de_dominio", "loja.d_varchar[]", Classe.Ressalva, comprimento: 12),
+                    ColTexto("nome_do_catalogo", "name", Classe.Ressalva, colacao: _c, limite: new(63, UnidadeComprimento.Bytes)),
+                    ColTexto("caractere", "\"char\"", Classe.Ressalva, semColacao: true, limite: new(1, UnidadeComprimento.Bytes)),
+                    ColTexto("binaria", Texto, suportadoTexto, colacao: _c),
+                    ColTexto("nivel2", Texto, suportadoTexto, colacao: Medida("ci_nivel2", "Idioma\"X", caixa: true)),
+                    ColTexto("sem_acento", Texto, suportadoTexto, colacao: Medida("sem_acento", "Idioma\"X", caixa: true, acento: true)),
+                    ColTexto("pontuacao", Texto, suportadoTexto, colacao: Medida("pontuacao", "Idioma\"X", pontuacao: true)),
+                    ColTexto("hostil", Texto, suportadoTexto, colacao: Medida("Caixa\"Alta.ç;--'", "Idioma\"X", caixa: true)),
+                    ColTexto("sentinela", Texto, suportadoTexto, colacao: Medida("colacao_sentinela", "loja", caixa: true)),
+                    ColTexto("caixa_do_dominio", "loja.d_citext", Classe.Ressalva, tipoBase: "public.citext", caixa: true),
+                    ColTexto("fixo_do_dominio", "loja.d_fixo", Classe.Ressalva, tipoBase: "character", comprimento: 2, espacoFinal: true),
+                    ColTexto("codigos", "loja.codigo_curto[]", Classe.Ressalva, restrita: true),
+                    ColTexto("email", Texto, suportadoTexto),
+                    ColTexto("email_min", Texto, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new(["email"])),
+                    ColTexto("junto", Texto, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new(["limitado", "livre"])),
+                    .. dezesseis
+                        ? [ColTexto("com_regras", Texto, suportadoTexto, colacao: new ColacaoEsperada("colacao_regras", "loja", false, true, null, null, null))]
+                        : Array.Empty<ColunaInventariada>(),
+                ],
+            },
+            new()
+            {
+                Nome = Nome("numeros"),
+                Colunas =
+                [
+                    Col("centenas", "numeric", Classe.Suportado(TipoColuna.Decimal), precisao: 5, escala: -2),
+                    Col("livre", "numeric", Classe.Suportado(TipoColuna.Decimal)),
+                    Col("positivo", "loja.numero", Classe.Ressalva, tipoBase: Inteiro, faixa: FaixaEsperada.Inteiro, restrita: true),
+                    Col("positivo_derivado", "loja.numero_livre", Classe.Ressalva, tipoBase: Inteiro, faixa: FaixaEsperada.Inteiro, restrita: true),
+                    ColTexto("documento", "loja.d_d_cpf", Classe.Ressalva, tipoBase: Variavel, comprimento: 11, restrita: true),
+                    Col("valor_do_dominio", "loja.d_valor", Classe.Ressalva, tipoBase: "numeric", precisao: 8, escala: 3),
+                    Col("constante", Inteiro, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new([])),
+                ],
+            },
+            new() { Nome = Nome("alheia"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
+            new() { Nome = new NomeObjeto("pgdados", "clientes"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
         ];
         SequenceEsperada[] sequences =
         [
@@ -362,22 +441,81 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             new(Nome("seq_avulsa"), []),
             new(Nome("seq_protocolo"), [Coluna("protocolos", "base"), Coluna("protocolos", "numero")]),
         ];
-        return new(tabelas, sequences);
+        ResidualInventariado[] residuais =
+        [
+            new(Nome("resumo_vendas"), TipoObjetoResidual.VisaoMaterializada),
+            new(Nome("resumo_alheio"), TipoObjetoResidual.VisaoMaterializada),
+            new(new NomeObjeto("pg_catalog", "pg_largeobject"), TipoObjetoResidual.ObjetosGrandes),
+        ];
+        return new(tabelas, sequences, residuais);
     }
 
     private static TabelaInventariada Particao(string nome, string pai, ColunaInventariada[] colunas, string[]? chavePrimaria = null) =>
         new() { Nome = Nome(nome), Tipo = TipoTabela.Particao, Pai = Nome(pai), Colunas = colunas, ChavePrimaria = chavePrimaria ?? [] };
 
+    // Uma coluna fora de texto: a faixa pelo tipo nativo, se for inteiro; nenhuma restrição do tipo, salvo declarada.
     private static ColunaInventariada Col(
-        string nome, string tipo, bool nula = true, IdentidadeColuna identidade = IdentidadeColuna.Nenhuma,
-        GeracaoColuna geracao = GeracaoColuna.Nenhuma, string? tipoBase = null) =>
-        new() { Nome = nome, TipoNativo = tipo, Anulavel = nula, Identidade = identidade, Geracao = geracao, TipoBase = tipoBase };
+        string nome, string tipo, Classe classe, bool nula = true, IdentidadeColuna identidade = IdentidadeColuna.Nenhuma,
+        GeracaoColuna geracao = GeracaoColuna.Nenhuma, string? tipoBase = null, FaixaEsperada? faixa = null, int? precisao = null, int? escala = null,
+        LimiteEsperado? comprimento = null, ReferenciasEsperadas? referencias = null, bool restrita = false) => new()
+        {
+            Nome = nome,
+            TipoNativo = tipo,
+            Situacao = classe.Situacao,
+            Tipo = classe.Tipo,
+            Anulavel = nula,
+            Identidade = identidade,
+            Geracao = geracao,
+            TipoBase = tipoBase,
+            Faixa = faixa ?? _faixas.GetValueOrDefault(tipo),
+            Precisao = precisao,
+            Escala = escala,
+            Comprimento = comprimento,
+            ReferenciasDaGeracao = referencias,
+            RestritaPeloTipo = restrita,
+        };
 
-    private static ColunaEsperada Suportado(string coluna, TipoColuna? tipo) => new(Coluna("tipos", coluna), SituacaoTipo.Suportado, tipo);
+    // Uma coluna de texto pelo fim da cadeia: a colação padrão, as marcas do tipo falsas e o limite em caracteres, salvo
+    // declarados.
+    private static ColunaInventariada ColTexto(
+        string nome, string tipo, Classe classe, bool nula = true, string? tipoBase = null, int? comprimento = null, LimiteEsperado? limite = null,
+        bool caixa = false, bool espacoFinal = false, bool restrita = false, GeracaoColuna geracao = GeracaoColuna.Nenhuma,
+        ReferenciasEsperadas? referencias = null, ColacaoEsperada? colacao = null, bool semColacao = false) => new()
+        {
+            Nome = nome,
+            TipoNativo = tipo,
+            Situacao = classe.Situacao,
+            Tipo = classe.Tipo,
+            Anulavel = nula,
+            Geracao = geracao,
+            TipoBase = tipoBase,
+            Colacao = semColacao ? null : colacao ?? _padrao,
+            IgnoraCaixaPeloTipo = caixa,
+            IgnoraEspacoFinalPeloTipo = espacoFinal,
+            Comprimento = limite ?? new(comprimento, UnidadeComprimento.PontosDeCodigo),
+            ReferenciasDaGeracao = referencias,
+            RestritaPeloTipo = restrita,
+        };
 
-    private static ColunaEsperada ComRessalva(string coluna) => new(Coluna("tipos", coluna), SituacaoTipo.ComRessalva, null);
+    // Uma colação não determinística medida: o que a medida acha, pela documentação do ICU para o locale do DDL.
+    private static ColacaoEsperada Medida(string nome, string esquema, bool caixa = false, bool acento = false, bool pontuacao = false) =>
+        new(nome, esquema, false, false, caixa, acento, pontuacao);
 
     private static NomeObjeto Nome(string nome) => new("loja", nome);
 
     private static ReferenciaColuna Coluna(string tabela, string coluna) => new(Nome(tabela), coluna);
+
+    // A classe de uma coluna na matriz de tipos: a situação e o tipo canônico.
+    private readonly record struct Classe(SituacaoTipo Situacao, TipoColuna? Tipo)
+    {
+        internal static Classe SemTipo => new(SituacaoTipo.Suportado, null);
+
+        internal static Classe Ressalva => new(SituacaoTipo.ComRessalva, null);
+
+        internal static Classe Exclusao => new(SituacaoTipo.SuportadoPorExclusao, null);
+
+        internal static Classe NaoSuportado => new(SituacaoTipo.NaoSuportado, null);
+
+        internal static Classe Suportado(TipoColuna tipo) => new(SituacaoTipo.Suportado, tipo);
+    }
 }

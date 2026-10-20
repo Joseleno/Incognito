@@ -3,8 +3,10 @@ using CodeProcess.Incognito.Dialetos;
 namespace CodeProcess.Incognito.Testes.Conformidade;
 
 /// <summary>
-/// A comparação de um esquema lido com o inventário, por nome: a primeira diferença de cada tabela e de cada sequence,
-/// em ordem ordinal de esquema e nome (as tabelas antes das sequences).
+/// A comparação de um esquema lido com o inventário, por nome: a primeira diferença de cada tabela, de cada sequence e de
+/// cada objeto residual, em ordem ordinal de esquema e nome (as tabelas, depois as sequences, depois os residuais). Numa
+/// tabela, a ordem dos ramos é fixa (decide a mensagem): estrutura, colunas (tipo base, situação, tipo canônico e a
+/// semântica), chave primária, chaves estrangeiras.
 /// </summary>
 internal static class ComparacaoDoInventario
 {
@@ -45,6 +47,24 @@ internal static class ComparacaoDoInventario
             if (diferenca is not null)
             {
                 yield return $"{nome}: {diferenca}";
+            }
+        }
+
+        var residuaisLidos = lido.ObjetosResiduais.ToLookup(residual => residual.Nome);
+        var residuaisEsperados = esperado.Residuais.ToLookup(residual => residual.Nome);
+        foreach (var nome in Nomes(residuaisLidos, residuaisEsperados))
+        {
+            var diferenca = (residuaisLidos[nome].ToArray(), residuaisEsperados[nome].ToArray()) switch
+            {
+                ([], _) => "residual a menos",
+                (_, []) => "residual a mais",
+                (_, [_, _, ..] esperados) => $"residual declarado {esperados.Length} vezes",
+                ([_, _, ..] lidos, _) => $"residual lido {lidos.Length} vezes",
+                ([var residual], [var esperadoResidual]) => residual.Tipo == esperadoResidual.Tipo ? null : $"residual lido como {residual.Tipo}, esperado {esperadoResidual.Tipo}",
+            };
+            if (diferenca is not null)
+            {
+                yield return $"residual {nome}: {diferenca}";
             }
         }
     }
@@ -152,13 +172,35 @@ internal static class ComparacaoDoInventario
             ? $": colunas referenciadas lidas [{Lista(chave.ColunasReferenciadas)}], esperadas [{Lista(esperada.ColunasReferenciadas)}]"
         : null;
 
+    // A semântica na ordem das propriedades novas da coluna; cada objeto comparado inteiro, pela projeção no registro
+    // esperado.
     private static string? Diferenca(ColunaEsquema coluna, ColunaInventariada esperada) =>
         coluna.TipoNativo != esperada.TipoNativo ? $"tipo nativo lido {coluna.TipoNativo}, esperado {esperada.TipoNativo}"
         : coluna.Anulavel != esperada.Anulavel ? $"anulável lida {coluna.Anulavel}, esperada {esperada.Anulavel}"
         : coluna.Identidade != esperada.Identidade ? $"identity lida {coluna.Identidade}, esperada {esperada.Identidade}"
         : coluna.Geracao != esperada.Geracao ? $"geração lida {coluna.Geracao}, esperada {esperada.Geracao}"
         : coluna.TipoBase != esperada.TipoBase ? $"tipo base lido {Texto(coluna.TipoBase)}, esperado {Texto(esperada.TipoBase)}"
+        : coluna.Situacao != esperada.Situacao ? $"situação lida {coluna.Situacao}, esperada {esperada.Situacao}"
+        : coluna.Tipo != esperada.Tipo ? $"tipo canônico lido {Texto(coluna.Tipo)}, esperado {Texto(esperada.Tipo)}"
+        : ColacaoEsperada.De(coluna.Colacao) != esperada.Colacao ? $"colação lida {Texto(ColacaoEsperada.De(coluna.Colacao))}, esperada {Texto(esperada.Colacao)}"
+        : coluna.IgnoraCaixaPeloTipo != esperada.IgnoraCaixaPeloTipo
+            ? $"caixa ignorada pelo tipo lida {Texto(coluna.IgnoraCaixaPeloTipo)}, esperada {Texto(esperada.IgnoraCaixaPeloTipo)}"
+        : coluna.IgnoraEspacoFinalPeloTipo != esperada.IgnoraEspacoFinalPeloTipo
+            ? $"espaço final ignorado pelo tipo lido {Texto(coluna.IgnoraEspacoFinalPeloTipo)}, esperado {Texto(esperada.IgnoraEspacoFinalPeloTipo)}"
+        : LimiteEsperado.De(coluna.Comprimento) != esperada.Comprimento ? $"comprimento lido {Texto(LimiteEsperado.De(coluna.Comprimento))}, esperado {Texto(esperada.Comprimento)}"
+        : coluna.Precisao != esperada.Precisao ? $"precisão lida {Texto(coluna.Precisao)}, esperada {Texto(esperada.Precisao)}"
+        : coluna.Escala != esperada.Escala ? $"escala lida {Texto(coluna.Escala)}, esperada {Texto(esperada.Escala)}"
+        : FaixaEsperada.De(coluna.Faixa) != esperada.Faixa ? $"faixa lida {Texto(FaixaEsperada.De(coluna.Faixa))}, esperada {Texto(esperada.Faixa)}"
+        : !MesmasReferencias(coluna.ReferenciasDaGeracao, esperada.ReferenciasDaGeracao)
+            ? $"referências da geração lidas {Texto(ReferenciasEsperadas.De(coluna.ReferenciasDaGeracao))}, esperadas {Texto(esperada.ReferenciasDaGeracao)}"
+        : coluna.RestritaPeloTipo != esperada.RestritaPeloTipo ? $"restrita pelo tipo lida {Texto(coluna.RestritaPeloTipo)}, esperada {Texto(esperada.RestritaPeloTipo)}"
         : null;
+
+    // A ordem das colunas é do contrato (a da tabela): comparada também.
+    private static bool MesmasReferencias(ReferenciasDaExpressao? lidas, ReferenciasEsperadas? esperadas) =>
+        lidas is null || esperadas is null
+            ? lidas is null && esperadas is null
+            : lidas.Incompletas == esperadas.Incompletas && lidas.Colunas.SequenceEqual(esperadas.Colunas);
 
     private static bool MesmaChave(ChaveParticaoEsperada? lida, ChaveParticaoEsperada? esperada) =>
         lida is null || esperada is null

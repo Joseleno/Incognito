@@ -133,3 +133,23 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   motor alteram **cada propriedade de cada tipo do modelo** do esquema, por reflexão, num objeto do banco falso completo,
   e reordenam as listas cuja ordem é do contrato, exigindo que algum fato da suíte falhe citando o objeto: um campo novo
   do modelo sem fato que o confira quebra sozinho, e a reconstrução sem alteração passa em tudo.
+- 2026-10-19: o modelo do esquema ganha a **semântica** que o `planejar` usa para decidir se um pseudônimo cabe na
+  coluna e se a unicidade continua valendo: colação efetiva da coluna, as marcas do próprio tipo (ignora a caixa, ignora
+  os espaços finais), comprimento declarado na unidade do banco, precisão e escala, faixa do inteiro, as colunas que uma
+  coluna gerada cita e se uma restrição do tipo vale para a coluna, e as propriedades do banco (versão, codificação,
+  colação padrão). Três princípios valem para todo campo novo: **nulo é o pior caso** (propriedade nova em tipo que já
+  existe é anulável ou lista, e uma regra de arquitetura congela as antigas); **nenhum texto opaco sai do servidor**
+  (só nomes de catálogo, números e marcas; uma regra de arquitetura exige uma lista aprovada para toda propriedade que é
+  ou contém texto, e outra proíbe no dialeto PostgreSQL as funções e colunas do catálogo que devolvem definição,
+  locale, comentário, estatística, opção ou segredo); e **o modelo não tem dicionário nem lista de valor** (a linhagem
+  da identidade é a exceção nomeada). O comportamento de uma colação não determinística é **medido no servidor** com
+  textos sintéticos, nunca deduzido do locale (que o próprio dono grava como texto livre e que regras de ordenação
+  contradizem), e só quando a medida não pode abortar a leitura; as marcas medidas são o mínimo garantido, não o limite.
+  Na suíte: o inventário passa a ser **total** (a situação, o tipo canônico e a semântica de toda coluna, declarados à
+  mão a partir do script, e os objetos residuais), a lista de tipos escolhidos dá lugar à **cobertura da matriz** (todo
+  valor de situação, tipo canônico e unidade aparece em alguma coluna ou é declarado inexistente com o motivo), entram
+  os fatos das propriedades do banco e do **sentinela** (que deixa o projeto do dialeto e procura, nos dois lados e
+  também com o administrador do servidor lendo, as formas literal, em bytes decimais e em hexadecimal), e a
+  consistência separa as regras de coerência, que o motor repetirá tratando o nulo como pior caso, das de presença, que
+  valem só para os dialetos do repositório. A perturbação do modelo gera sempre um valor válido e diferente (o `bool?`
+  em três estados, os objetos pela anulabilidade declarada) e calcula a alteração antes de rodar a suíte.

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Text.RegularExpressions;
 
 namespace CodeProcess.Incognito.Testes.Arquitetura;
 
@@ -29,6 +30,107 @@ public sealed class RegrasDeArquiteturaTestes
     // Cpf, Cnpj e Email colidem com tipos que já existem em muitos projetos brasileiros; Dominio, com o namespace de
     // projetos DDD.
     private static readonly string[] _nomesDeTipoProibidos = ["Cpf", "Cnpj", "Email", "Dominio"];
+
+    // O que o dialeto PostgreSQL nunca lê, casado pelo nome em qualquer forma (sem parêntese, entre aspas, concatenado) e
+    // sem diferenciar maiúsculas: as funções que devolvem definição, as árvores de nó e os textos de objeto, locale e regras
+    // de colação, comentários, rótulos e estatísticas, as visões que mostram definição, opções e segredos, sessões, arquivos
+    // e páginas, o conteúdo dos large objects e das sequences, as funções e os casts que transformam uma linha em texto, a
+    // leitura de todas as colunas e o current_setting fora dos parâmetros aprovados (um parâmetro do usuário pode guardar
+    // segredo). Uma lista negra: pega o descuido, não quem quer burlá-la.
+    private static readonly Regex[] _textoOpaco =
+    [
+        .. new[]
+        {
+            @"\bpg_get_",
+            @"\b(adbin|conbin|indexprs|indpred|partexprs|polqual|polwithcheck|relpartbound|typdefaultbin|typdefault|attmissingval|stxexprs|prosrc|prosqlbody|probin|proargdefaults|ev_qual|ev_action|tgargs|tgqual)\b",
+            @"\b(colllocale|colliculocale|collicurules|collcollate|collctype|daticurules|datlocale|daticulocale|datcollate|datctype)\b",
+            @"(obj_description|col_description|pg_description|pg_shdescription|pg_seclabels?|pg_shseclabel|pg_statistic|pg_statistic_ext_data|pg_stats|pg_stats_ext|pg_stats_ext_exprs|\bstxd\w*)\b",
+            @"\b(pg_policies|pg_rules|pg_views|pg_matviews|pg_indexes|pg_publication_tables|prqual|information_schema)\b",
+            @"\b(ftoptions|umoptions|srvoptions|fdwoptions|attfdwoptions|pg_user_mappings|pg_authid|rolpassword|pg_shadow|passwd|rolconfig|setconfig|pg_db_role_setting|proconfig|subconninfo)\b",
+            @"\b(pg_stat_activity|pg_stat_get_\w+|pg_stat_statements|pg_prepared_statements|pg_cursors|client_dn|issuer_dn|client_serial|pg_stat_gssapi|pg_settings|pg_show_all_settings|pg_file_settings|pg_read_file|pg_read_binary_file|pg_logical_slot_\w+|pg_sequence_last_value)\b",
+            @"\b(heap_page_items|get_raw_page|tuple_data_split|page_header|bt_page_items)\b",
+            @"\b(lo_get|loread|lo_export)\b",
+            @"\bpg_largeobject\b",
+            @"\b(to_jsonb?|\w*_to_json\w*|jsonb?_agg|jsonb?_build_\w+|jsonb?_object\w*|\w*_to_xml\w*|format)\b",
+            @"\brow\s*\(",
+            @"::\s*""?\s*(pg_catalog\s*""?\s*\.\s*""?)?(text|varchar|bpchar|name|character|json|jsonb)\b",
+            @"\bCAST\s*\(",
+            @"\bSELECT\s+(DISTINCT\s+|ALL\s+)?\*",
+            @",\s*\*",
+            @"\b\w+\s*\.\s*\*",
+            @"(^|[(;])\s*TABLE\s+\w",
+            @"\bSHOW\s+\w",
+            @"\b(current_setting|set_config)\b",
+            @"\bDO\s+\$",
+            @"\bEXECUTE\s+\w",
+        }.Select(padrao => new Regex(padrao, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Multiline, TimeSpan.FromSeconds(1))),
+    ];
+
+    // As formas permitidas, tiradas antes da busca: os números das colunas citadas por uma expressão, extraídos no servidor;
+    // a presença de um texto (nunca o texto); o nome do esquema do sistema no filtro; o objeto dos large objects; e o
+    // current_setting dos parâmetros do servidor que o dialeto precisa.
+    private static readonly Regex[] _formasPermitidas =
+    [
+        .. new[]
+        {
+            @"\bpg_catalog\.regexp_matches\(\s*\w+\.(indexprs|indpred|partexprs)::text,\s*':varattno \(-\?\[0-9\]\+\)',\s*'g'\)",
+            @"\b\w+\.(indexprs|indpred|partexprs|tgqual|collicurules|daticurules)\s+IS\s+NOT\s+NULL\b",
+            @"'information_schema'",
+            @"new\(""pg_catalog"", ""pg_largeobject""\)",
+            @"\bpg_catalog\.current_setting\('(server_version_num|search_path|client_encoding|default_transaction_read_only|standard_conforming_strings|lo_compat_privileges|max_identifier_length)'\)",
+        }.Select(padrao => new Regex(padrao, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1))),
+    ];
+
+    // Toda propriedade do contrato de dialeto que é ou contém texto, com o motivo de ser só nome de catálogo ou de um
+    // conjunto fechado.
+    private static readonly Dictionary<string, string> _textoAprovado = new(StringComparer.Ordinal)
+    {
+        ["NomeObjeto.Esquema"] = "nome de catálogo",
+        ["NomeObjeto.Nome"] = "nome de catálogo",
+        ["ReferenciaColuna.Tabela"] = "nome de catálogo",
+        ["ReferenciaColuna.Coluna"] = "nome de coluna do catálogo",
+        ["TabelaEsquema.Nome"] = "nome de catálogo",
+        ["TabelaEsquema.Pai"] = "nome de catálogo",
+        ["TabelaEsquema.OutrosPais"] = "nomes de catálogo",
+        ["TabelaEsquema.Historico"] = "nome de catálogo",
+        ["TabelaEsquema.Extensao"] = "nome de extensão do catálogo",
+        ["TabelaEsquema.ChavePrimaria"] = "nomes de coluna do catálogo",
+        ["ChaveParticao.Colunas"] = "nomes de coluna do catálogo",
+        ["ColunaEsquema.Nome"] = "nome de coluna do catálogo",
+        ["ColunaEsquema.TipoNativo"] = "nome de tipo do catálogo, sem modificador",
+        ["ColunaEsquema.TipoBase"] = "nome de tipo do catálogo, sem modificador",
+        ["ChaveEstrangeira.Nome"] = "nome de restrição do catálogo",
+        ["ChaveEstrangeira.Colunas"] = "nomes de coluna do catálogo",
+        ["ChaveEstrangeira.Referenciada"] = "nome de catálogo",
+        ["ChaveEstrangeira.ColunasReferenciadas"] = "nomes de coluna do catálogo",
+        ["SequenceEsquema.Nome"] = "nome de catálogo",
+        ["SequenceEsquema.Colunas"] = "nomes de coluna do catálogo",
+        ["ObjetoResidual.Nome"] = "nome de catálogo",
+        ["ReferenciasDaExpressao.Colunas"] = "nomes de coluna do catálogo",
+        ["ColacaoEsquema.Nome"] = "nome de colação do catálogo, nunca o locale",
+        ["ColacaoEsquema.Esquema"] = "nome de esquema do catálogo",
+        ["CodificacaoTexto.Nome"] = "nome de codificação, de um conjunto fechado do banco",
+        ["IdentidadeLida.Banco"] = "nome do banco do catálogo",
+        ["IdentidadeLida.Servidor"] = "endereço e porta do servidor",
+        ["IdentidadeLida.Linhagem"] = "exceção nomeada: identificadores numéricos do cluster e do banco",
+        ["ProvedorDialeto.Nome"] = "nome fixo do dialeto",
+    };
+
+    // As propriedades dos tipos do modelo antes da semântica do esquema: as novas nesses tipos são anuláveis ou
+    // listas.
+    private static readonly Dictionary<string, string[]> _propriedadesCongeladas = new(StringComparer.Ordinal)
+    {
+        ["EsquemaBanco"] = ["Tabelas", "Sequences", "ObjetosResiduais"],
+        ["TabelaEsquema"] = ["Nome", "Tipo", "Pai", "OutrosPais", "Historico", "ChaveParticao", "Estrangeira", "Extensao", "Colunas", "ChavePrimaria", "ChavesEstrangeiras", "SegurancaDeLinha"],
+        ["ChaveParticao"] = ["Colunas", "ColunasIncompletas"],
+        ["ColunaEsquema"] = ["Nome", "TipoNativo", "TipoBase", "Situacao", "Tipo", "Anulavel", "Geracao", "Identidade", "Mascarada"],
+        ["ChaveEstrangeira"] = ["Nome", "Colunas", "Referenciada", "ColunasReferenciadas"],
+        ["SequenceEsquema"] = ["Nome", "Colunas"],
+        ["ObjetoResidual"] = ["Nome", "Tipo"],
+        ["IdentidadeLida"] = ["Banco", "Servidor", "Linhagem"],
+        ["NomeObjeto"] = ["Esquema", "Nome"],
+        ["ReferenciaColuna"] = ["Tabela", "Coluna"],
+    };
 
     [Fact]
     public void Nucleo_nao_referencia_pacotes_de_terceiros()
@@ -226,6 +328,152 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.True(expostos.Length == 0, $"Tipos estáveis do motor que expõem o contrato de dialeto: {string.Join(", ", expostos)}.");
     }
 
+    [Fact]
+    public void O_dialeto_PostgreSql_nao_le_texto_opaco_do_catalogo()
+    {
+        // Uma lista negra: expressões, defaults, locale, comentários, estatísticas, opções, segredos, sessões e o conteúdo
+        // dos large objects guardam valor de linha ou segredo, e um canário de texto não acharia todos (as árvores de nó
+        // guardam as constantes em bytes). Os comentários do C# ficam de fora; as formas permitidas saem antes da busca.
+        // Também o SQL fora do C# (script ou recurso embutido), se um dia houver.
+        string[] arquivos =
+        [
+            .. Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.cs"),
+            .. Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.sql"),
+            .. Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.resx"),
+        ];
+        var achados = arquivos
+            .SelectMany(arquivo => TextoOpaco(File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))).Select(trecho => $"{arquivo}: {trecho}"))
+            .ToArray();
+
+        Assert.Contains(arquivos, arquivo => arquivo.EndsWith("LeitorEsquemaPostgreSql.cs", StringComparison.Ordinal));
+        Assert.True(achados.Length == 0, $"O dialeto PostgreSQL lê texto opaco do catálogo: {string.Join("; ", achados)}.");
+    }
+
+    [Theory]
+    [InlineData("SELECT pg_catalog.pg_get_expr(i.indpred, i.indrelid) FROM pg_catalog.pg_index i")]
+    [InlineData("SELECT k::text FROM pg_catalog.pg_constraint k")]
+    [InlineData("SELECT pg_catalog.to_json(k) FROM pg_catalog.pg_constraint k")]
+    [InlineData("SELECT c.colliculocale FROM pg_catalog.pg_collation c")]
+    [InlineData("SELECT pg_catalog.current_setting('app.segredo')")]
+    [InlineData("SELECT x.* FROM pg_catalog.pg_class x")]
+    [InlineData("SELECT data FROM pg_largeobject")]
+    [InlineData("SELECT i.indexprs FROM pg_catalog.pg_index i")]
+    [InlineData("SELECT pg_catalog.shobj_description(d.oid, 'pg_database') FROM pg_catalog.pg_database d")]
+    [InlineData("SELECT pg_catalog.query_to_xml('SELECT 1', true, false, '')")]
+    [InlineData("SELECT pg_catalog.array_to_json(x.a) FROM x")]
+    [InlineData("SELECT pg_catalog.json_build_object('c', k.conname) FROM pg_catalog.pg_constraint k")]
+    [InlineData("SELECT CAST(k AS text) FROM pg_catalog.pg_constraint k")]
+    [InlineData("SELECT k::\"varchar\" FROM pg_catalog.pg_constraint k")]
+    [InlineData("SELECT pg_catalog.format('%s', k) FROM pg_catalog.pg_constraint k")]
+    [InlineData("TABLE pg_catalog.pg_class")]
+    [InlineData("SELECT DISTINCT * FROM pg_catalog.pg_class")]
+    [InlineData("SELECT c.oid, * FROM pg_catalog.pg_class c")]
+    [InlineData("SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.\"pg_largeobject\" l ON true")]
+    [InlineData("SELECT pg_catalog.\"current_setting\"('app.segredo')")]
+    [InlineData("SHOW app.segredo")]
+    [InlineData("SELECT pg_catalog.pg_stat_get_backend_activity(1)")]
+    [InlineData("\"pg_get_\" + \"expr\"")]
+    [InlineData("DO $$ BEGIN EXECUTE x; END $$")]
+    public void A_lista_de_texto_opaco_pega_cada_forma_proibida(string consulta) => Assert.NotEmpty(TextoOpaco("const string C = \"\"\"\n" + consulta + "\n\"\"\";"));
+
+    [Fact]
+    public void A_lista_de_texto_opaco_deixa_as_formas_permitidas()
+    {
+        const string Permitidas = """
+            // pg_get_expr num comentário não conta.
+            private const string F = "NOT pg_catalog.starts_with(n.nspname, 'pg_') AND n.nspname NOT IN ('information_schema', 'incognito')";
+            private const string P = "SELECT e.citada FROM pg_catalog.regexp_matches(pt.partexprs::text, ':varattno (-?[0-9]+)', 'g') AS e(citada)";
+            private const string R = ", k.collicurules IS NOT NULL AS regras, d.daticurules IS NOT NULL";
+            private const string S = "SELECT pg_catalog.current_setting('server_version_num'), pg_catalog.current_setting('max_identifier_length')::integer";
+            private static readonly NomeObjeto _objetosGrandes = new("pg_catalog", "pg_largeobject");
+            private const string L = "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)";
+            """;
+
+        Assert.Empty(TextoOpaco(Permitidas));
+    }
+
+    [Fact]
+    public void Toda_propriedade_do_modelo_com_texto_esta_aprovada()
+    {
+        // Texto no modelo só de nomes de catálogo e de conjuntos fechados: um campo de texto livre (expressão, locale,
+        // default) levaria valor de linha ao plano e ao relatório. A linhagem da identidade é a exceção nomeada.
+        var comTexto = PropriedadesDoContrato()
+            .Where(propriedade => ContemTexto(propriedade.PropertyType))
+            .Select(propriedade => $"{propriedade.DeclaringType!.Name}.{propriedade.Name}")
+            .ToHashSet(StringComparer.Ordinal);
+
+        var semAprovacao = comTexto.Except(_textoAprovado.Keys).Order(StringComparer.Ordinal).ToArray();
+        var sobrando = _textoAprovado.Keys.Except(comTexto).Order(StringComparer.Ordinal).ToArray();
+        Assert.True(semAprovacao.Length == 0, $"Propriedades do modelo com texto sem aprovação: {string.Join(", ", semAprovacao)}.");
+        Assert.True(sobrando.Length == 0, $"Aprovações de texto sem propriedade: {string.Join(", ", sobrando)}.");
+    }
+
+    [Fact]
+    public void Propriedade_nova_em_tipo_antigo_do_modelo_e_anulavel_ou_lista()
+    {
+        // Um dialeto que não conhece o campo novo deixa o padrão: nulo diz "não informa", o pior caso; um bool com padrão
+        // false diria "não tem". As propriedades de antes da semântica do esquema ficam congeladas aqui.
+        var contexto = new NullabilityInfoContext();
+        var tipos = Tipos(Motor).Where(tipo => tipo.IsVisible && NoContrato(tipo)).ToDictionary(tipo => tipo.Name);
+        var ausentes = _propriedadesCongeladas.Keys.Where(nome => !tipos.ContainsKey(nome)).ToArray();
+        var naoAnulaveis = _propriedadesCongeladas
+            .Where(par => tipos.ContainsKey(par.Key))
+            .SelectMany(par => tipos[par.Key].GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(propriedade => !par.Value.Contains(propriedade.Name))
+                .Where(propriedade => Nullable.GetUnderlyingType(propriedade.PropertyType) is null
+                    && !(propriedade.PropertyType.IsGenericType && propriedade.PropertyType.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
+                    && (propriedade.PropertyType.IsValueType || contexto.Create(propriedade).ReadState != NullabilityState.Nullable))
+                .Select(propriedade => $"{par.Key}.{propriedade.Name}"))
+            .ToArray();
+
+        Assert.True(ausentes.Length == 0, $"Tipos congelados que não existem mais: {string.Join(", ", ausentes)}.");
+        Assert.True(naoAnulaveis.Length == 0, $"Propriedades novas em tipos antigos do modelo que não são anuláveis nem listas: {string.Join(", ", naoAnulaveis)}.");
+    }
+
+    [Fact]
+    public void O_modelo_so_tem_propriedades_de_tipos_conhecidos()
+    {
+        // Um campo público ou um tipo que as guardas não conhecem (objeto, memória de caracteres, exceção) escaparia da
+        // lista aprovada de texto, do despejo e do canário: só passam números, marcas, enums, versão, nomes e objetos do
+        // próprio modelo, e listas deles.
+        var doModelo = Tipos(Motor).Where(tipo => tipo.IsVisible && NoContrato(tipo)).ToHashSet();
+        var modelo = doModelo.Where(tipo => tipo.GetProperties().Any(propriedade => propriedade.SetMethod is { IsPublic: true })).ToArray();
+        bool Conhecido(Type tipo) =>
+            tipo == typeof(string) || tipo == typeof(bool) || tipo == typeof(int) || tipo == typeof(long) || tipo == typeof(Version) || tipo.IsEnum
+            || doModelo.Contains(tipo)
+            || (Nullable.GetUnderlyingType(tipo) is { } valor && Conhecido(valor))
+            || (tipo.IsGenericType && tipo.GetGenericTypeDefinition() == typeof(IReadOnlyList<>) && Conhecido(tipo.GetGenericArguments()[0]));
+        var campos = doModelo.Where(tipo => !tipo.IsEnum).SelectMany(tipo => tipo.GetFields(BindingFlags.Public | BindingFlags.Instance).Select(campo => $"{tipo.Name}.{campo.Name}")).ToArray();
+        var desconhecidas = modelo
+            .SelectMany(tipo => tipo.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(propriedade => $"{propriedade.DeclaringType!.Name}.{propriedade.Name}" != "IdentidadeLida.Linhagem" && !Conhecido(propriedade.PropertyType))
+            .Select(propriedade => $"{propriedade.DeclaringType!.Name}.{propriedade.Name} ({propriedade.PropertyType.Name})")
+            .ToArray();
+
+        Assert.True(modelo.Length > 10, $"Só {modelo.Length} tipos do modelo achados: a reflexão não está olhando o contrato.");
+        Assert.True(campos.Length == 0, $"Campos públicos no contrato de dialeto: {string.Join(", ", campos)}.");
+        Assert.True(desconhecidas.Length == 0, $"Propriedades do modelo de tipo que as guardas não conhecem: {string.Join(", ", desconhecidas)}.");
+    }
+
+    [Fact]
+    public void O_modelo_nao_tem_dicionario_nem_lista_de_valor()
+    {
+        // O despejo e a perturbação da suíte percorrem objetos do modelo, nomes e texto: um dicionário ou uma lista de
+        // números passaria sem conferência. A linhagem da identidade é a exceção nomeada.
+        var doModelo = Tipos(Motor).Where(tipo => tipo.IsVisible && NoContrato(tipo)).ToHashSet();
+        var proibidas = PropriedadesDoContrato()
+            .Where(propriedade => $"{propriedade.DeclaringType!.Name}.{propriedade.Name}" != "IdentidadeLida.Linhagem")
+            .Where(propriedade => propriedade.PropertyType.GetInterfaces().Append(propriedade.PropertyType).Any(tipo => tipo.IsGenericType && tipo.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))
+                || (propriedade.PropertyType != typeof(string)
+                    && propriedade.PropertyType.GetInterfaces().Append(propriedade.PropertyType).FirstOrDefault(tipo => tipo.IsGenericType && tipo.GetGenericTypeDefinition() == typeof(IEnumerable<>)) is { } lista
+                    && lista.GetGenericArguments()[0] is var item && item != typeof(string) && !doModelo.Contains(item)))
+            .Select(propriedade => $"{propriedade.DeclaringType!.Name}.{propriedade.Name}")
+            .ToArray();
+
+        Assert.NotEmpty(PropriedadesDoContrato());
+        Assert.True(proibidas.Length == 0, $"Dicionários ou listas de valor no modelo do esquema: {string.Join(", ", proibidas)}.");
+    }
+
     [Theory]
     [InlineData("ContextoTransformacao")]
     [InlineData("ResultadoTransformacao")]
@@ -265,6 +513,26 @@ public sealed class RegrasDeArquiteturaTestes
             .SelectMany(Desembrulhar)
             .Concat(tipo.GetNestedTypes(Todos).SelectMany(TiposDaAssinatura));
     }
+
+    // Os trechos proibidos de um arquivo C#, sem as linhas de comentário e sem as formas permitidas.
+    private static IEnumerable<string> TextoOpaco(string fonte)
+    {
+        var codigo = string.Join("\n", fonte.Split('\n').Where(linha => !linha.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+        codigo = _formasPermitidas.Aggregate(codigo, (texto, forma) => forma.Replace(texto, " "));
+        return _textoOpaco.SelectMany(padrao => padrao.Matches(codigo).Select(achado => achado.Value)).Distinct(StringComparer.Ordinal);
+    }
+
+    // As propriedades públicas dos tipos públicos do contrato de dialeto.
+    private static IEnumerable<PropertyInfo> PropriedadesDoContrato() =>
+        Tipos(Motor).Where(tipo => tipo.IsVisible && NoContrato(tipo))
+            .SelectMany(tipo => tipo.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly));
+
+    // Texto, lista ou dicionário de texto, e os nomes do contrato, que são texto.
+    private static bool ContemTexto(Type tipo) =>
+        tipo == typeof(string)
+        || tipo.FullName is Dialetos + ".NomeObjeto" or Dialetos + ".ReferenciaColuna"
+        || (tipo.IsGenericType && tipo.GetGenericArguments().Any(ContemTexto))
+        || (tipo.IsArray && ContemTexto(tipo.GetElementType()!));
 
     private static bool NoContrato(Type tipo) => tipo.Namespace is { } nome && (nome == Dialetos || nome.StartsWith(Dialetos + ".", StringComparison.Ordinal));
 

@@ -139,6 +139,11 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
         Password = senha,
     }.ConnectionString;
 
+    /// <summary>A string de conexão do administrador do servidor a um banco (para ler como quem vê o catálogo inteiro).</summary>
+    /// <param name="banco">O banco.</param>
+    /// <returns>A string de conexão.</returns>
+    public string StringDeConexaoDoAdministrador(string banco) => StringDoAdministrador(banco);
+
     /// <summary>Executa comandos como administrador num banco.</summary>
     /// <param name="banco">O banco.</param>
     /// <param name="sql">Os comandos.</param>

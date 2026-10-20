@@ -105,6 +105,12 @@ public sealed class EsquemaBanco
     /// objects): num destino restaurado de produção, dado real.
     /// </summary>
     public IReadOnlyList<ObjetoResidual> ObjetosResiduais { get => _residuais; init => _residuais = Lista.Copiar(value, nameof(ObjetosResiduais)); }
+
+    /// <summary>
+    /// A versão do servidor, a codificação e a colação padrão do banco; nulo se o dialeto não informa (o <c>planejar</c>
+    /// trata como o pior caso).
+    /// </summary>
+    public PropriedadesBanco? Propriedades { get; init; }
 }
 
 /// <summary>Como uma tabela se relaciona com outras.</summary>
@@ -184,12 +190,7 @@ public sealed class TabelaEsquema
         get => _extensao;
         init
         {
-            if (value is not null)
-            {
-                ArgumentException.ThrowIfNullOrEmpty(value, nameof(Extensao));
-            }
-
-            _extensao = value;
+            _extensao = value is null ? null : Lista.Texto(value, nameof(Extensao));
         }
     }
 
@@ -227,7 +228,7 @@ public sealed class ChaveParticao
     /// não decompõe): quem usa a chave a trata como se citasse todas as colunas. Uma função chamada pela expressão que leia
     /// outras tabelas continua invisível.
     /// </summary>
-    public bool ColunasIncompletas { get; init; }
+    public required bool ColunasIncompletas { get; init; }
 }
 
 /// <summary>A situação de um tipo de coluna na matriz de tipos.</summary>
@@ -289,18 +290,19 @@ public sealed class ColunaEsquema
     private readonly GeracaoColuna _geracao;
     private readonly IdentidadeColuna _identidade;
     private readonly string? _tipoBase;
+    private readonly int? _precisao;
 
     /// <summary>O nome, como o catálogo o guarda.</summary>
-    public required string Nome { get => _nome; init => _nome = Texto(value); }
+    public required string Nome { get => _nome; init => _nome = Lista.Texto(value, nameof(Nome)); }
 
     /// <summary>O tipo como o banco o nomeia (<c>character varying</c>, <c>nvarchar</c>).</summary>
-    public required string TipoNativo { get => _tipoNativo; init => _tipoNativo = Texto(value); }
+    public required string TipoNativo { get => _tipoNativo; init => _tipoNativo = Lista.Texto(value, nameof(TipoNativo)); }
 
     /// <summary>
     /// O tipo do fim da cadeia de domínios (tipo de alias no SQL Server), como o banco o nomeia, numa coluna cujo tipo é
     /// domínio; nulo nas outras.
     /// </summary>
-    public string? TipoBase { get => _tipoBase; init => _tipoBase = value is null ? null : Texto(value); }
+    public string? TipoBase { get => _tipoBase; init => _tipoBase = value is null ? null : Lista.Texto(value, nameof(TipoBase)); }
 
     /// <summary>A situação do tipo na matriz de tipos.</summary>
     public required SituacaoTipo Situacao
@@ -339,11 +341,62 @@ public sealed class ColunaEsquema
     /// <summary>Se a coluna tem máscara dinâmica (SQL Server), que a leitura sem permissão devolveria mascarada.</summary>
     public bool Mascarada { get; init; }
 
-    private static string Texto(string valor)
+    // A semântica da coluna, toda pelo fim da cadeia de domínios e arrays (num array, vale para cada elemento). "Texto" é
+    // o tipo de texto no fim da cadeia, também com tipo canônico nulo (um domínio sobre varchar).
+
+    /// <summary>
+    /// A colação efetiva da coluna (a do domínio ou a do <c>COLLATE</c> explícito). Nula: sem colação ou não informada; numa
+    /// coluna de texto, também de tipo canônico nulo, o <c>planejar</c> trata como o pior caso.
+    /// </summary>
+    public ColacaoEsquema? Colacao { get; init; }
+
+    /// <summary>
+    /// Se o próprio tipo compara sem a caixa (<c>citext</c>), qualquer que seja a colação. Nulo fora de texto; numa coluna
+    /// de texto, nulo é o pior caso. O <c>planejar</c> combina com <see cref="Colacao"/>.
+    /// </summary>
+    public bool? IgnoraCaixaPeloTipo { get; init; }
+
+    /// <summary>
+    /// Se o próprio tipo compara sem os espaços finais (<c>char(n)</c>; no SQL Server, todo <c>char</c> e <c>varchar</c>,
+    /// em qualquer colação). Nulo como em <see cref="IgnoraCaixaPeloTipo"/>.
+    /// </summary>
+    public bool? IgnoraEspacoFinalPeloTipo { get; init; }
+
+    /// <summary>
+    /// O comprimento que o tipo declara. Nulo: o dialeto não informa ou não mede (o <c>planejar</c> trata como o pior caso
+    /// para um valor fixo); sem limite declarado, o limite vem preenchido com o valor nulo.
+    /// </summary>
+    public LimiteComprimento? Comprimento { get; init; }
+
+    /// <summary>
+    /// A precisão de um <c>numeric</c>/<c>decimal</c> (dígitos ao todo); nula se o tipo não a declara ou não é decimal. Não
+    /// é a precisão de segundos fracionários de data e hora.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Zero ou negativa.</exception>
+    public int? Precisao
     {
-        ArgumentException.ThrowIfNullOrEmpty(valor);
-        return valor;
+        get => _precisao;
+        init => _precisao = value is null or > 0 ? value : throw new ArgumentOutOfRangeException(nameof(Precisao), "A precisão precisa ser positiva.");
     }
+
+    /// <summary>A escala de um <c>numeric</c>/<c>decimal</c> (dígitos depois da vírgula; negativa no PostgreSQL 15+).</summary>
+    public int? Escala { get; init; }
+
+    /// <summary>A faixa do tipo inteiro; nula fora de inteiro. Numa coluna inteira, nula é o pior caso.</summary>
+    public FaixaInteira? Faixa { get; init; }
+
+    /// <summary>
+    /// As colunas de que uma coluna gerada ou computada depende: um índice sobre ela depende delas. Nula fora de coluna
+    /// gerada; numa coluna gerada, nula é o pior caso.
+    /// </summary>
+    public ReferenciasDaExpressao? ReferenciasDaGeracao { get; init; }
+
+    /// <summary>
+    /// Se uma restrição do tipo vale para a coluna sem aparecer nas restrições da tabela (o <c>CHECK</c> de um domínio da
+    /// cadeia; no SQL Server, uma regra ligada à coluna ou ao tipo de alias): o pseudônimo pode violá-la. Nulo: não
+    /// informado, o pior caso.
+    /// </summary>
+    public bool? RestritaPeloTipo { get; init; }
 }
 
 /// <summary>Uma chave estrangeira, do lado que referencia.</summary>
@@ -356,15 +409,7 @@ public sealed class ChaveEstrangeira
     private readonly IReadOnlyList<string> _colunasReferenciadas = [];
 
     /// <summary>O nome da restrição.</summary>
-    public required string Nome
-    {
-        get => _nome;
-        init
-        {
-            ArgumentException.ThrowIfNullOrEmpty(value);
-            _nome = value;
-        }
-    }
+    public required string Nome { get => _nome; init => _nome = Lista.Texto(value, nameof(Nome)); }
 
     /// <summary>As colunas que referenciam, na ordem da chave.</summary>
     public required IReadOnlyList<string> Colunas { get => _colunas; init => _colunas = Lista.CopiarNomes(value, nameof(Colunas)); }
@@ -438,15 +483,7 @@ public sealed class IdentidadeLida
     private readonly IReadOnlyDictionary<string, string> _linhagem = new Dictionary<string, string>(StringComparer.Ordinal);
 
     /// <summary>O banco conectado (<c>current_database()</c>, <c>DB_NAME()</c>), conferido com <c>bancoEsperado</c>.</summary>
-    public required string Banco
-    {
-        get => _banco;
-        init
-        {
-            ArgumentException.ThrowIfNullOrEmpty(value);
-            _banco = value;
-        }
-    }
+    public required string Banco { get => _banco; init => _banco = Lista.Texto(value, nameof(Banco)); }
 
     /// <summary>O servidor, como o banco o informa; só para aviso.</summary>
     public required string Servidor
@@ -481,9 +518,18 @@ public sealed class IdentidadeLida
     }
 }
 
-/// <summary>Cópia das listas do modelo, que recusa lista nula e item nulo (e, nas de nomes, vazio).</summary>
+/// <summary>
+/// Cópia das listas do modelo, que recusa lista nula e item nulo (e, nas de nomes, vazio), e a conferência do texto
+/// obrigatório.
+/// </summary>
 internal static class Lista
 {
+    internal static string Texto(string valor, string propriedade)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(valor, propriedade);
+        return valor;
+    }
+
     // Copia antes de conferir: uma lista que mude entre as duas passadas não traz item nulo.
     internal static IReadOnlyList<T> Copiar<T>(IReadOnlyList<T> valor, string propriedade)
         where T : class
