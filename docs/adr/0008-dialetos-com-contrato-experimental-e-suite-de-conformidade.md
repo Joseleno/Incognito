@@ -153,3 +153,24 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   consistência separa as regras de coerência, que o motor repetirá tratando o nulo como pior caso, das de presença, que
   valem só para os dialetos do repositório. A perturbação do modelo gera sempre um valor válido e diferente (o `bool?`
   em três estados, os objetos pela anulabilidade declarada) e calcula a alteração antes de rodar a suíte.
+- 2026-10-20: o modelo do esquema ganha os **objetos da tabela** que um pseudônimo pode fazer colidir ou violar. Os
+  índices únicos entram **inclusive o da chave primária** (marcado) e o inválido ou em construção: o motor exige que os
+  pseudônimos não colidam em todo índice listado, e não há campo de imposição, porque o único consumidor trata todos
+  como impostos (um índice que só o pai tem, criado com `ON ONLY`, não impõe nada e mesmo assim é listado). Cada
+  elemento da chave traz a coluna (nula num elemento de expressão) e a **colação do índice**, que pode diferir da
+  coluna; das expressões e do predicado, só as colunas citadas. Os `CHECK`s, as exclusões (também a chave com
+  sobreposição proibida) e as triggers de usuário entram com as colunas citadas e as marcas (imposto, ligada, herdada);
+  o estado exato de uma trigger fica para o diário do dialeto. A chave estrangeira diz se o banco a confere agora e se
+  as linhas que existiam quando a conferência foi ligada foram validadas, pela **família** dela (a original e as cópias
+  nas partições, dos dois lados); nenhuma das duas marcas prova que não há linha órfã, o que só a verificação depois da
+  carga confere. O objeto residual diz as materialized views que lê, passando pelas regras de leitura das views, se a
+  leitura passa por função ou operador de usuário e se tem dados, tudo pelas dependências do catálogo, nunca pelo texto
+  das regras; um ciclo entre materialized views (que o banco aceita, por views) sai das dependências e as deixa
+  incompletas, para a atualização se repetir até nada mudar. Numa particionada, o índice anexado, o `CHECK` e a
+  exclusão copiados numa partição ficam no pai, onde valem. As listas novas ficam vazias quando não há, o caso
+  otimista; a suíte confere as dos dialetos do repositório pelo inventário, **inteiras e na ordem de nome**. A
+  consistência confere a coerência, que o motor repetirá (no máximo um índice primário, igual à chave primária; colunas
+  citadas que existem, na ordem da tabela; trigger herdada só em partição; dependências só de materialized views do
+  esquema, em ordem e sem ciclo; nenhuma dependência nem marca de materialized view em outro residual), e, só nos
+  dialetos do repositório, a presença (a chave primária tem índice primário, salvo numa partição ou com sobreposição
+  proibida; o elemento de coluna de texto tem colação; o elemento de expressão tem as colunas citadas).

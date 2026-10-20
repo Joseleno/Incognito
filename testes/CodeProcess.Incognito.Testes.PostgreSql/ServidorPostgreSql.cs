@@ -79,16 +79,18 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
 
         _modeloOrigem = NovoNome("modelo_origem");
         await ExecutarAsync(Administrador, $"CREATE DATABASE {_modeloOrigem}", cancelamento);
-        await ExecutarAsync(_modeloOrigem, LerRecurso("esquema-de-conformidade.sql"), cancelamento);
+        await CriarEsquemaAsync(_modeloOrigem, cancelamento);
         await ConferirAsync(_modeloOrigem, "presenca-do-sentinela.sql", "Lugares do esquema de conformidade sem o sentinela", cancelamento);
+        await ConferirAsync(_modeloOrigem, "estado-dos-objetos.sql", "Casos do esquema de conformidade fora do estado declarado", cancelamento);
 
         // O mesmo esquema, com a posse passada ao dono e conferida por uma guarda que não depende do leitor.
         _modeloDestino = NovoNome("modelo_destino");
         await ExecutarAsync(Administrador, $"CREATE DATABASE {_modeloDestino}", cancelamento);
-        await ExecutarAsync(_modeloDestino, LerRecurso("esquema-de-conformidade.sql"), cancelamento);
+        await CriarEsquemaAsync(_modeloDestino, cancelamento);
         await ExecutarAsync(_modeloDestino, LerRecurso("posse-do-destino.sql"), cancelamento);
         await ConferirAsync(_modeloDestino, "guarda-de-posse.sql", "Objetos do destino que continuam do administrador (acrescentar à posse-do-destino.sql)", cancelamento);
         await ConferirAsync(_modeloDestino, "presenca-do-sentinela.sql", "Lugares do esquema de conformidade sem o sentinela no destino", cancelamento);
+        await ConferirAsync(_modeloDestino, "estado-dos-objetos.sql", "Casos do esquema de conformidade fora do estado declarado no destino", cancelamento);
 
         // As conexões do administrador não ficam em pool: fechadas aqui, os modelos podem ser clonados.
         await ExecutarAsync(
@@ -247,6 +249,22 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
             ?? throw new InvalidOperationException($"{nome} não embutido.");
         using var leitor = new StreamReader(recurso);
         return leitor.ReadToEnd();
+    }
+
+    // O script do esquema de conformidade e os passos que não cabem nele, porque o script roda numa transação: o índice
+    // único CONCURRENTLY sobre valores repetidos, que falha e fica inválido.
+    private async Task CriarEsquemaAsync(string banco, CancellationToken cancelamento)
+    {
+        await ExecutarAsync(banco, LerRecurso("esquema-de-conformidade.sql"), cancelamento);
+        try
+        {
+            await ExecutarAsync(banco, "CREATE UNIQUE INDEX CONCURRENTLY ix_duplicadas_v ON loja.duplicadas (v)", cancelamento);
+            throw new InvalidOperationException("O índice único sobre valores repetidos foi criado: o caso do índice inválido sumiu.");
+        }
+        catch (PostgresException erro) when (erro.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            // O esperado: o índice fica no catálogo, inválido.
+        }
     }
 
     // Um clone por vez, atrás do mesmo semáforo para os dois modelos.

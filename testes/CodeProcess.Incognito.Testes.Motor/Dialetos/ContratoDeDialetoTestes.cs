@@ -131,6 +131,47 @@ public sealed class ContratoDeDialetoTestes
     }
 
     [Fact]
+    public void Os_objetos_da_tabela_copiam_as_listas_e_recusam_nulos_e_vazios()
+    {
+        var elementos = new List<ElementoIndice> { new() { Coluna = "id" } };
+        var indice = new IndiceUnico { Nome = "pk", Primario = true, Elementos = elementos, NulosDistintos = true };
+        elementos.Clear();
+
+        Assert.Single(indice.Elementos);
+        Assert.True(indice is { ReferenciasDasExpressoes: null, Predicado: null });
+        Assert.Null(new ElementoIndice().Coluna);
+        Assert.Equal("Elementos", Assert.Throws<ArgumentException>(() => new IndiceUnico { Nome = "pk", Primario = true, Elementos = [], NulosDistintos = true }).ParamName);
+        Assert.Equal("Elementos", Assert.Throws<ArgumentNullException>(() => new IndiceUnico { Nome = "pk", Primario = true, Elementos = [null!], NulosDistintos = true }).ParamName);
+        Assert.Equal("Nome", Assert.Throws<ArgumentException>(() => new IndiceUnico { Nome = "", Primario = true, Elementos = [new()], NulosDistintos = true }).ParamName);
+        Assert.Equal("Coluna", Assert.Throws<ArgumentException>(() => new ElementoIndice { Coluna = "" }).ParamName);
+
+        var referencias = new ReferenciasDaExpressao { Colunas = [], Incompletas = false };
+        Assert.Equal("Nome", Assert.Throws<ArgumentException>(() => new RestricaoCheck { Nome = "", Referencias = referencias, Imposta = true }).ParamName);
+        Assert.Equal("Referencias", Assert.Throws<ArgumentNullException>(() => new RestricaoCheck { Nome = "ck", Referencias = null!, Imposta = true }).ParamName);
+        Assert.Equal("Nome", Assert.Throws<ArgumentException>(() => new RestricaoExclusao { Nome = "", Referencias = referencias }).ParamName);
+        Assert.Equal("Referencias", Assert.Throws<ArgumentNullException>(() => new RestricaoExclusao { Nome = "ex", Referencias = null! }).ParamName);
+        Assert.Equal("Nome", Assert.Throws<ArgumentException>(() => new TriggerEsquema { Nome = "", Ligada = true, Herdada = false }).ParamName);
+
+        // As listas novas da tabela e do residual começam vazias; as marcas novas da chave e do residual, nulas (o pior caso).
+        var nome = new NomeObjeto("loja", "itens");
+        var tabela = new TabelaEsquema { Nome = nome, Colunas = [] };
+        Assert.True(tabela is { IndicesUnicos: [], RestricoesCheck: [], RestricoesExclusao: [], Triggers: [] });
+        Assert.Equal("IndicesUnicos", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], IndicesUnicos = [null!] }).ParamName);
+        Assert.Equal("RestricoesCheck", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], RestricoesCheck = null! }).ParamName);
+        Assert.Equal("RestricoesExclusao", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], RestricoesExclusao = [null!] }).ParamName);
+        Assert.Equal("Triggers", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], Triggers = [null!] }).ParamName);
+
+        var chave = new ChaveEstrangeira { Nome = "fk", Colunas = ["a"], Referenciada = nome, ColunasReferenciadas = ["b"] };
+        Assert.True(chave is { Imposta: null, Validada: null });
+        var dependencias = new List<NomeObjeto> { nome };
+        var residual = new ObjetoResidual { Nome = nome, Tipo = TipoObjetoResidual.VisaoMaterializada, DependeDe = dependencias };
+        dependencias.Clear();
+        Assert.Single(residual.DependeDe);
+        Assert.True(new ObjetoResidual { Nome = nome, Tipo = TipoObjetoResidual.ObjetosGrandes } is { DependeDe: [], DependenciasIncompletas: null, Populada: null });
+        Assert.Equal("DependeDe", Assert.Throws<ArgumentNullException>(() => new ObjetoResidual { Nome = nome, Tipo = TipoObjetoResidual.VisaoMaterializada, DependeDe = [null!] }).ParamName);
+    }
+
+    [Fact]
     public async Task O_descarte_do_dialeto_roda_uma_vez_so()
     {
         var dialeto = new OrigemContada();

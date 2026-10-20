@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CodeProcess.Incognito.Dialetos;
 
 namespace CodeProcess.Incognito.Testes.Conformidade;
@@ -6,7 +7,8 @@ namespace CodeProcess.Incognito.Testes.Conformidade;
 /// A comparação de um esquema lido com o inventário, por nome: a primeira diferença de cada tabela, de cada sequence e de
 /// cada objeto residual, em ordem ordinal de esquema e nome (as tabelas, depois as sequences, depois os residuais). Numa
 /// tabela, a ordem dos ramos é fixa (decide a mensagem): estrutura, colunas (tipo base, situação, tipo canônico e a
-/// semântica), chave primária, chaves estrangeiras.
+/// semântica), chave primária, os objetos da tabela (índices únicos, CHECKs, exclusões e triggers, cada lista também na
+/// ordem do contrato), chaves estrangeiras.
 /// </summary>
 internal static class ComparacaoDoInventario
 {
@@ -60,7 +62,7 @@ internal static class ComparacaoDoInventario
                 (_, []) => "residual a mais",
                 (_, [_, _, ..] esperados) => $"residual declarado {esperados.Length} vezes",
                 ([_, _, ..] lidos, _) => $"residual lido {lidos.Length} vezes",
-                ([var residual], [var esperadoResidual]) => residual.Tipo == esperadoResidual.Tipo ? null : $"residual lido como {residual.Tipo}, esperado {esperadoResidual.Tipo}",
+                ([var residual], [var esperadoResidual]) => Diferenca(residual, esperadoResidual),
             };
             if (diferenca is not null)
             {
@@ -143,6 +145,15 @@ internal static class ComparacaoDoInventario
             return $"chave primária lida [{Lista(tabela.ChavePrimaria)}], esperada [{Lista(esperada.ChavePrimaria)}]";
         }
 
+        var objetos = Objetos(new("índice", "índices", Feminino: false), [.. tabela.IndicesUnicos.Select(IndiceInventariado.De)], esperada.IndicesUnicos, indice => indice.Nome)
+            ?? Objetos(new("CHECK", "CHECKs", Feminino: false), [.. tabela.RestricoesCheck.Select(CheckInventariado.De)], esperada.Checks, check => check.Nome)
+            ?? Objetos(new("exclusão", "exclusões", Feminino: true), [.. tabela.RestricoesExclusao.Select(ExclusaoInventariada.De)], esperada.Exclusoes, exclusao => exclusao.Nome)
+            ?? Objetos(new("trigger", "triggers", Feminino: true), [.. tabela.Triggers.Select(TriggerInventariada.De)], esperada.Triggers, trigger => trigger.Nome);
+        if (objetos is not null)
+        {
+            return objetos;
+        }
+
         var chaves = tabela.ChavesEstrangeiras.ToLookup(chave => chave.Nome, StringComparer.Ordinal);
         var chavesEsperadas = esperada.ChavesEstrangeiras.ToLookup(chave => chave.Nome, StringComparer.Ordinal);
         var nomes = chaves.Select(grupo => grupo.Key).Union(chavesEsperadas.Select(grupo => grupo.Key), StringComparer.Ordinal).Order(StringComparer.Ordinal);
@@ -170,7 +181,47 @@ internal static class ComparacaoDoInventario
         : !chave.Referenciada.Equals(esperada.Referenciada) ? $": referenciada lida {chave.Referenciada}, esperada {esperada.Referenciada}"
         : !chave.ColunasReferenciadas.SequenceEqual(esperada.ColunasReferenciadas)
             ? $": colunas referenciadas lidas [{Lista(chave.ColunasReferenciadas)}], esperadas [{Lista(esperada.ColunasReferenciadas)}]"
+        : chave.Imposta != esperada.Imposta ? $": imposta lida {Texto(chave.Imposta)}, esperada {Texto(esperada.Imposta)}"
+        : chave.Validada != esperada.Validada ? $": validada lida {Texto(chave.Validada)}, esperada {Texto(esperada.Validada)}"
         : null;
+
+    // A ordem das dependências é do contrato: comparada também.
+    private static string? Diferenca(ObjetoResidual residual, ResidualInventariado esperado) =>
+        residual.Tipo != esperado.Tipo ? $"residual lido como {residual.Tipo}, esperado {esperado.Tipo}"
+        : !residual.DependeDe.SequenceEqual(esperado.DependeDe) ? $"depende de [{Lista(residual.DependeDe)}], esperado de [{Lista(esperado.DependeDe)}]"
+        : residual.DependenciasIncompletas != esperado.DependenciasIncompletas
+            ? $"dependências incompletas lidas {Texto(residual.DependenciasIncompletas)}, esperadas {Texto(esperado.DependenciasIncompletas)}"
+        : residual.Populada != esperado.Populada ? $"populada lida {Texto(residual.Populada)}, esperada {Texto(esperado.Populada)}"
+        : null;
+
+    // Os objetos de uma lista da tabela, por nome e inteiros (pela projeção, comparada pela estrutura: o texto só serve à
+    // mensagem, e dois valores diferentes podem ter o mesmo), e depois a ordem ordinal de nome, que é do
+    // contrato e a comparação por nome não vê.
+    private static string? Objetos<T>(Rotulo rotulo, IReadOnlyList<T> lidos, IReadOnlyList<T> esperados, Func<T, string> nome)
+        where T : notnull
+    {
+        var porNome = lidos.ToLookup(nome, StringComparer.Ordinal);
+        var esperadosPorNome = esperados.ToLookup(nome, StringComparer.Ordinal);
+        var (lido, esperado) = rotulo.Feminino ? ("lida", "esperada") : ("lido", "esperado");
+        foreach (var nomeDoObjeto in porNome.Select(grupo => grupo.Key).Union(esperadosPorNome.Select(grupo => grupo.Key), StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            var diferenca = (porNome[nomeDoObjeto].ToArray(), esperadosPorNome[nomeDoObjeto].ToArray()) switch
+            {
+                ([], _) => "a menos",
+                (_, []) => "a mais",
+                (_, [_, _, ..] declarados) => $"{(rotulo.Feminino ? "declarada" : "declarado")} {declarados.Length} vezes",
+                ([_, _, ..] repetidos, _) => $"{lido} {repetidos.Length} vezes",
+                ([var unico], [var declarado]) => JsonSerializer.Serialize(unico) == JsonSerializer.Serialize(declarado) ? null : $"{lido} {unico}, {esperado} {declarado}",
+            };
+            if (diferenca is not null)
+            {
+                return $"{rotulo.Singular} {nomeDoObjeto} {diferenca}";
+            }
+        }
+
+        var nomes = lidos.Select(nome).ToArray();
+        return nomes.SequenceEqual(nomes.Order(StringComparer.Ordinal)) ? null : $"{rotulo.Plural} fora da ordem ordinal de nome: [{Lista(nomes)}]";
+    }
 
     // A semântica na ordem das propriedades novas da coluna; cada objeto comparado inteiro, pela projeção no registro
     // esperado.
@@ -179,6 +230,7 @@ internal static class ComparacaoDoInventario
         : coluna.Anulavel != esperada.Anulavel ? $"anulável lida {coluna.Anulavel}, esperada {esperada.Anulavel}"
         : coluna.Identidade != esperada.Identidade ? $"identity lida {coluna.Identidade}, esperada {esperada.Identidade}"
         : coluna.Geracao != esperada.Geracao ? $"geração lida {coluna.Geracao}, esperada {esperada.Geracao}"
+        : coluna.Mascarada != esperada.Mascarada ? $"mascarada lida {coluna.Mascarada}, esperada {esperada.Mascarada}"
         : coluna.TipoBase != esperada.TipoBase ? $"tipo base lido {Texto(coluna.TipoBase)}, esperado {Texto(esperada.TipoBase)}"
         : coluna.Situacao != esperada.Situacao ? $"situação lida {coluna.Situacao}, esperada {esperada.Situacao}"
         : coluna.Tipo != esperada.Tipo ? $"tipo canônico lido {Texto(coluna.Tipo)}, esperado {Texto(esperada.Tipo)}"
@@ -227,4 +279,7 @@ internal static class ComparacaoDoInventario
         ChaveParticaoEsperada chave => $"({Lista(chave.Colunas)}{(chave.ColunasIncompletas ? "; incompleta" : "")})",
         _ => valor.ToString()!,
     };
+
+    // Como a mensagem nomeia o objeto e concorda com ele.
+    private sealed record Rotulo(string Singular, string Plural, bool Feminino);
 }

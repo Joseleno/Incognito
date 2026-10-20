@@ -116,6 +116,21 @@ public sealed class TabelaInventariada
     /// <summary>As chaves estrangeiras, em qualquer ordem.</summary>
     public IReadOnlyList<ChaveEstrangeiraInventariada> ChavesEstrangeiras { get; init; } = [];
 
+    // Os objetos da tabela, inteiros: um índice que falta deixaria a injetividade sem conferência. Declarados em qualquer
+    // ordem; a leitura tem de vir na ordem ordinal de nome.
+
+    /// <summary>Os índices únicos, inclusive o da chave primária.</summary>
+    public IReadOnlyList<IndiceInventariado> IndicesUnicos { get; init; } = [];
+
+    /// <summary>Os <c>CHECK</c>s.</summary>
+    public IReadOnlyList<CheckInventariado> Checks { get; init; } = [];
+
+    /// <summary>As restrições de exclusão.</summary>
+    public IReadOnlyList<ExclusaoInventariada> Exclusoes { get; init; } = [];
+
+    /// <summary>As triggers de usuário.</summary>
+    public IReadOnlyList<TriggerInventariada> Triggers { get; init; } = [];
+
     /// <inheritdoc/>
     public override string ToString() => Nome.ToString();
 }
@@ -147,6 +162,9 @@ public sealed class ColunaInventariada
 
     /// <summary>A geração.</summary>
     public GeracaoColuna Geracao { get; init; }
+
+    /// <summary>Se tem máscara dinâmica.</summary>
+    public bool Mascarada { get; init; }
 
     /// <summary>O tipo do fim da cadeia de domínios.</summary>
     public string? TipoBase { get; init; }
@@ -295,14 +313,104 @@ public sealed record CodificacaoEsperada(string Nome, bool Definida, bool Unicod
 /// <summary>Um objeto residual do inventário.</summary>
 /// <param name="Nome">O nome.</param>
 /// <param name="Tipo">O tipo.</param>
-public sealed record ResidualInventariado(NomeObjeto Nome, TipoObjetoResidual Tipo);
+/// <param name="DependenciasIncompletas">Se a leitura passa por função (nulo fora de materialized view).</param>
+/// <param name="Populada">Se tem dados (nulo fora de materialized view).</param>
+public sealed record ResidualInventariado(NomeObjeto Nome, TipoObjetoResidual Tipo, bool? DependenciasIncompletas = null, bool? Populada = null)
+{
+    /// <summary>As materialized views que ele lê, na ordem ordinal de esquema e nome.</summary>
+    public IReadOnlyList<NomeObjeto> DependeDe { get; init; } = [];
+}
 
 /// <summary>Uma chave estrangeira do inventário.</summary>
 /// <param name="Nome">O nome da restrição.</param>
 /// <param name="Colunas">As colunas, na ordem da chave.</param>
 /// <param name="Referenciada">A tabela referenciada.</param>
 /// <param name="ColunasReferenciadas">As colunas referenciadas, na mesma ordem.</param>
-public sealed record ChaveEstrangeiraInventariada(string Nome, IReadOnlyList<string> Colunas, NomeObjeto Referenciada, IReadOnlyList<string> ColunasReferenciadas);
+/// <param name="Imposta">Se o banco a confere agora (padrão: sim).</param>
+/// <param name="Validada">Se as linhas antigas foram conferidas (padrão: sim).</param>
+public sealed record ChaveEstrangeiraInventariada(
+    string Nome, IReadOnlyList<string> Colunas, NomeObjeto Referenciada, IReadOnlyList<string> ColunasReferenciadas, bool? Imposta = true, bool? Validada = true);
+
+/// <summary>Um elemento de índice único.</summary>
+/// <param name="Coluna">A coluna (nula num elemento de expressão).</param>
+/// <param name="Colacao">A colação do índice no elemento.</param>
+public sealed record ElementoEsperado(string? Coluna, ColacaoEsperada? Colacao)
+{
+    /// <summary>O elemento lido, na forma da declaração.</summary>
+    /// <param name="elemento">O elemento lido.</param>
+    /// <returns>A projeção.</returns>
+    public static ElementoEsperado De(ElementoIndice elemento) => new(elemento.Coluna, ColacaoEsperada.De(elemento.Colacao));
+
+    /// <inheritdoc/>
+    public override string ToString() => $"{Coluna ?? "(expressão)"} [{Colacao?.ToString() ?? "sem colação"}]";
+}
+
+/// <summary>Um índice único do inventário.</summary>
+/// <param name="Nome">O nome.</param>
+/// <param name="Elementos">Os elementos, na ordem da chave.</param>
+/// <param name="Primario">Se é o da chave primária.</param>
+/// <param name="Expressoes">As colunas das expressões (nulo sem elemento de expressão).</param>
+/// <param name="Predicado">As colunas do predicado (nulo se não é parcial).</param>
+/// <param name="NulosDistintos">Se cada NULL é distinto (padrão: sim).</param>
+public sealed record IndiceInventariado(
+    string Nome, IReadOnlyList<ElementoEsperado> Elementos, bool Primario = false, ReferenciasEsperadas? Expressoes = null, ReferenciasEsperadas? Predicado = null,
+    bool NulosDistintos = true)
+{
+    /// <summary>O índice lido, na forma da declaração.</summary>
+    /// <param name="indice">O índice lido.</param>
+    /// <returns>A projeção.</returns>
+    public static IndiceInventariado De(IndiceUnico indice) => new(
+        indice.Nome, [.. indice.Elementos.Select(ElementoEsperado.De)], indice.Primario, ReferenciasEsperadas.De(indice.ReferenciasDasExpressoes),
+        ReferenciasEsperadas.De(indice.Predicado), indice.NulosDistintos);
+
+    /// <inheritdoc/>
+    public override string ToString() =>
+        $"({string.Join(", ", Elementos)}){(Primario ? " primário" : "")}; expressões {Expressoes?.ToString() ?? "nenhuma"}; predicado {Predicado?.ToString() ?? "nenhum"}; nulos {(NulosDistintos ? "distintos" : "não distintos")}";
+}
+
+/// <summary>Um <c>CHECK</c> do inventário.</summary>
+/// <param name="Nome">O nome.</param>
+/// <param name="Referencias">As colunas citadas.</param>
+/// <param name="Imposta">Se o banco o confere (padrão: sim).</param>
+public sealed record CheckInventariado(string Nome, ReferenciasEsperadas Referencias, bool Imposta = true)
+{
+    /// <summary>O <c>CHECK</c> lido, na forma da declaração.</summary>
+    /// <param name="check">O <c>CHECK</c> lido.</param>
+    /// <returns>A projeção.</returns>
+    public static CheckInventariado De(RestricaoCheck check) => new(check.Nome, ReferenciasEsperadas.De(check.Referencias)!, check.Imposta);
+
+    /// <inheritdoc/>
+    public override string ToString() => $"{Referencias}{(Imposta ? "" : " não imposto")}";
+}
+
+/// <summary>Uma restrição de exclusão do inventário.</summary>
+/// <param name="Nome">O nome.</param>
+/// <param name="Referencias">As colunas citadas.</param>
+public sealed record ExclusaoInventariada(string Nome, ReferenciasEsperadas Referencias)
+{
+    /// <summary>A exclusão lida, na forma da declaração.</summary>
+    /// <param name="exclusao">A exclusão lida.</param>
+    /// <returns>A projeção.</returns>
+    public static ExclusaoInventariada De(RestricaoExclusao exclusao) => new(exclusao.Nome, ReferenciasEsperadas.De(exclusao.Referencias)!);
+
+    /// <inheritdoc/>
+    public override string ToString() => Referencias.ToString();
+}
+
+/// <summary>Uma trigger do inventário.</summary>
+/// <param name="Nome">O nome.</param>
+/// <param name="Ligada">Se dispara numa sessão comum (padrão: sim).</param>
+/// <param name="Herdada">Se é a cópia de uma trigger da particionada.</param>
+public sealed record TriggerInventariada(string Nome, bool Ligada = true, bool Herdada = false)
+{
+    /// <summary>A trigger lida, na forma da declaração.</summary>
+    /// <param name="trigger">A trigger lida.</param>
+    /// <returns>A projeção.</returns>
+    public static TriggerInventariada De(TriggerEsquema trigger) => new(trigger.Nome, trigger.Ligada, trigger.Herdada);
+
+    /// <inheritdoc/>
+    public override string ToString() => $"{(Ligada ? "ligada" : "desligada")}{(Herdada ? ", herdada" : "")}";
+}
 
 /// <summary>Uma chave de partição.</summary>
 /// <param name="Colunas">As colunas citadas, na ordem do modelo.</param>

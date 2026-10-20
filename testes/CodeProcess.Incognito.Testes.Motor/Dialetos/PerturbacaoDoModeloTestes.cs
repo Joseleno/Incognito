@@ -21,6 +21,7 @@ public sealed class PerturbacaoDoModeloTestes
     [
         typeof(EsquemaBanco), typeof(TabelaEsquema), typeof(ColunaEsquema), typeof(ChaveEstrangeira), typeof(ChaveParticao), typeof(SequenceEsquema), typeof(ObjetoResidual),
         typeof(PropriedadesBanco), typeof(CodificacaoTexto), typeof(ColacaoEsquema), typeof(LimiteComprimento), typeof(FaixaInteira), typeof(ReferenciasDaExpressao),
+        typeof(IndiceUnico), typeof(ElementoIndice), typeof(RestricaoCheck), typeof(RestricaoExclusao), typeof(TriggerEsquema),
     ];
 
     // O que a falha precisa citar quando o objeto alterado não tem tabela nem outro dono com nome.
@@ -90,11 +91,10 @@ public sealed class PerturbacaoDoModeloTestes
             Assert.True(
                 DespejoDoModelo.Texto(perturbado) != DespejoDoModelo.Texto(original),
                 $"A alteração de {tipo}.{propriedade} (por {caminho}) em {citado} não muda o despejo do modelo.");
-            // Um número alterado precisa ser pego pelo inventário, que compara o valor: a consistência só pega o número que
-            // quebra uma regra, e um valor errado que a cumpra passaria. Fora das tabelas, pelo fato do próprio objeto.
+            // A alteração precisa ser pega pelo inventário, que compara o valor: a consistência só pega o valor que quebra uma
+            // regra, e um valor errado que a cumpra passaria. Fora das tabelas, pelo fato do próprio objeto.
             var falhas = await SuiteDeConformidadeTestes.RodarAsync(new FixtureFalsa(completo: true, Defeito.Nenhum, _ => perturbado));
-            var exigeInventario = (Nullable.GetUnderlyingType(alvo.PropertyType) ?? alvo.PropertyType) is var numero
-                && (numero == typeof(int) || numero == typeof(long)) && !_marcadores.ContainsValue(citado);
+            var exigeInventario = !_marcadores.ContainsValue(citado);
             if (falhas.Any(falha => falha.Value is IAssertionException && Cita(falha.Value.Message, citado)
                 && (!exigeInventario || falha.Key == nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas))))
             {
@@ -138,11 +138,17 @@ public sealed class PerturbacaoDoModeloTestes
     private static bool Cita(string mensagem, string citado) =>
         Regex.IsMatch(mensagem, $@"(?<![\w.]){Regex.Escape(citado)}(?!\w)", RegexOptions.None, TimeSpan.FromSeconds(1));
 
-    // As listas cuja ordem é do contrato: nomes (chave primária, colunas das chaves, outras mães) e as colunas da tabela.
+    // As listas cuja ordem é do contrato: nomes (chave primária, colunas das chaves, outras mães, dependências), as colunas
+    // da tabela, os elementos de um índice (a ordem da chave) e os objetos da tabela (ordem ordinal de nome).
     private static bool Reordenavel(PropertyInfo propriedade) =>
         propriedade.PropertyType == typeof(IReadOnlyList<string>)
         || propriedade.PropertyType == typeof(IReadOnlyList<NomeObjeto>)
-        || propriedade.PropertyType == typeof(IReadOnlyList<ColunaEsquema>);
+        || propriedade.PropertyType == typeof(IReadOnlyList<ColunaEsquema>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<ElementoIndice>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<IndiceUnico>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<RestricaoCheck>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<RestricaoExclusao>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<TriggerEsquema>);
 
     private static async Task<EsquemaBanco> LerAsync()
     {
@@ -309,8 +315,14 @@ public sealed class PerturbacaoDoModeloTestes
 
         if (ElementoDoModelo(tipo) is { } elemento)
         {
+            // Sem o primeiro item; a lista que não pode ficar vazia (os elementos de um índice) troca o único item.
             var itens = ((IEnumerable)valor!).Cast<object>().ToArray();
-            return itens.Length == 0 ? (valor, null) : (Lista(elemento, itens.Skip(1)), Percorrer(itens[0]).First().Dono is { Length: > 0 } nome && nome != dono ? nome : dono);
+            return itens switch
+            {
+                [] => (valor, null),
+                [var unico] when propriedade.Name == nameof(IndiceUnico.Elementos) => (Lista(elemento, [Outro(unico, dono)]), dono),
+                _ => (Lista(elemento, itens.Skip(1)), Percorrer(itens[0]).First().Dono is { Length: > 0 } nome && nome != dono ? nome : dono),
+            };
         }
 
         return valor switch
