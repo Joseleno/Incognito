@@ -55,8 +55,8 @@ public sealed class EsquemaDeConformidade
     /// <summary>Uma tabela temporal e o histórico dela.</summary>
     public required Caso<TemporalEsperada> Temporal { get; init; }
 
-    /// <summary>A única tabela com segurança por linha.</summary>
-    public required Caso<NomeObjeto> SegurancaDeLinha { get; init; }
+    /// <summary>As tabelas com segurança por linha.</summary>
+    public required Caso<IReadOnlyList<NomeObjeto>> SegurancaDeLinha { get; init; }
 
     /// <summary>A única coluna com máscara dinâmica.</summary>
     public required Caso<ReferenciaColuna> Mascara { get; init; }
@@ -69,6 +69,12 @@ public sealed class EsquemaDeConformidade
 
     /// <summary>Uma tabela que a fixture cria no esquema <c>incognito</c> (como o diário), para a suíte conferir que o leitor a deixa de fora.</summary>
     public required NomeObjeto ObjetoDoIncognito { get; init; }
+
+    /// <summary>As permissões do leitor da origem e do dono do destino.</summary>
+    public required Caso<AcessoEsperado> Acesso { get; init; }
+
+    /// <summary>O transporte das conexões da fixture, igual nos dois lados.</summary>
+    public required Caso<TransporteEsperado> Transporte { get; init; }
 }
 
 /// <summary>O inventário do esquema de conformidade.</summary>
@@ -410,6 +416,115 @@ public sealed record TriggerInventariada(string Nome, bool Ligada = true, bool H
 
     /// <inheritdoc/>
     public override string ToString() => $"{(Ligada ? "ligada" : "desligada")}{(Herdada ? ", herdada" : "")}";
+}
+
+/// <summary>As permissões esperadas em cada lado.</summary>
+/// <param name="Origem">As do leitor da origem.</param>
+/// <param name="Destino">As do dono do destino.</param>
+public sealed record AcessoEsperado(LadoDoAcesso Origem, LadoDoAcesso Destino);
+
+/// <summary>
+/// As permissões de um login: um padrão para as tabelas, os objetos residuais e as sequences, e as exceções por objeto. Toda
+/// tabela, todo objeto residual e toda sequence lidos são comparados com a exceção dele ou com o padrão.
+/// </summary>
+public sealed class LadoDoAcesso
+{
+    /// <summary>As permissões no banco.</summary>
+    public required PermissoesBancoEsperadas Banco { get; init; }
+
+    /// <summary>As permissões de toda tabela sem exceção.</summary>
+    public required PermissoesTabelaEsperadas Tabelas { get; init; }
+
+    /// <summary>As tabelas com outras permissões.</summary>
+    public IReadOnlyDictionary<NomeObjeto, PermissoesTabelaEsperadas> ExcecoesDasTabelas { get; init; } = new Dictionary<NomeObjeto, PermissoesTabelaEsperadas>();
+
+    /// <summary>Se o login limpa todo objeto residual sem exceção.</summary>
+    public required bool? PodeLimpar { get; init; }
+
+    /// <summary>Os objetos residuais com outra resposta.</summary>
+    public IReadOnlyDictionary<NomeObjeto, bool?> ExcecoesDosResiduais { get; init; } = new Dictionary<NomeObjeto, bool?>();
+
+    /// <summary>Se o login ajusta toda sequence sem exceção.</summary>
+    public required bool? PodeAjustar { get; init; }
+
+    /// <summary>As sequences com outra resposta.</summary>
+    public IReadOnlyDictionary<NomeObjeto, bool?> ExcecoesDasSequences { get; init; } = new Dictionary<NomeObjeto, bool?>();
+}
+
+/// <summary>As permissões no banco.</summary>
+/// <param name="PodeMarcarBanco">Se marca o banco como destino.</param>
+/// <param name="PodeCriarEsquema">Se cria o esquema do diário.</param>
+public sealed record PermissoesBancoEsperadas(bool? PodeMarcarBanco, bool? PodeCriarEsquema)
+{
+    /// <summary>As permissões lidas, na forma da declaração.</summary>
+    /// <param name="banco">As permissões lidas.</param>
+    /// <returns>A projeção.</returns>
+    public static PermissoesBancoEsperadas De(PermissoesBanco banco) => new(banco.PodeMarcarBanco, banco.PodeCriarEsquema);
+
+    /// <inheritdoc/>
+    public override string ToString() => $"marca {Marcas.Texto(PodeMarcarBanco)}, cria esquema {Marcas.Texto(PodeCriarEsquema)}";
+}
+
+/// <summary>As permissões numa tabela.</summary>
+/// <param name="PodeLer">Se lê todas as colunas.</param>
+/// <param name="PodeInserir">Se grava as colunas da carga.</param>
+/// <param name="PodeGravarIdentidade">Se grava a identidade como veio.</param>
+/// <param name="PodeEsvaziar">Se esvazia.</param>
+/// <param name="PodeReferenciar">Se cria chave estrangeira para ela.</param>
+/// <param name="PodeAlterarRestricoes">Se desliga as restrições.</param>
+/// <param name="PodeDesligarTriggers">Se desliga as triggers.</param>
+/// <param name="LeituraFiltradaPorLinha">Se a leitura sai filtrada por linha.</param>
+/// <param name="EscritaRestritaPorLinha">Se a gravação é restrita por linha.</param>
+public sealed record PermissoesTabelaEsperadas(
+    bool? PodeLer, bool? PodeInserir, bool? PodeGravarIdentidade, bool? PodeEsvaziar, bool? PodeReferenciar, bool? PodeAlterarRestricoes, bool? PodeDesligarTriggers,
+    bool? LeituraFiltradaPorLinha, bool? EscritaRestritaPorLinha)
+{
+    /// <summary>As colunas que o login não lê, na ordem da tabela.</summary>
+    public IReadOnlyList<string> ColunasSemLeitura { get; init; } = [];
+
+    /// <summary>Se as duas dizem o mesmo: as marcas e as colunas sem leitura, na ordem.</summary>
+    /// <param name="outra">As outras permissões.</param>
+    /// <returns>Se são iguais.</returns>
+    public bool Igual(PermissoesTabelaEsperadas outra) =>
+        this with { ColunasSemLeitura = Array.Empty<string>() } == outra with { ColunasSemLeitura = Array.Empty<string>() }
+        && ColunasSemLeitura.SequenceEqual(outra.ColunasSemLeitura);
+
+    /// <summary>As permissões lidas, na forma da declaração.</summary>
+    /// <param name="tabela">As permissões lidas.</param>
+    /// <returns>A projeção.</returns>
+    public static PermissoesTabelaEsperadas De(PermissoesTabela tabela) => new(
+        tabela.PodeLer, tabela.PodeInserir, tabela.PodeGravarIdentidade, tabela.PodeEsvaziar, tabela.PodeReferenciar, tabela.PodeAlterarRestricoes, tabela.PodeDesligarTriggers,
+        tabela.LeituraFiltradaPorLinha, tabela.EscritaRestritaPorLinha)
+    {
+        ColunasSemLeitura = tabela.ColunasSemLeitura,
+    };
+
+    /// <inheritdoc/>
+    public override string ToString() =>
+        $"lê {Marcas.Texto(PodeLer)} (sem leitura [{string.Join(", ", ColunasSemLeitura)}]), insere {Marcas.Texto(PodeInserir)}, identidade {Marcas.Texto(PodeGravarIdentidade)}, "
+        + $"esvazia {Marcas.Texto(PodeEsvaziar)}, referencia {Marcas.Texto(PodeReferenciar)}, restrições {Marcas.Texto(PodeAlterarRestricoes)}, triggers {Marcas.Texto(PodeDesligarTriggers)}, "
+        + $"leitura por linha {Marcas.Texto(LeituraFiltradaPorLinha)}, escrita por linha {Marcas.Texto(EscritaRestritaPorLinha)}";
+}
+
+/// <summary>O transporte de uma conexão.</summary>
+/// <param name="Cifrado">Se é cifrada (nulo: sem resposta).</param>
+/// <param name="ServidorVerificado">Se o servidor foi verificado.</param>
+/// <param name="Local">Se o servidor está na própria máquina.</param>
+public sealed record TransporteEsperado(bool? Cifrado, bool? ServidorVerificado, bool Local)
+{
+    /// <summary>O transporte lido, na forma da declaração.</summary>
+    /// <param name="transporte">O transporte lido.</param>
+    /// <returns>A projeção; nula se o transporte é nulo.</returns>
+    public static TransporteEsperado? De(TransporteConexao? transporte) => transporte is null ? null : new(transporte.Cifrado, transporte.ServidorVerificado, transporte.Local);
+
+    /// <inheritdoc/>
+    public override string ToString() => $"cifrado {Marcas.Texto(Cifrado)}, servidor verificado {Marcas.Texto(ServidorVerificado)}, local {Marcas.Texto(Local)}";
+}
+
+/// <summary>Uma marca em texto: sim, não ou "?" (sem resposta).</summary>
+internal static class Marcas
+{
+    internal static string Texto(bool? marca) => marca switch { null => "?", true => "sim", false => "não" };
 }
 
 /// <summary>Uma chave de partição.</summary>

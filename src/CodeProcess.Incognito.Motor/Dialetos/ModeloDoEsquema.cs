@@ -111,6 +111,14 @@ public sealed class EsquemaBanco
     /// trata como o pior caso).
     /// </summary>
     public PropriedadesBanco? Propriedades { get; init; }
+
+    /// <summary>
+    /// As permissões do login que leu o esquema; nulo se o dialeto não informa (o <c>planejar</c> não aprova nada que
+    /// dependa de permissão antes da execução). Fica fora da comparação entre a origem e o destino: é a parte do esquema
+    /// que depende do login, fora as marcas medidas de uma colação, que saem nulas (o pior caso) quando o login não tem
+    /// acesso ao esquema dela.
+    /// </summary>
+    public AcessoLido? Acesso { get; init; }
 }
 
 /// <summary>Como uma tabela se relaciona com outras.</summary>
@@ -208,8 +216,9 @@ public sealed class TabelaEsquema
     public IReadOnlyList<ChaveEstrangeira> ChavesEstrangeiras { get => _chavesEstrangeiras; init => _chavesEstrangeiras = Lista.Copiar(value, nameof(ChavesEstrangeiras)); }
 
     /// <summary>
-    /// Se a tabela tem segurança por linha que filtraria a leitura (RLS ligado no PostgreSQL, política de segurança
-    /// no SQL Server): falha segura, a contagem de linhas não a detecta.
+    /// Se a tabela tem segurança por linha ligada (RLS no PostgreSQL, política de segurança no SQL Server): fato do esquema,
+    /// independente do login. Se ela vale para quem lê ou grava (o dono, o superusuário e quem a ignora podem escapar dela)
+    /// está em <see cref="EsquemaBanco.Acesso"/>. A contagem de linhas não detecta a leitura filtrada.
     /// </summary>
     public bool SegurancaDeLinha { get; init; }
 
@@ -534,7 +543,7 @@ public sealed class ObjetoResidual
     public bool? Populada { get; init; }
 }
 
-/// <summary>O banco, o servidor e a linhagem lidos de um banco.</summary>
+/// <summary>O banco, o servidor, a linhagem e o transporte lidos de uma conexão.</summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public sealed class IdentidadeLida
 {
@@ -576,6 +585,9 @@ public sealed class IdentidadeLida
             _linhagem = copia.AsReadOnly();
         }
     }
+
+    /// <summary>Como a conexão chega ao servidor; nulo se o dialeto não informa (o pior caso: em claro, remoto).</summary>
+    public TransporteConexao? Transporte { get; init; }
 }
 
 /// <summary>

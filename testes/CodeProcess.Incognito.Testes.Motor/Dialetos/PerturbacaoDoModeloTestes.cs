@@ -22,10 +22,19 @@ public sealed class PerturbacaoDoModeloTestes
         typeof(EsquemaBanco), typeof(TabelaEsquema), typeof(ColunaEsquema), typeof(ChaveEstrangeira), typeof(ChaveParticao), typeof(SequenceEsquema), typeof(ObjetoResidual),
         typeof(PropriedadesBanco), typeof(CodificacaoTexto), typeof(ColacaoEsquema), typeof(LimiteComprimento), typeof(FaixaInteira), typeof(ReferenciasDaExpressao),
         typeof(IndiceUnico), typeof(ElementoIndice), typeof(RestricaoCheck), typeof(RestricaoExclusao), typeof(TriggerEsquema),
+        typeof(AcessoLido), typeof(PermissoesBanco), typeof(PermissoesTabela), typeof(PermissoesResidual), typeof(PermissoesSequence),
     ];
 
+    // As permissões do login: conferidas pelo fato do acesso, não pelo inventário.
+    private static readonly Type[] _doAcesso = [typeof(AcessoLido), typeof(PermissoesBanco), typeof(PermissoesTabela), typeof(PermissoesResidual), typeof(PermissoesSequence)];
+
     // O que a falha precisa citar quando o objeto alterado não tem tabela nem outro dono com nome.
-    private static readonly Dictionary<Type, string> _marcadores = new() { [typeof(PropriedadesBanco)] = "Propriedades do banco" };
+    private static readonly Dictionary<Type, string> _marcadores = new()
+    {
+        [typeof(PropriedadesBanco)] = "Propriedades do banco",
+        [typeof(AcessoLido)] = "acesso do login",
+        [typeof(PermissoesBanco)] = "permissões do banco",
+    };
 
     private static readonly NullabilityInfoContext _anulabilidade = new();
 
@@ -41,14 +50,14 @@ public sealed class PerturbacaoDoModeloTestes
     [Fact]
     public void Todos_os_tipos_publicos_do_esquema_sao_perturbados()
     {
-        // Os tipos com propriedades init do contrato (também aninhados, structs e em sub-namespaces), fora a identidade
-        // (que não é esquema) e o próprio contrato.
+        // Os tipos com propriedades init do contrato (também aninhados, structs e em sub-namespaces), fora a identidade e o
+        // transporte dela (que não são esquema, e têm fato e defeitos próprios) e o próprio contrato.
         var espaco = typeof(EsquemaBanco).Namespace!;
         var doModelo = typeof(EsquemaBanco).Assembly.GetTypes()
             .Where(tipo => (tipo.IsPublic || tipo.IsNestedPublic) && !tipo.IsEnum && !tipo.IsInterface
                 && (tipo.Namespace == espaco || tipo.Namespace?.StartsWith(espaco + ".", StringComparison.Ordinal) == true)
                 && Alteraveis(tipo).Any())
-            .Where(tipo => tipo != typeof(IdentidadeLida))
+            .Where(tipo => tipo != typeof(IdentidadeLida) && tipo != typeof(TransporteConexao))
             .Select(tipo => tipo.Name)
             .Order(StringComparer.Ordinal);
 
@@ -60,8 +69,8 @@ public sealed class PerturbacaoDoModeloTestes
     {
         // O controle da reconstrução: sem alteração, a cópia diz o mesmo que o original e não derruba nada (senão toda
         // alteração pareceria pega).
-        var original = await LerAsync();
-        var falhas = await SuiteDeConformidadeTestes.RodarAsync(new FixtureFalsa(completo: true, Defeito.Nenhum, SemAlteracao));
+        var (original, _) = await LerAsync();
+        var falhas = await SuiteDeConformidadeTestes.RodarAsync(new FixtureFalsa(completo: true, Defeito.Nenhum, (esquema, _) => SemAlteracao(esquema)));
 
         Assert.Equal(DespejoDoModelo.Texto(original), DespejoDoModelo.Texto(SemAlteracao(original)));
         Assert.True(falhas.Count == 0, string.Join("\n", falhas.Select(falha => $"{falha.Key}: {falha.Value.Message}")));
@@ -73,12 +82,16 @@ public sealed class PerturbacaoDoModeloTestes
     {
         var classe = _tipos.Single(candidato => candidato.Name == tipo);
         var alvo = classe.GetProperty(propriedade)!;
-        var original = await LerAsync();
+        var (original, doDestino) = await LerAsync();
         var ocorrencias = Percorrer(original).Count(item => item.Objeto.GetType() == classe && item.Caminho == caminho);
         var tentadas = new List<string>();
 
+        // O fato que precisa pegar: o das permissões, para os objetos delas; o inventário, para os do esquema.
+        var fatoExigido = _doAcesso.Contains(classe) ? nameof(SuiteFalsa.O_acesso_e_lido_em_cada_lado) : nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas);
+
         // Tenta cada objeto do tipo, na ordem do esquema, até um cuja alteração algum fato pegue. A alteração é calculada
-        // antes de rodar a suíte: a que não cita nada (lista curta demais para reordenar) pula o objeto sem rodá-la.
+        // antes de rodar a suíte, nos dois lados (cada um com as permissões dele): a que não cita nada (lista curta demais
+        // para reordenar) pula o objeto sem rodá-la.
         for (var indice = 0; indice < ocorrencias; indice++)
         {
             var (perturbado, citado) = Alterar(original, classe, caminho, indice, alvo, reordenar);
@@ -87,16 +100,19 @@ public sealed class PerturbacaoDoModeloTestes
                 continue;
             }
 
+            var destinoPerturbado = Alterar(doDestino, classe, caminho, indice, alvo, reordenar).Esquema;
+
             // A alteração aparece no despejo que a leitura estável e o destino usam.
             Assert.True(
                 DespejoDoModelo.Texto(perturbado) != DespejoDoModelo.Texto(original),
                 $"A alteração de {tipo}.{propriedade} (por {caminho}) em {citado} não muda o despejo do modelo.");
-            // A alteração precisa ser pega pelo inventário, que compara o valor: a consistência só pega o valor que quebra uma
-            // regra, e um valor errado que a cumpra passaria. Fora das tabelas, pelo fato do próprio objeto.
-            var falhas = await SuiteDeConformidadeTestes.RodarAsync(new FixtureFalsa(completo: true, Defeito.Nenhum, _ => perturbado));
-            var exigeInventario = !_marcadores.ContainsValue(citado);
+            // A alteração precisa ser pega pelo inventário (ou pelo fato das permissões), que compara o valor: a consistência só
+            // pega o valor que quebra uma regra, e um valor errado que a cumpra passaria. Fora das tabelas e das permissões de
+            // um objeto, pelo fato do próprio objeto.
+            var falhas = await SuiteDeConformidadeTestes.RodarAsync(new FixtureFalsa(completo: true, Defeito.Nenhum, (_, destino) => destino ? destinoPerturbado : perturbado));
+            var exigeFato = !_marcadores.ContainsValue(citado);
             if (falhas.Any(falha => falha.Value is IAssertionException && Cita(falha.Value.Message, citado)
-                && (!exigeInventario || falha.Key == nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas))))
+                && (!exigeFato || falha.Key == fatoExigido)))
             {
                 return;
             }
@@ -114,7 +130,7 @@ public sealed class PerturbacaoDoModeloTestes
         // Um valor que o init recusa (fora da faixa, nulo num obrigatório) faria o laço acima falhar por exceção, longe do
         // motivo; um citado vazio casaria com qualquer mensagem; e um campo nunca preenchido no falso nunca seria alterado.
         var classe = _tipos.Single(candidato => candidato.Name == tipo);
-        var original = await LerAsync();
+        var (original, _) = await LerAsync();
         var ocorrencias = Percorrer(original).Count(item => item.Objeto.GetType() == classe && item.Caminho == caminho);
         var citados = new List<string>();
 
@@ -138,8 +154,9 @@ public sealed class PerturbacaoDoModeloTestes
     private static bool Cita(string mensagem, string citado) =>
         Regex.IsMatch(mensagem, $@"(?<![\w.]){Regex.Escape(citado)}(?!\w)", RegexOptions.None, TimeSpan.FromSeconds(1));
 
-    // As listas cuja ordem é do contrato: nomes (chave primária, colunas das chaves, outras mães, dependências), as colunas
-    // da tabela, os elementos de um índice (a ordem da chave) e os objetos da tabela (ordem ordinal de nome).
+    // As listas cuja ordem é do contrato: nomes (chave primária, colunas das chaves, outras mães, dependências, colunas sem
+    // leitura), as colunas da tabela, os elementos de um índice (a ordem da chave), os objetos da tabela (ordem ordinal de
+    // nome) e as permissões (a ordem do esquema).
     private static bool Reordenavel(PropertyInfo propriedade) =>
         propriedade.PropertyType == typeof(IReadOnlyList<string>)
         || propriedade.PropertyType == typeof(IReadOnlyList<NomeObjeto>)
@@ -148,13 +165,17 @@ public sealed class PerturbacaoDoModeloTestes
         || propriedade.PropertyType == typeof(IReadOnlyList<IndiceUnico>)
         || propriedade.PropertyType == typeof(IReadOnlyList<RestricaoCheck>)
         || propriedade.PropertyType == typeof(IReadOnlyList<RestricaoExclusao>)
-        || propriedade.PropertyType == typeof(IReadOnlyList<TriggerEsquema>);
+        || propriedade.PropertyType == typeof(IReadOnlyList<TriggerEsquema>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<PermissoesTabela>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<PermissoesResidual>)
+        || propriedade.PropertyType == typeof(IReadOnlyList<PermissoesSequence>);
 
-    private static async Task<EsquemaBanco> LerAsync()
+    // O esquema lido da origem e o do destino (o mesmo, com as permissões de outro login).
+    private static async Task<(EsquemaBanco Origem, EsquemaBanco Destino)> LerAsync()
     {
         var fixture = new FixtureFalsa(completo: true, Defeito.Nenhum);
         await using var par = await fixture.CriarParAsync(CancellationToken.None);
-        return await par.Origem.Esquema.LerAsync(CancellationToken.None);
+        return (await par.Origem.Esquema.LerAsync(CancellationToken.None), await par.Destino.Esquema.LerAsync(CancellationToken.None));
     }
 
     private static IEnumerable<PropertyInfo> Alteraveis(Type tipo) =>
@@ -179,6 +200,9 @@ public sealed class PerturbacaoDoModeloTestes
             SequenceEsquema sequence => sequence.Nome.ToString(),
             ObjetoResidual residual => residual.Nome.ToString(),
             ChaveEstrangeira chave => chave.Nome,
+            PermissoesTabela permissoes => permissoes.Tabela.ToString(),
+            PermissoesResidual permissoes => permissoes.Nome.ToString(),
+            PermissoesSequence permissoes => permissoes.Nome.ToString(),
             _ when _marcadores.TryGetValue(objeto.GetType(), out var marcador) => marcador,
             _ => dono,
         };

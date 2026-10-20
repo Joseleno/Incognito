@@ -106,6 +106,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             new(Coluna("textos", "junto"), GeracaoColuna.Armazenada),
             new(Coluna("numeros", "constante"), GeracaoColuna.Armazenada),
             new(Coluna("indexada", "minusculo"), GeracaoColuna.Armazenada),
+            new(Coluna("alheia_colunas", "dobro"), GeracaoColuna.Armazenada),
         ];
         return new()
         {
@@ -121,13 +122,77 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             ColunasGeradas = Caso.Presente<IReadOnlyList<ColunaGeradaEsperada>>(geradas),
             ChaveEstrangeiraComposta = new(Nome("itens"), "fk_itens_pedidos", ["loja", "pedido"], Nome("pedidos"), ["loja", "id"]),
             Temporal = Caso.Inexistente<TemporalEsperada>("o PostgreSQL não tem tabela temporal"),
-            SegurancaDeLinha = Caso.Presente(Nome("segredos")),
+            SegurancaDeLinha = Caso.Presente<IReadOnlyList<NomeObjeto>>([Nome("forcada"), Nome("repartida_1"), Nome("segredos")]),
             Mascara = Caso.Inexistente<ReferenciaColuna>("o PostgreSQL não tem máscara dinâmica"),
             NomesExatos = [Nome("Cliente"), Nome("cliente"), Nome("select"), Nome("nota fiscal")],
             Citacoes = [new("Cliente", "\"Cliente\""), new("a\"b", "\"a\"\"b\""), new("nota fiscal", "\"nota fiscal\"")],
             ObjetoDoIncognito = new NomeObjeto("incognito", "execucao"),
+            Acesso = Caso.Presente(new AcessoEsperado(AcessoDoLeitor(), AcessoDoDono(versao))),
+
+            // Pelo loopback com o TLS só preferido, num servidor sem TLS: em claro.
+            Transporte = Caso.Presente(new TransporteEsperado(Cifrado: false, ServidorVerificado: false, Local: true)),
         };
     }
+
+    // O leitor da origem lê tudo do esquema loja, menos uma coluna de uma tabela e a tabela sem colunas; não lê fora dele (sem
+    // USAGE ou sem SELECT) e
+    // tem a leitura filtrada onde há segurança por linha. Não grava, não limpa, não ajusta e não marca o banco.
+    private static LadoDoAcesso AcessoDoLeitor()
+    {
+        var porLinha = Leitor(podeLer: true) with { LeituraFiltradaPorLinha = true, EscritaRestritaPorLinha = true };
+        return new()
+        {
+            Banco = new(PodeMarcarBanco: false, PodeCriarEsquema: false),
+            Tabelas = Leitor(podeLer: true),
+            ExcecoesDasTabelas = new Dictionary<NomeObjeto, PermissoesTabelaEsperadas>
+            {
+                [Nome("parcial")] = Leitor(podeLer: false) with { ColunasSemLeitura = ["nota"] },
+                [Nome("vazia")] = Leitor(podeLer: false),
+                [new NomeObjeto("restrito", "fechada")] = Leitor(podeLer: false),
+                [new NomeObjeto("alheio", "do_dono")] = Leitor(podeLer: false) with { ColunasSemLeitura = ["id"] },
+                [new NomeObjeto("pgdados", "clientes")] = Leitor(podeLer: false) with { ColunasSemLeitura = ["id"] },
+                [Nome("segredos")] = porLinha,
+                [Nome("forcada")] = porLinha,
+                [Nome("repartida_1")] = porLinha,
+            },
+            PodeLimpar = false,
+            PodeAjustar = false,
+        };
+    }
+
+    // O dono do destino pode tudo no que é dele, fora a segurança por linha forçada; nas tabelas do terceiro papel e na da
+    // extensão (que continua do administrador), só o que lhe foi concedido; e nada na tabela dele num esquema sem USAGE.
+    private static LadoDoAcesso AcessoDoDono(int versao)
+    {
+        var nada = new PermissoesTabelaEsperadas(false, false, false, false, false, false, false, false, false);
+        return new()
+        {
+            Banco = new(PodeMarcarBanco: true, PodeCriarEsquema: true),
+            Tabelas = new(true, true, true, true, true, true, true, false, false),
+            ExcecoesDasTabelas = new Dictionary<NomeObjeto, PermissoesTabelaEsperadas>
+            {
+                [Nome("alheia")] = nada with { PodeEsvaziar = true, PodeReferenciar = true, ColunasSemLeitura = ["id"] },
+                [Nome("alheia_colunas")] = nada with { PodeInserir = true, PodeGravarIdentidade = true, PodeReferenciar = true, ColunasSemLeitura = ["id", "nota", "dobro"] },
+                [Nome("alheia_insercao")] = nada with { PodeInserir = true, PodeGravarIdentidade = true, ColunasSemLeitura = ["id"] },
+                [Nome("vazia_alheia")] = nada with { PodeInserir = true, PodeGravarIdentidade = true, PodeReferenciar = true },
+                [new NomeObjeto("alheio", "do_dono")] = nada,
+                [Nome("da_extensao")] = nada with { ColunasSemLeitura = ["id"] },
+                [Nome("forcada")] = new(true, true, true, true, true, true, true, true, true),
+            },
+            PodeLimpar = true,
+            ExcecoesDosResiduais = new Dictionary<NomeObjeto, bool?>
+            {
+                [Nome("resumo_alheio")] = false,
+                [Nome("resumo_mantido")] = versao >= 170000,
+                [new NomeObjeto("pg_catalog", "pg_largeobject")] = false,
+            },
+            PodeAjustar = true,
+            ExcecoesDasSequences = new Dictionary<NomeObjeto, bool?> { [Nome("seq_alheia")] = false, [new NomeObjeto("alheio", "seq_do_dono")] = false },
+        };
+    }
+
+    // As permissões de quem só lê (ou nem isso).
+    private static PermissoesTabelaEsperadas Leitor(bool podeLer) => new(podeLer, false, false, false, false, false, false, false, false);
 
     // Escrito à mão a partir do esquema-de-conformidade.sql, nunca copiado da saída do leitor: a classe de cada coluna pela
     // matriz de tipos da especificação, a semântica pelo DDL. O tipo nativo é o do format_type com o caminho de busca só no
@@ -456,6 +521,22 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             },
             .. ObjetosDaTabela(versao),
             new() { Nome = Nome("alheia"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"], IndicesUnicos = [Primario("alheia_pkey", "id")] },
+
+            // As permissões: as tabelas de cada caso de leitor e de dono.
+            new() { Nome = new NomeObjeto("restrito", "fechada"), Colunas = [Col("id", Grande, suportadoInteiro)] },
+            new() { Nome = Nome("parcial"), Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("nota", Texto, suportadoTexto)] },
+            new() { Nome = Nome("forcada"), SegurancaDeLinha = true, Colunas = [Col("id", Grande, suportadoInteiro)] },
+            new() { Nome = Nome("repartida"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["id"]), Colunas = [Col("id", Inteiro, suportadoInteiro)] },
+            new() { Nome = Nome("repartida_1"), Tipo = TipoTabela.Particao, Pai = Nome("repartida"), SegurancaDeLinha = true, Colunas = [Col("id", Inteiro, suportadoInteiro)] },
+            new() { Nome = new NomeObjeto("alheio", "do_dono"), Colunas = [Col("id", Grande, suportadoInteiro)] },
+            new() { Nome = Nome("alheia_insercao"), Colunas = [Col("id", Grande, suportadoInteiro)] },
+            new() { Nome = Nome("vazia"), Colunas = [] },
+            new() { Nome = Nome("vazia_alheia"), Colunas = [] },
+            new()
+            {
+                Nome = Nome("alheia_colunas"),
+                Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("nota", Texto, suportadoTexto), Col("dobro", Grande, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new(["id"]))],
+            },
             new()
             {
                 Nome = new NomeObjeto("pgdados", "clientes"),
@@ -474,11 +555,14 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             new(Nome("pedidos_9_numero_seq"), [Coluna("pedidos_9", "numero")]),
             new(Nome("seq_avulsa"), []),
             new(Nome("seq_protocolo"), [Coluna("protocolos", "base"), Coluna("protocolos", "numero")]),
+            new(Nome("seq_alheia"), []),
+            new(new NomeObjeto("alheio", "seq_do_dono"), []),
         ];
         ResidualInventariado[] residuais =
         [
             Visao("resumo_vendas"),
             Visao("resumo_alheio"),
+            Visao("resumo_mantido"),
             Visao("mv_base"),
             Visao("mv_derivada") with { DependeDe = [Nome("mv_base"), Nome("resumo_vendas")] },
             Visao("mv_vazia", populada: false),

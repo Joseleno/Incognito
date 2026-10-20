@@ -503,10 +503,58 @@ COMMENT ON ROLE incognito_outro IS 'zqSENTINELAqz-papel';
 CREATE RULE regra_sentinela AS ON INSERT TO loja.tipos WHERE NEW.texto = 'zqSENTINELAqz-regra' DO INSTEAD NOTHING;
 CREATE PUBLICATION publicacao_sentinela FOR TABLE loja.tipos WHERE (texto <> 'zqSENTINELAqz-publicacao') WITH (publish = 'insert');
 
--- O leitor da origem: só leitura, nunca dono; com USAGE no esquema das colações, para medi-las.
+-- As permissões de cada login sobre o mesmo esquema: as do leitor valem na origem; as do dono, no destino, onde a posse passa
+-- a ele o que é do administrador. Para o leitor: SELECT numa tabela de um esquema sem USAGE (não lê), SELECT numa coluna só
+-- e nenhum numa tabela sem colunas (logo abaixo), segurança por linha forçada e sem política (vale também para o dono) e só
+-- numa partição (não no pai). Para o dono, uma tabela e uma sequence dele num esquema do terceiro papel sem USAGE (não pode
+-- nada nelas) e, em objetos do terceiro papel: TRUNCATE e REFERENCES numa tabela (sem poder alterá-la), INSERT e REFERENCES
+-- em todas as colunas de outra (insere sem o privilégio na tabela; a gerada fica de fora da carga), INSERT na tabela de uma
+-- terceira e numa sem colunas (com REFERENCES; nela só o privilégio na tabela conta), MAINTAIN numa materialized view (do
+-- 17 em diante, limpa sem ser dono) e uma sequence (não a ajusta).
+CREATE SCHEMA restrito;
+CREATE TABLE restrito.fechada (id bigint);
+GRANT SELECT ON restrito.fechada TO incognito_leitor;
+CREATE TABLE loja.parcial (id bigint, nota text);
+CREATE TABLE loja.forcada (id bigint);
+ALTER TABLE loja.forcada ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loja.forcada FORCE ROW LEVEL SECURITY;
+CREATE TABLE loja.repartida (id integer) PARTITION BY LIST (id);
+CREATE TABLE loja.repartida_1 PARTITION OF loja.repartida FOR VALUES IN (1);
+ALTER TABLE loja.repartida_1 ENABLE ROW LEVEL SECURITY;
+CREATE SCHEMA alheio AUTHORIZATION incognito_outro;
+CREATE TABLE alheio.do_dono (id bigint);
+CREATE SEQUENCE alheio.seq_do_dono;
+GRANT TRUNCATE, REFERENCES ON loja.alheia TO incognito_dono;
+CREATE TABLE loja.alheia_colunas (id bigint, nota text, dobro bigint GENERATED ALWAYS AS (id * 2) STORED);
+ALTER TABLE loja.alheia_colunas OWNER TO incognito_outro;
+GRANT INSERT (id, nota), REFERENCES (id, nota, dobro) ON loja.alheia_colunas TO incognito_dono;
+CREATE TABLE loja.alheia_insercao (id bigint);
+ALTER TABLE loja.alheia_insercao OWNER TO incognito_outro;
+GRANT INSERT ON loja.alheia_insercao TO incognito_dono;
+CREATE TABLE loja.vazia ();
+CREATE TABLE loja.vazia_alheia ();
+ALTER TABLE loja.vazia_alheia OWNER TO incognito_outro;
+GRANT INSERT, REFERENCES ON loja.vazia_alheia TO incognito_dono;
+CREATE MATERIALIZED VIEW loja.resumo_mantido AS SELECT count(*) AS total FROM loja.alheia;
+ALTER MATERIALIZED VIEW loja.resumo_mantido OWNER TO incognito_outro;
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::integer >= 170000 THEN
+        EXECUTE 'GRANT MAINTAIN ON loja.resumo_mantido TO incognito_dono';
+    END IF;
+END
+$$;
+CREATE SEQUENCE loja.seq_alheia;
+ALTER SEQUENCE loja.seq_alheia OWNER TO incognito_outro;
+
+-- O leitor da origem: só leitura, nunca dono; com USAGE no esquema das colações, para medi-las. Na tabela de cima, só uma
+-- coluna, e nenhuma na tabela sem colunas; e uma sequence que ele lê e não ajusta.
 GRANT USAGE ON SCHEMA loja TO incognito_leitor;
 GRANT USAGE ON SCHEMA "Idioma""X" TO incognito_leitor;
 GRANT SELECT ON ALL TABLES IN SCHEMA loja TO incognito_leitor;
+REVOKE SELECT ON loja.parcial, loja.vazia FROM incognito_leitor;
+GRANT SELECT (id) ON loja.parcial TO incognito_leitor;
+GRANT USAGE, SELECT ON SEQUENCE loja.seq_avulsa TO incognito_leitor;
 
 -- Linhas com o sentinela e a estatística delas (pg_stats e pg_statistic_ext_data guardam valores reais das colunas: o
 -- texto repetido vai para os valores mais comuns e os curtos distintos, para o histograma; com uma linha só, nenhum dos

@@ -122,6 +122,23 @@ public enum Defeito
     DependenciaDeObjetosGrandes,
     ObjetosGrandesComMarcas,
 
+    // As permissões do login e o transporte: o fato de cada um.
+    AcessoAusente,
+    AcessoDoLeitorNoDestino,
+    PermissaoDeTabelaInexistente,
+    PodeLerComColunaSemLeitura,
+    ColunaSemLeituraInexistente,
+    ColunasSemLeituraForaDeOrdem,
+    ExcecaoDeAcessoInexistente,
+    TransporteAusente,
+    TransporteOtimista,
+    TransporteVerificadoSemCifra,
+    TransporteLocalTrocado,
+    TransporteVerificadoTrocado,
+    TransporteOtimistaNoDestino,
+    PermissaoDeTabelaRepetida,
+    SegurancaDeLinhaVazia,
+
     // A classe concreta da suíte aninhada em outra, ou aberta.
     SuiteAninhada,
     SuiteAberta,
@@ -363,6 +380,91 @@ internal static class BancoFalso
         }
         : null;
 
+    // As permissões de cada lado: o leitor da origem só lê (menos as colunas de uma tabela) e tem a leitura filtrada por linha
+    // numa; o dono do destino pode tudo, menos numa tabela e num objeto de outro dono. Toda marca preenchida e listas de dois
+    // itens, para a perturbação ter o que alterar e reordenar.
+    internal static LadoDoAcesso Lado(bool destino, Defeito defeito = Defeito.Nenhum) => destino
+        ? new()
+        {
+            Banco = new(PodeMarcarBanco: true, PodeCriarEsquema: true),
+            Tabelas = new(true, true, true, true, true, true, true, false, false),
+            ExcecoesDasTabelas = new Dictionary<NomeObjeto, PermissoesTabelaEsperadas>
+            {
+                [Nome("externa")] = new(false, false, false, false, false, false, false, false, false) { ColunasSemLeitura = ["linha"] },
+            },
+            PodeLimpar = true,
+            ExcecoesDosResiduais = new Dictionary<NomeObjeto, bool?> { [Nome("mv_clientes")] = false },
+            PodeAjustar = true,
+            ExcecoesDasSequences = new Dictionary<NomeObjeto, bool?> { [Nome("contadores_sempre_seq")] = false, [Nome("seq_avulsa")] = false },
+        }
+        : new()
+        {
+            Banco = new(PodeMarcarBanco: false, PodeCriarEsquema: false),
+            Tabelas = new(true, false, false, false, false, false, false, false, false),
+            ExcecoesDasTabelas = ExcecoesDaOrigem(defeito),
+            PodeLimpar = false,
+            PodeAjustar = false,
+        };
+
+    // Com a exceção que a fixture declara para uma tabela que o banco não tem.
+    private static Dictionary<NomeObjeto, PermissoesTabelaEsperadas> ExcecoesDaOrigem(Defeito defeito)
+    {
+        var excecoes = new Dictionary<NomeObjeto, PermissoesTabelaEsperadas>
+        {
+            [Nome("canonicos")] = new(false, false, false, false, false, false, false, false, false) { ColunasSemLeitura = ["valor", "dia"] },
+            [Nome("segredos")] = new(true, false, false, false, false, false, false, true, true),
+        };
+        if (defeito == Defeito.ExcecaoDeAcessoInexistente)
+        {
+            excecoes[Nome("fantasma")] = new(true, false, false, false, false, false, false, false, false);
+        }
+
+        return excecoes;
+    }
+
+    /// <summary>As permissões de um lado sobre o esquema lido, uma por objeto e na ordem dele.</summary>
+    internal static AcessoLido Acesso(LadoDoAcesso lado, IEnumerable<TabelaEsquema> tabelas, IEnumerable<ObjetoResidual> residuais, IEnumerable<SequenceEsquema> sequences) => new()
+    {
+        Banco = new() { PodeMarcarBanco = lado.Banco.PodeMarcarBanco, PodeCriarEsquema = lado.Banco.PodeCriarEsquema },
+        Tabelas =
+        [
+            .. tabelas.Select(tabela => (tabela.Nome, Permissoes: lado.ExcecoesDasTabelas.GetValueOrDefault(tabela.Nome) ?? lado.Tabelas)).Select(par => new PermissoesTabela
+            {
+                Tabela = par.Nome,
+                PodeLer = par.Permissoes.PodeLer,
+                ColunasSemLeitura = par.Permissoes.ColunasSemLeitura,
+                PodeInserir = par.Permissoes.PodeInserir,
+                PodeGravarIdentidade = par.Permissoes.PodeGravarIdentidade,
+                PodeEsvaziar = par.Permissoes.PodeEsvaziar,
+                PodeReferenciar = par.Permissoes.PodeReferenciar,
+                PodeAlterarRestricoes = par.Permissoes.PodeAlterarRestricoes,
+                PodeDesligarTriggers = par.Permissoes.PodeDesligarTriggers,
+                LeituraFiltradaPorLinha = par.Permissoes.LeituraFiltradaPorLinha,
+                EscritaRestritaPorLinha = par.Permissoes.EscritaRestritaPorLinha,
+            }),
+        ],
+        Residuais =
+        [
+            .. residuais.Select(residual => new PermissoesResidual
+            {
+                Nome = residual.Nome,
+                Tipo = residual.Tipo,
+                PodeLimpar = lado.ExcecoesDosResiduais.TryGetValue(residual.Nome, out var limpar) ? limpar : lado.PodeLimpar,
+            }),
+        ],
+        Sequences =
+        [
+            .. sequences.Select(sequence => new PermissoesSequence
+            {
+                Nome = sequence.Nome,
+                PodeAjustar = lado.ExcecoesDasSequences.TryGetValue(sequence.Nome, out var ajustar) ? ajustar : lado.PodeAjustar,
+            }),
+        ],
+    };
+
+    /// <summary>O transporte das duas conexões do falso: em claro, sem verificação, remoto.</summary>
+    internal static TransporteConexao Transporte() => new() { Cifrado = false, ServidorVerificado = false, Local = false };
+
     /// <summary>O que a fixture declara sobre o banco.</summary>
     internal static EsquemaDeConformidade Esperado(bool completo, Defeito defeito) => new()
     {
@@ -393,13 +495,21 @@ internal static class BancoFalso
         Temporal = completo
             ? Caso.Presente(new TemporalEsperada(Nome("contratos"), Nome("contratos_historico")))
             : Caso.Inexistente<TemporalEsperada>("banco falso sem temporais"),
-        SegurancaDeLinha = completo ? Caso.Presente(Nome("segredos")) : Caso.Inexistente<NomeObjeto>("banco falso sem segurança por linha"),
+        SegurancaDeLinha = completo
+            ? Caso.Presente<IReadOnlyList<NomeObjeto>>(defeito == Defeito.SegurancaDeLinhaVazia ? [] : [Nome("segredos")])
+            : Caso.Inexistente<IReadOnlyList<NomeObjeto>>("banco falso sem segurança por linha"),
         Mascara = completo ? Caso.Presente(Coluna("contatos", "email")) : Caso.Inexistente<ReferenciaColuna>("banco falso sem máscara"),
 
         // Um caso sem declaração: o 'required' não impede null!.
         NomesExatos = defeito == Defeito.CasoSemDeclaracao ? null! : [Nome("Cliente"), Nome("cliente"), Nome("select"), Nome("nota fiscal")],
         Citacoes = [new("Cliente", "\"Cliente\""), new("a\"b", "\"a\"\"b\"")],
         ObjetoDoIncognito = defeito == Defeito.IncognitoForaDoEsquema ? Nome("execucao") : new NomeObjeto("incognito", "execucao"),
+        Acesso = completo
+            ? Caso.Presente(new AcessoEsperado(Lado(destino: false, defeito), Lado(destino: true)))
+            : Caso.Inexistente<AcessoEsperado>("banco falso sem permissões"),
+        Transporte = completo
+            ? Caso.Presente(TransporteEsperado.De(Transporte())!)
+            : Caso.Inexistente<TransporteEsperado>("banco falso sem transporte"),
     };
 
     // Os valores da matriz que o banco sem recursos não tem; com a matriz descoberta, falta um motivo.
@@ -552,33 +662,35 @@ internal static class BancoFalso
 }
 
 /// <summary>O dialeto falso: lê o banco em memória e aplica o defeito pedido e a perturbação, se há.</summary>
-internal sealed class ProvedorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, EsquemaBanco>? perturbar, bool privilegiado = false) : ProvedorDialeto
+// A perturbação recebe o esquema lido e se é o destino.
+internal sealed class ProvedorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, bool, EsquemaBanco>? perturbar, bool privilegiado = false) : ProvedorDialeto
 {
     public override string Nome => "falso";
 
     public override Task<DialetoOrigem> ConectarOrigemAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: false, privilegiado), defeito, privilegiado));
+        Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: false, privilegiado), completo, defeito, privilegiado));
 
     public override Task<DialetoDestino> ConectarDestinoAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: true, privilegiado), defeito, privilegiado));
+        Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: true, privilegiado), completo, defeito, privilegiado));
 }
 
-internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, Defeito defeito, bool privilegiado = false) : DialetoOrigem
+internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoOrigem
 {
     public override LeitorEsquema Esquema { get; } = leitor;
 
     // Só no par comum: o sentinela, por extenso, na identidade da origem.
-    public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, defeito, vaza: defeito == Defeito.SentinelaNaIdentidadeDaOrigem && !privilegiado);
+    public override IdentidadeBanco Identidade { get; } =
+        new IdentidadeFalsa(banco, completo, defeito, vaza: defeito == Defeito.SentinelaNaIdentidadeDaOrigem && !privilegiado, origem: true);
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape);
 }
 
 // O destino da suíte tem o mesmo esquema da origem, lido pelo dono.
-internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, Defeito defeito, bool privilegiado = false) : DialetoDestino
+internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoDestino
 {
     public override LeitorEsquema Esquema { get; } = leitor;
 
-    public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, defeito, vaza: false);
+    public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, completo, defeito, vaza: false, origem: false);
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape or Defeito.CitacaoErradaNoDestino);
 
@@ -588,7 +700,7 @@ internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, Defeito d
         : base.ToString()!;
 }
 
-internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, EsquemaBanco>? perturbar, bool destino, bool privilegiado) : LeitorEsquema
+internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, bool, EsquemaBanco>? perturbar, bool destino, bool privilegiado) : LeitorEsquema
 {
     private int _leituras;
 
@@ -619,8 +731,40 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
             tabelas.Reverse();
         }
 
-        var esquema = new EsquemaBanco { Tabelas = tabelas, Sequences = sequences, ObjetosResiduais = residuais, Propriedades = propriedades };
-        return Task.FromResult(perturbar is null ? esquema : perturbar(esquema));
+        var esquema = new EsquemaBanco { Tabelas = tabelas, Sequences = sequences, ObjetosResiduais = residuais, Propriedades = propriedades, Acesso = Acesso(comRecursos, tabelas, residuais, sequences) };
+        return Task.FromResult(perturbar is null ? esquema : perturbar(esquema, destino));
+    }
+
+    // As permissões do lado sobre o esquema lido, com os defeitos delas (só na origem, fora o do destino).
+    private AcessoLido? Acesso(bool comRecursos, List<TabelaEsquema> tabelas, List<ObjetoResidual> residuais, List<SequenceEsquema> sequences)
+    {
+        if (!comRecursos || (defeito == Defeito.AcessoAusente && !destino))
+        {
+            return null;
+        }
+
+        var acesso = BancoFalso.Acesso(BancoFalso.Lado(destino && defeito != Defeito.AcessoDoLeitorNoDestino), tabelas, residuais, sequences);
+        if (destino)
+        {
+            return acesso;
+        }
+
+        PermissoesTabela Canonicos(params (string Propriedade, object? Valor)[] trocas) =>
+            BancoFalso.Clonar(acesso.Tabelas.Single(permissoes => permissoes.Tabela.Equals(BancoFalso.Nome("canonicos"))), trocas);
+        var trocada = defeito switch
+        {
+            Defeito.PodeLerComColunaSemLeitura => Canonicos((nameof(PermissoesTabela.PodeLer), true)),
+            Defeito.ColunaSemLeituraInexistente => Canonicos((nameof(PermissoesTabela.ColunasSemLeitura), (string[])["valor", "fantasma"])),
+            Defeito.ColunasSemLeituraForaDeOrdem => Canonicos((nameof(PermissoesTabela.ColunasSemLeitura), (string[])["dia", "valor"])),
+            _ => null,
+        };
+        return defeito switch
+        {
+            _ when trocada is not null => BancoFalso.Clonar(acesso, (nameof(AcessoLido.Tabelas), acesso.Tabelas.Select(permissoes => permissoes.Tabela.Equals(trocada.Tabela) ? trocada : permissoes).ToArray())),
+            Defeito.PermissaoDeTabelaInexistente => BancoFalso.Clonar(acesso, (nameof(AcessoLido.Tabelas), acesso.Tabelas.Append(new PermissoesTabela { Tabela = BancoFalso.Nome("fantasma") }).ToArray())),
+            Defeito.PermissaoDeTabelaRepetida => BancoFalso.Clonar(acesso, (nameof(AcessoLido.Tabelas), acesso.Tabelas.Append(Canonicos()).ToArray())),
+            _ => acesso,
+        };
     }
 
     private void Aplicar(List<TabelaEsquema> tabelas, List<SequenceEsquema> sequences, List<ObjetoResidual> residuais, ref PropriedadesBanco? propriedades)
@@ -922,7 +1066,7 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
         Trocar(tabelas, tabela, lida => BancoFalso.Clonar(lida, (nameof(TabelaEsquema.ChavesEstrangeiras), lida.ChavesEstrangeiras.SelectMany(trocar).ToArray())));
 }
 
-internal sealed class IdentidadeFalsa(string banco, Defeito defeito, bool vaza) : IdentidadeBanco
+internal sealed class IdentidadeFalsa(string banco, bool completo, Defeito defeito, bool vaza, bool origem) : IdentidadeBanco
 {
     private int _leituras;
 
@@ -934,7 +1078,33 @@ internal sealed class IdentidadeFalsa(string banco, Defeito defeito, bool vaza) 
             Banco = defeito == Defeito.BancoErrado ? "outro-banco" : banco,
             Servidor = defeito == Defeito.IdentidadeInstavel ? $"servidor-{_leituras}" : vaza ? "servidor-" + BancoFalso.SentinelaCurto : "servidor-falso",
             Linhagem = defeito == Defeito.LinhagemVazia ? new Dictionary<string, string>() : new Dictionary<string, string> { ["identificador"] = "7" },
+            Transporte = Transporte(),
         });
+    }
+
+    // O transporte do falso com os defeitos dele, só na origem.
+    private TransporteConexao? Transporte()
+    {
+        if (!completo && defeito != Defeito.InventaRecursos)
+        {
+            return null;
+        }
+
+        var transporte = BancoFalso.Transporte();
+        if (!origem)
+        {
+            return defeito == Defeito.TransporteOtimistaNoDestino ? BancoFalso.Clonar(transporte, (nameof(TransporteConexao.Cifrado), true)) : transporte;
+        }
+
+        return defeito switch
+        {
+            Defeito.TransporteAusente => null,
+            Defeito.TransporteOtimista => BancoFalso.Clonar(transporte, (nameof(TransporteConexao.Cifrado), true)),
+            Defeito.TransporteVerificadoSemCifra => BancoFalso.Clonar(transporte, (nameof(TransporteConexao.ServidorVerificado), true), (nameof(TransporteConexao.Cifrado), null)),
+            Defeito.TransporteLocalTrocado => BancoFalso.Clonar(transporte, (nameof(TransporteConexao.Local), true)),
+            Defeito.TransporteVerificadoTrocado => BancoFalso.Clonar(transporte, (nameof(TransporteConexao.Cifrado), true), (nameof(TransporteConexao.ServidorVerificado), true)),
+            _ => transporte,
+        };
     }
 }
 
@@ -945,7 +1115,7 @@ internal sealed class SqlFalso(bool semEscape) : DialetoSql
 }
 
 /// <summary>A fixture do dialeto falso: um par de bancos em memória por teste, com o mesmo esquema nos dois lados.</summary>
-internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaBanco, EsquemaBanco>? perturbar = null) : FixtureDialeto
+internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaBanco, bool, EsquemaBanco>? perturbar = null) : FixtureDialeto
 {
     private readonly ProvedorFalso _provedor = new(completo, defeito, perturbar);
     private readonly ProvedorFalso _privilegiado = new(completo, defeito, perturbar, privilegiado: true);

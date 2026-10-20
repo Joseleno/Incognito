@@ -172,6 +172,54 @@ public sealed class ContratoDeDialetoTestes
     }
 
     [Fact]
+    public void O_acesso_e_o_transporte_copiam_as_listas_e_recusam_nulos_e_vazios()
+    {
+        var nome = new NomeObjeto("loja", "itens");
+        var colunas = new List<string> { "a", "b" };
+        var tabela = new PermissoesTabela { Tabela = nome, ColunasSemLeitura = colunas };
+        colunas.Clear();
+        var tabelas = new List<PermissoesTabela> { tabela };
+        var residuais = new List<PermissoesResidual> { new() { Nome = nome, Tipo = TipoObjetoResidual.ObjetosGrandes } };
+        var sequences = new List<PermissoesSequence> { new() { Nome = nome } };
+        var acesso = new AcessoLido { Banco = new(), Tabelas = tabelas, Residuais = residuais, Sequences = sequences };
+        tabelas.Clear();
+        residuais.Clear();
+        sequences.Clear();
+
+        Assert.Equal(["a", "b"], tabela.ColunasSemLeitura);
+        Assert.Single(acesso.Tabelas);
+        Assert.Single(acesso.Residuais);
+        Assert.Single(acesso.Sequences);
+
+        // Toda marca nova começa nula (o pior caso), e a lista das colunas, vazia.
+        Assert.True(new PermissoesBanco() is { PodeMarcarBanco: null, PodeCriarEsquema: null });
+        Assert.True(new PermissoesTabela { Tabela = nome } is
+        {
+            PodeLer: null, ColunasSemLeitura: [], PodeInserir: null, PodeGravarIdentidade: null, PodeEsvaziar: null, PodeReferenciar: null,
+            PodeAlterarRestricoes: null, PodeDesligarTriggers: null, LeituraFiltradaPorLinha: null, EscritaRestritaPorLinha: null,
+        });
+        Assert.Null(new PermissoesResidual { Nome = nome, Tipo = TipoObjetoResidual.ObjetosGrandes }.PodeLimpar);
+        Assert.Null(new PermissoesSequence { Nome = nome }.PodeAjustar);
+        Assert.True(new TransporteConexao { Local = false } is { Cifrado: null, ServidorVerificado: null });
+        Assert.True(new EsquemaBanco { Tabelas = [] } is { Acesso: null });
+        Assert.Null(new IdentidadeLida { Banco = "b", Servidor = "", Linhagem = new Dictionary<string, string>() }.Transporte);
+
+        Assert.Equal("Banco", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = null!, Tabelas = [], Residuais = [], Sequences = [] }).ParamName);
+        Assert.Equal("Tabelas", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = new(), Tabelas = null!, Residuais = [], Sequences = [] }).ParamName);
+        Assert.Equal("Tabelas", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = new(), Tabelas = [null!], Residuais = [], Sequences = [] }).ParamName);
+        Assert.Equal("Residuais", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = new(), Tabelas = [], Residuais = null!, Sequences = [] }).ParamName);
+        Assert.Equal("Residuais", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = new(), Tabelas = [], Residuais = [null!], Sequences = [] }).ParamName);
+        Assert.Equal("Sequences", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = new(), Tabelas = [], Residuais = [], Sequences = null! }).ParamName);
+        Assert.Equal("Sequences", Assert.Throws<ArgumentNullException>(() => new AcessoLido { Banco = new(), Tabelas = [], Residuais = [], Sequences = [null!] }).ParamName);
+        Assert.Equal("Tabela", Assert.Throws<ArgumentNullException>(() => new PermissoesTabela { Tabela = null! }).ParamName);
+        Assert.Equal("ColunasSemLeitura", Assert.Throws<ArgumentException>(() => new PermissoesTabela { Tabela = nome, ColunasSemLeitura = [""] }).ParamName);
+        Assert.Equal("ColunasSemLeitura", Assert.Throws<ArgumentNullException>(() => new PermissoesTabela { Tabela = nome, ColunasSemLeitura = [null!] }).ParamName);
+        Assert.Equal("Nome", Assert.Throws<ArgumentNullException>(() => new PermissoesResidual { Nome = null!, Tipo = TipoObjetoResidual.ObjetosGrandes }).ParamName);
+        Assert.Equal("Tipo", Assert.Throws<ArgumentOutOfRangeException>(() => new PermissoesResidual { Nome = nome, Tipo = (TipoObjetoResidual)99 }).ParamName);
+        Assert.Equal("Nome", Assert.Throws<ArgumentNullException>(() => new PermissoesSequence { Nome = null! }).ParamName);
+    }
+
+    [Fact]
     public async Task O_descarte_do_dialeto_roda_uma_vez_so()
     {
         var dialeto = new OrigemContada();

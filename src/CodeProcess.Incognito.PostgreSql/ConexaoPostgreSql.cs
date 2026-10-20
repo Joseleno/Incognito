@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
@@ -32,17 +33,20 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     private static readonly string[] _autenticacoesSemSenha = ["ScramSHA256", "MD5", "GSS", "SSPI", "None"];
     private static readonly string[] _integradas = ["GSS", "SSPI"];
 
-    // Os servidores na própria máquina, onde o TLS não protege nada.
-    private static readonly string[] _locais = ["localhost", "127.0.0.1", "::1"];
-
     private readonly NpgsqlDataSource _fonte;
     private readonly NpgsqlConnection _conexao;
 
-    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, int versao)
+    // O modo de TLS e o servidor depois do que o Incognito impõe: o transporte sai deles.
+    private readonly SslMode _modo;
+    private readonly string _servidor;
+
+    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, int versao, SslMode modo, string servidor)
     {
         _fonte = fonte;
         _conexao = conexao;
         Versao = versao;
+        _modo = modo;
+        _servidor = servidor;
     }
 
     /// <summary>A versão do servidor (<c>server_version_num</c>, como 180006).</summary>
@@ -79,7 +83,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
             }
 
             var versao = await ConferirAsync(conexao, origem, cancelamento).ConfigureAwait(false);
-            return new ConexaoPostgreSql(fonte, conexao, versao);
+            return new ConexaoPostgreSql(fonte, conexao, versao, construtor.SslMode, construtor.Host!);
         }
         catch
         {
@@ -92,6 +96,71 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
             throw;
         }
     }
+
+    /// <summary>
+    /// Se o servidor está na própria máquina: endereço de loopback, <c>localhost</c> ou socket Unix (caminho de diretório),
+    /// com ou sem a porta, que o Npgsql aceita no próprio servidor. Nunca por prefixo do nome: <c>127.exemplo.invalid</c> é
+    /// um nome de DNS, e remoto.
+    /// </summary>
+    /// <param name="servidor">O servidor da string de conexão.</param>
+    /// <returns>Se é local.</returns>
+    internal static bool Local(string servidor)
+    {
+        if (servidor.StartsWith('/'))
+        {
+            return true;
+        }
+
+        var semPorta = SemPorta(servidor);
+        return string.Equals(semPorta, "localhost", StringComparison.OrdinalIgnoreCase)
+            || (IPAddress.TryParse(semPorta, out var endereco) && IPAddress.IsLoopback(endereco));
+    }
+
+    /// <summary>
+    /// O transporte pelo modo de TLS que a conexão exigiu: cifrado só quando o modo exige a cifra, em claro quando a recusa
+    /// ou por socket (o servidor nunca cifra ali), e sem resposta quando só a prefere (o servidor diz que a sessão está
+    /// cifrada, mas um intermediário pode cifrar só o trecho dele); o que o servidor diz só rebaixa. O servidor só é verificado
+    /// com o nome conferido.
+    /// </summary>
+    /// <param name="modo">O modo de TLS depois do que o Incognito impõe.</param>
+    /// <param name="servidor">O servidor da string de conexão.</param>
+    /// <param name="cifradaNoServidor">Se o servidor diz que a sessão está cifrada; nulo se não diz.</param>
+    /// <returns>O transporte.</returns>
+    internal static TransporteConexao Transporte(SslMode modo, string servidor, bool? cifradaNoServidor)
+    {
+        bool? cifrado = cifradaNoServidor == false || servidor.StartsWith('/') ? false : modo switch
+        {
+            SslMode.Disable => false,
+            SslMode.Require or SslMode.VerifyCA or SslMode.VerifyFull => true,
+            _ => null,
+        };
+        return new TransporteConexao
+        {
+            Cifrado = cifrado,
+            ServidorVerificado = modo == SslMode.VerifyFull && cifrado == true,
+            Local = Local(servidor),
+        };
+    }
+
+    // O servidor sem a porta ([::1]:5433, 127.0.0.1:5433, localhost:5433); um IPv6 sem colchetes fica como está.
+    private static string SemPorta(string servidor)
+    {
+        if (servidor.StartsWith('[') && servidor.IndexOf(']', StringComparison.Ordinal) is var fim and > 0)
+        {
+            return servidor[1..fim];
+        }
+
+        var separador = servidor.IndexOf(':', StringComparison.Ordinal);
+        return separador > 0 && separador == servidor.LastIndexOf(':')
+            && int.TryParse(servidor.AsSpan(separador + 1), NumberStyles.None, CultureInfo.InvariantCulture, out _)
+            ? servidor[..separador]
+            : servidor;
+    }
+
+    /// <summary>O transporte desta conexão.</summary>
+    /// <param name="cifradaNoServidor">Se o servidor diz que a sessão está cifrada; nulo se não diz.</param>
+    /// <returns>O transporte.</returns>
+    internal TransporteConexao Transporte(bool? cifradaNoServidor) => Transporte(_modo, _servidor, cifradaNoServidor);
 
     /// <summary>Fecha a conexão e a fonte.</summary>
     /// <returns>A tarefa.</returns>
@@ -124,7 +193,11 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         CodigosPostgreSql.StringInvalida,
         "A string de conexão do PostgreSQL tem uma opção que não pôde ser usada (por exemplo, arquivo de senha, certificado, método de autenticação ou negociação de TLS).");
 
-    private static void Impor(NpgsqlConnectionStringBuilder construtor, bool origem)
+    /// <summary>Impõe por cima da string de conexão o que o Incognito exige.</summary>
+    /// <param name="construtor">A string de conexão lida.</param>
+    /// <param name="origem">Se é a origem (sessão só de leitura).</param>
+    /// <exception cref="IncognitoException">Opção recusada.</exception>
+    internal static void Impor(NpgsqlConnectionStringBuilder construtor, bool origem)
     {
         if (string.IsNullOrWhiteSpace(construtor.Host) || string.IsNullOrWhiteSpace(construtor.Database))
         {
@@ -186,18 +259,14 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         // Pelo pacote de início, que vale antes da primeira consulta e vence ALTER ROLE/DATABASE ... SET e o PGOPTIONS:
         // só o pg_catalog no caminho de busca (nenhuma função ou operador do usuário sombreia os do sistema), a barra
         // invertida literal nas strings (as consultas usam literais), nenhum tempo-limite do servidor (a conexão de
-        // controle fica parada entre os passos) e, na origem, transações só de leitura por padrão.
+        // controle fica parada entre os passos), o formato monetário C, que sempre existe (o money sai e entra igual nos dois
+        // lados, qualquer que seja o locale do login; conferido na abertura, e código do usuário pode trocá-lo depois), e, na
+        // origem, transações só de leitura por padrão.
         construtor.SearchPath = CaminhoDeBusca;
         construtor.Options = $"-c search_path={CaminhoDeBusca} -c standard_conforming_strings=on"
-            + " -c statement_timeout=0 -c idle_session_timeout=0 -c idle_in_transaction_session_timeout=0"
+            + " -c statement_timeout=0 -c idle_session_timeout=0 -c idle_in_transaction_session_timeout=0 -c lc_monetary=C"
             + (origem ? " -c default_transaction_read_only=on" : "");
     }
-
-    // Loopback ou socket Unix (caminho de diretório).
-    private static bool Local(string servidor) =>
-        _locais.Contains(servidor, StringComparer.OrdinalIgnoreCase)
-        || servidor.StartsWith('/')
-        || servidor.StartsWith("127.", StringComparison.Ordinal);
 
     // A lista do usuário sem a senha em claro, ou a lista padrão; uma negação (!) ou uma lista só com a senha em claro é
     // recusada.
@@ -271,7 +340,8 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
             """
             SELECT pg_catalog.current_setting('server_version_num'), pg_catalog.current_setting('search_path'),
                    pg_catalog.current_setting('default_transaction_read_only'), pg_catalog.current_setting('client_encoding'),
-                   pg_catalog.current_setting('standard_conforming_strings'), current_user = session_user
+                   pg_catalog.current_setting('standard_conforming_strings'), current_user = session_user,
+                   pg_catalog.current_setting('lc_monetary') = 'C'
             """,
             conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
@@ -292,11 +362,11 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         }
 
         if (leitor.GetString(1) != CaminhoDeBusca || (origem && leitor.GetString(2) != "on") || leitor.GetString(3) != Utf8 || leitor.GetString(4) != "on"
-            || !leitor.GetBoolean(5))
+            || !leitor.GetBoolean(5) || !leitor.GetBoolean(6))
         {
             throw new IncognitoException(
                 CodigosPostgreSql.SessaoDivergente,
-                "A sessão do PostgreSQL não ficou com os parâmetros que o Incognito impõe (search_path, client_encoding, standard_conforming_strings, o papel do login e, na origem, default_transaction_read_only).");
+                "A sessão do PostgreSQL não ficou com os parâmetros que o Incognito impõe (search_path, client_encoding, standard_conforming_strings, lc_monetary, o papel do login e, na origem, default_transaction_read_only).");
         }
 
         return versao;

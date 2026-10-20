@@ -30,7 +30,7 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.ChaveDesbalanceada] = (true, [(nameof(SuiteFalsa.A_chave_estrangeira_composta_mantem_a_ordem_da_chave), "Chave estrangeira composta: fk_itens_pedidos lida como"), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "com 2 colunas e 1 referenciadas"), Inventario("loja.itens", "chave estrangeira fk_itens_pedidos: colunas referenciadas lidas [loja], esperadas [loja, id]")]),
         [Defeito.TabelaDuplicada] = (true, [(nameof(SuiteFalsa.A_chave_estrangeira_composta_mantem_a_ordem_da_chave), "Chave estrangeira composta: tabela loja.itens lida 2 vezes"), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "tabela loja.itens repetida"), (nameof(SuiteFalsa.O_esquema_vem_em_ordem_de_esquema_e_nome), "Ordem: tabelas"), Inventario("loja.itens", "tabela lida 2 vezes")]),
         [Defeito.TemporalSemHistorico] = (true, [(nameof(SuiteFalsa.A_temporal_aponta_o_historico), "Temporal: loja.contratos lida como Temporal com histórico ,"), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "histórico de loja.contratos (Temporal) ausente"), Inventario("loja.contratos", "histórico lido nenhum, esperado loja.contratos_historico")]),
-        [Defeito.ResiduoAusente] = (true, [(nameof(SuiteFalsa.Os_objetos_residuais_sao_inventariados), "Objetos residuais: lidos []"), Inventario("residual loja.resumo_vendas", "residual a menos")]),
+        [Defeito.ResiduoAusente] = (true, [(nameof(SuiteFalsa.Os_objetos_residuais_sao_inventariados), "Objetos residuais: lidos []"), Inventario("residual loja.resumo_vendas", "residual a menos"), Acesso("destino: exceção de acesso do objeto residual loja.mv_clientes, que não foi lido")]),
         [Defeito.SegurancaDeLinhaAusente] = (true, [(nameof(SuiteFalsa.A_seguranca_por_linha_e_apontada), "Segurança por linha: lida em []"), Inventario("loja.segredos", "segurança por linha lida False, esperada True")]),
         [Defeito.MascaraAusente] = (true, [(nameof(SuiteFalsa.A_mascara_e_apontada), "Máscara: lida em []"), Inventario("loja.contatos", "coluna email: mascarada lida False, esperada True")]),
         [Defeito.NomeNaCaixaErrada] = (true, [(nameof(SuiteFalsa.Os_nomes_sao_lidos_como_o_catalogo_os_guarda), "Nomes: não lidos exatamente como o catálogo os guarda: loja.Cliente"), Inventario("loja.CLIENTE", "tabela a mais; origem: loja.Cliente: tabela a menos")]),
@@ -56,6 +56,8 @@ public sealed class SuiteDeConformidadeTestes
             (nameof(SuiteFalsa.A_seguranca_por_linha_e_apontada), "Segurança por linha: lida em [loja.segredos]"),
             (nameof(SuiteFalsa.A_mascara_e_apontada), "Máscara: lida em [loja.contatos.email]"),
             (nameof(SuiteFalsa.As_propriedades_do_banco_sao_lidas), "Propriedades do banco: origem: lidas versão 18.6"),
+            (nameof(SuiteFalsa.O_acesso_e_lido_em_cada_lado), "Acesso: origem: acesso do login lido num banco que o declara inexistente"),
+            (nameof(SuiteFalsa.A_identidade_informa_o_transporte), "Transporte: origem: transporte lido num banco que o declara inexistente"),
             Inventario("loja.calculos", "tabela a mais"),
         ]),
 
@@ -70,7 +72,7 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.ChaveEstrangeiraComReferenciadaErrada] = (true, [Inventario("loja.ficha", "chave estrangeira fk_ficha_contato: referenciada lida loja.ficha, esperada loja.contato")]),
         [Defeito.ChavePrimariaForaDeOrdem] = (true, [Consistencia("índice primário pk_pedidos de loja.pedidos diferente da chave primária"), Inventario("loja.pedidos", "chave primária lida [id, loja], esperada [loja, id]")]),
         [Defeito.TipoDeTabelaTrocado] = (true, [(nameof(SuiteFalsa.O_esquema_lido_e_consistente), "pai de loja.contadores (Herdeira) ausente"), Inventario("loja.contadores", "tipo lido Herdeira, esperado Comum")]),
-        [Defeito.SequenceOmitida] = (true, [Inventario("loja.seq_avulsa", "sequence a menos")]),
+        [Defeito.SequenceOmitida] = (true, [Inventario("loja.seq_avulsa", "sequence a menos"), Acesso("destino: exceção de acesso da sequence loja.seq_avulsa, que não foi lida")]),
         [Defeito.SituacaoTrocadaNoDestino] = (true, [(nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas), "Inventário: destino: loja.tipos: coluna dados: situação lida NaoSuportado, esperada ComRessalva.")]),
         [Defeito.SituacaoTrocadaForaDaMatriz] = (true, [Inventario("loja.canonicos", "coluna dia: situação lida ComRessalva, esperada Suportado")]),
         [Defeito.TipoCanonicoTrocadoForaDaMatriz] = (true, [Inventario("loja.canonicos", "coluna momento: tipo canônico lido DataHoraComFuso, esperado DataHora")]),
@@ -98,7 +100,7 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.SentinelaVazio] = (true, [(nameof(SuiteFalsa.Nada_lido_traz_o_sentinela), "Sentinela: a fixture precisa declarar os sentinelas, sem item vazio")]),
         [Defeito.SentinelaNaIdentidadeDaOrigem] = (true, [(nameof(SuiteFalsa.Nada_lido_traz_o_sentinela), "Sentinela: 1 textos lidos trazem um sentinela")]),
         [Defeito.SentinelaNoTextoDoDestino] = (true, [(nameof(SuiteFalsa.Nada_lido_traz_o_sentinela), "Sentinela: 1 textos lidos trazem um sentinela")]),
-        [Defeito.PropriedadesAusentesNoDestino] = (true, [(nameof(SuiteFalsa.As_propriedades_do_banco_sao_lidas), "Propriedades do banco: destino: lidas nenhuma"), (nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas), "Inventário: o destino, com o mesmo esquema, foi lido diferente da origem.")]),
+        [Defeito.PropriedadesAusentesNoDestino] = (true, [(nameof(SuiteFalsa.As_propriedades_do_banco_sao_lidas), "Propriedades do banco: destino: lidas nenhuma"), (nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas), "Inventário: o destino, com o mesmo esquema, foi lido diferente da origem (fora as permissões do login).")]),
         [Defeito.MascaraTrocadaNoDestino] = (true, [(nameof(SuiteFalsa.O_esquema_e_lido_sem_perdas), "Inventário: destino: loja.contatos: coluna email: mascarada lida False, esperada True.")]),
         [Defeito.FaixaSemPositivos] = (true, [Consistencia("coluna loja.canonicos.pequeno com faixa sem positivos"), Inventario("loja.canonicos", "coluna pequeno: faixa lida [-10, -5]")]),
         [Defeito.DeterministicaComMarcaNula] = (true, [Consistencia("coluna loja.endereco.cidade com colação determinística e marca que não é falsa"), Inventario("loja.endereco", "coluna cidade: colação lida default (determinística; caixa ?")]),
@@ -134,6 +136,21 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.ExclusaoQueNaoCobreAPrimaria] = (true, [Consistencia("chave primária de loja.periodos sem índice primário fora de partição"), Inventario("loja.periodos", "exclusão pk_periodos lida (sala), esperada (sala, inicio)")]),
         [Defeito.DependenciaDeObjetosGrandes] = (true, [Consistencia("residual loja.resumo_vendas depende de pg_catalog.pg_largeobject, que não é materialized view do esquema"), Inventario("residual loja.resumo_vendas", "depende de [loja.mv_base, loja.mv_clientes, pg_catalog.pg_largeobject]")]),
         [Defeito.ObjetosGrandesComMarcas] = (true, [Consistencia("residual pg_catalog.pg_largeobject (ObjetosGrandes) com dependências ou marcas de materialized view"), Inventario("residual pg_catalog.pg_largeobject", "populada lida True, esperada nenhum")]),
+        [Defeito.AcessoAusente] = (true, [Acesso("origem: acesso do login ausente")]),
+        [Defeito.AcessoDoLeitorNoDestino] = (true, [Acesso("destino: acesso do login com as permissões do banco lidas marca não, cria esquema não, esperadas marca sim, cria esquema sim")]),
+        [Defeito.PermissaoDeTabelaInexistente] = (true, [Acesso("origem: acesso do login com permissões a mais de tabela loja.fantasma")]),
+        [Defeito.PodeLerComColunaSemLeitura] = (true, [Acesso("origem: loja.canonicos: com leitura e colunas sem leitura")]),
+        [Defeito.ColunaSemLeituraInexistente] = (true, [Acesso("origem: loja.canonicos: coluna sem leitura fantasma, que não existe")]),
+        [Defeito.ColunasSemLeituraForaDeOrdem] = (true, [Acesso("origem: loja.canonicos: colunas sem leitura fora da ordem da tabela")]),
+        [Defeito.ExcecaoDeAcessoInexistente] = (true, [Acesso("origem: exceção de acesso da tabela loja.fantasma, que não foi lida")]),
+        [Defeito.TransporteAusente] = (true, [Transporte("origem: transporte ausente")]),
+        [Defeito.TransporteOtimista] = (true, [Transporte("origem: lido cifrado sim, servidor verificado não, local não, esperado cifrado não")]),
+        [Defeito.TransporteVerificadoSemCifra] = (true, [Transporte("origem: servidor verificado numa conexão que não é cifrada")]),
+        [Defeito.TransporteLocalTrocado] = (true, [Transporte("origem: lido cifrado não, servidor verificado não, local sim")]),
+        [Defeito.TransporteVerificadoTrocado] = (true, [Transporte("origem: lido cifrado sim, servidor verificado sim, local não")]),
+        [Defeito.TransporteOtimistaNoDestino] = (true, [Transporte("destino: lido cifrado sim, servidor verificado não, local não, esperado cifrado não")]),
+        [Defeito.PermissaoDeTabelaRepetida] = (true, [Acesso("origem: acesso do login com permissões a mais de tabela loja.canonicos")]),
+        [Defeito.SegurancaDeLinhaVazia] = (true, [(nameof(SuiteFalsa.A_seguranca_por_linha_e_apontada), "Segurança por linha: a fixture a declara presente sem nenhuma tabela")]),
         [Defeito.SuiteAninhada] = (true, [(nameof(SuiteFalsa.A_classe_da_suite_e_selada_e_de_primeiro_nivel), "Suíte: a classe CodeProcess.Incognito.Testes.Motor.Dialetos.SuiteDeConformidadeTestes+SuiteAninhada precisa ser selada e de primeiro nível")]),
         [Defeito.SuiteAberta] = (true, [(nameof(SuiteFalsa.A_classe_da_suite_e_selada_e_de_primeiro_nivel), "Suíte: a classe CodeProcess.Incognito.Testes.Motor.Dialetos.SuiteAberta precisa ser selada e de primeiro nível")]),
     };
@@ -241,6 +258,10 @@ public sealed class SuiteDeConformidadeTestes
     ];
 
     private static (string Teste, string Trecho) Consistencia(string trecho) => (nameof(SuiteFalsa.O_esquema_lido_e_consistente), trecho);
+
+    private static (string Teste, string Trecho) Acesso(string trecho) => (nameof(SuiteFalsa.O_acesso_e_lido_em_cada_lado), trecho);
+
+    private static (string Teste, string Trecho) Transporte(string trecho) => (nameof(SuiteFalsa.A_identidade_informa_o_transporte), trecho);
 
     // O inventário falha nos dois lados; o trecho confere o da origem.
     private static (string Teste, string Trecho) Inventario(string objeto, string trecho) =>

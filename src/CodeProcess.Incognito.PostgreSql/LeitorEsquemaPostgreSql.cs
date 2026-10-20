@@ -16,7 +16,8 @@ namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 /// colação nem o conteúdo dos large objects. Das expressões da chave de partição e dos índices e dos predicados só saem,
 /// extraídos no servidor, os números das colunas citadas; dos <c>CHECK</c>s e das exclusões, as colunas da chave da
 /// restrição; das colunas geradas e das materialized views, as dependências, pelo <c>pg_depend</c>. O comportamento de uma
-/// colação não determinística é medido no servidor com textos sintéticos, nunca deduzido do locale.
+/// colação não determinística é medido no servidor com textos sintéticos, nunca deduzido do locale. As permissões do login
+/// saem só como marcas, pelas funções de privilégio (que leem o catálogo atual, não o instante da transação), sempre por oid.
 /// </remarks>
 internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorEsquema
 {
@@ -364,6 +365,76 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         WHERE d.refclassid IN ('pg_catalog.pg_proc'::pg_catalog.regclass, 'pg_catalog.pg_operator'::pg_catalog.regclass) OR l.oid IS NOT NULL
         """;
 
+    // As permissões do login em cada tabela, pelo catálogo atual: as funções has_* e pg_has_role não leem o instante da
+    // transação. Sempre por oid (um nome citado falharia sem USAGE no esquema). A tabela que sumiu entre a leitura do esquema
+    // e esta tem has_table_privilege nulo, e as capacidades dela ficam nulas; nas colunas, o IS NOT TRUE conta o nulo como
+    // sem privilégio. A leitura de uma tabela sem colunas pede o SELECT na tabela. A gravação vale pelo privilégio na tabela
+    // ou em toda coluna que a carga grava (as geradas ficam de fora), e a referência, na tabela ou em toda coluna. A segurança
+    // por linha vale para o login pelo catálogo atual ou, se a tabela sumiu (row_security_active daria
+    // não), pelo instante da transação: ligada, sem o login ignorá-la (superusuário ou BYPASSRLS) e forçada ou de outro dono.
+    private const string ConsultaAcessoDasTabelas = Tabelas + """
+        SELECT n.nspname AS esquema, c.relname AS nome,
+               pg_catalog.has_table_privilege(c.oid, 'SELECT') IS NULL AS sumida,
+               pg_catalog.has_schema_privilege(c.relnamespace, 'USAGE') AS uso,
+               ARRAY(SELECT a.attname
+                     FROM pg_catalog.pg_attribute a
+                     WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                       AND pg_catalog.has_column_privilege(c.oid, a.attnum, 'SELECT') IS NOT TRUE
+                     ORDER BY a.attnum) AS sem_leitura,
+               pg_catalog.has_table_privilege(c.oid, 'SELECT') AS le_tabela,
+               EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped) AS tem_colunas,
+               pg_catalog.has_table_privilege(c.oid, 'INSERT')
+                 OR (EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+                             WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped AND a.attgenerated = '')
+                     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+                                     WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped AND a.attgenerated = ''
+                                       AND pg_catalog.has_column_privilege(c.oid, a.attnum, 'INSERT') IS NOT TRUE)) AS insere,
+               pg_catalog.has_table_privilege(c.oid, 'TRUNCATE') AS esvazia,
+               pg_catalog.has_table_privilege(c.oid, 'REFERENCES')
+                 OR (EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped)
+                     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+                                     WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                                       AND pg_catalog.has_column_privilege(c.oid, a.attnum, 'REFERENCES') IS NOT TRUE)) AS referencia,
+               pg_catalog.pg_has_role(c.relowner, 'USAGE') AS dono,
+               pg_catalog.row_security_active(c.oid)
+                 OR (c.relrowsecurity
+                     AND NOT (SELECT r.rolsuper OR r.rolbypassrls FROM pg_catalog.pg_roles r WHERE r.rolname = current_user)
+                     AND (c.relforcerowsecurity OR NOT pg_catalog.pg_has_role(c.relowner, 'USAGE'))) AS por_linha
+        FROM tabelas
+        JOIN pg_catalog.pg_class c ON c.oid = tabelas.oid
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        """;
+
+    // As permissões nas materialized views (limpar é atualizá-las: no 17+, pelo MAINTAIN; antes, sendo dono) e nas sequences
+    // (ajustar é o setval, que exige UPDATE), com o USAGE no esquema e nulas para o objeto que sumiu.
+    private const string ConsultaAcessoDosObjetosInicio = """
+        SELECT n.nspname AS esquema, c.relname AS nome, c.relkind = 'S' AS sequence,
+               pg_catalog.has_table_privilege(c.oid, 'SELECT') IS NULL AS sumida,
+               pg_catalog.has_schema_privilege(c.relnamespace, 'USAGE') AS uso,
+               CASE WHEN c.relkind = 'S' THEN pg_catalog.has_sequence_privilege(c.oid, 'UPDATE') ELSE
+        """;
+
+    private const string LimparVisao17 = " pg_catalog.has_table_privilege(c.oid, 'MAINTAIN')";
+
+    private const string LimparVisao15 = " pg_catalog.pg_has_role(c.relowner, 'USAGE')";
+
+    private const string ConsultaAcessoDosObjetosFim = $"""
+         END AS pode
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relkind IN ('m', 'S') AND {FiltroDeEsquema}
+        """;
+
+    // As permissões no banco (marcá-lo pede ser dono; o esquema do diário, CREATE) e nos large objects: apagá-los pede o
+    // modo de compatibilidade dos privilégios ou ser dono de todos (o superusuário é membro de todo papel).
+    private const string ConsultaAcessoDoBanco = """
+        SELECT pg_catalog.pg_has_role(d.datdba, 'USAGE') AS marca, pg_catalog.has_database_privilege(d.oid, 'CREATE') AS cria,
+               pg_catalog.current_setting('lo_compat_privileges')::boolean
+                 OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata m WHERE NOT pg_catalog.pg_has_role(m.lomowner, 'USAGE')) AS limpa_objetos_grandes
+        FROM pg_catalog.pg_database d
+        WHERE d.datname = pg_catalog.current_database()
+        """;
+
     // Os números das codificações (pg_wchar.h): sem codificação declarada e UTF-8.
     private const int SqlAscii = 0;
     private const int Utf8 = 6;
@@ -408,6 +479,8 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             var triggers = await LerTriggersAsync(cancelamento).ConfigureAwait(false);
             var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
+            var acesso = await LerAcessoAsync(conexao.Conexao, conexao.Versao, cancelamento).ConfigureAwait(false);
+            var nomes = tabelas.Values.Select(tabela => tabela.Nome).OrderBy(nome => nome, OrdemDeNomes.Instancia).ToArray();
 
             return new EsquemaBanco
             {
@@ -435,9 +508,100 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                 Sequences = sequences,
                 ObjetosResiduais = residuais,
                 Propriedades = banco.Propriedades,
+
+                // Um objeto que a leitura das permissões não achou (não deveria: as duas veem o mesmo catálogo) fica com tudo
+                // nulo, o pior caso.
+                Acesso = new AcessoLido
+                {
+                    Banco = acesso.Banco,
+                    Tabelas = [.. nomes.Select(nome => acesso.Tabelas.GetValueOrDefault(nome) ?? new PermissoesTabela { Tabela = nome })],
+                    Residuais =
+                    [
+                        .. residuais.Select(residual => new PermissoesResidual
+                        {
+                            Nome = residual.Nome,
+                            Tipo = residual.Tipo,
+                            PodeLimpar = residual.Tipo == TipoObjetoResidual.ObjetosGrandes ? acesso.LimparObjetosGrandes : acesso.Objetos.GetValueOrDefault((residual.Nome, false)),
+                        }),
+                    ],
+                    Sequences = [.. sequences.Select(sequence => new PermissoesSequence { Nome = sequence.Nome, PodeAjustar = acesso.Objetos.GetValueOrDefault((sequence.Nome, true)) })],
+                },
             };
         }
     }
+
+    /// <summary>
+    /// As permissões do login que a conexão usa, por objeto, na transação que já está aberta na conexão (a do leitor ou, no
+    /// teste de duas sessões, a do teste).
+    /// </summary>
+    /// <param name="conexao">A conexão, com a transação aberta.</param>
+    /// <param name="versao">A versão do servidor (<c>server_version_num</c>).</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>As permissões lidas.</returns>
+    internal static async Task<AcessoBruto> LerAcessoAsync(NpgsqlConnection conexao, int versao, CancellationToken cancelamento)
+    {
+        var tabelas = new Dictionary<NomeObjeto, PermissoesTabela>();
+        await using (var comando = new NpgsqlCommand(ConsultaAcessoDasTabelas, conexao))
+        {
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+            {
+                var nome = new NomeObjeto(leitor.GetString(leitor.GetOrdinal("esquema")), leitor.GetString(leitor.GetOrdinal("nome")));
+                var sumida = leitor.GetBoolean(leitor.GetOrdinal("sumida"));
+                var uso = Marca(leitor, "uso");
+                var semLeitura = leitor.GetFieldValue<string[]>(leitor.GetOrdinal("sem_leitura"));
+                bool? Pode(bool? capacidade) => sumida ? null : E(uso, capacidade);
+                var insere = Pode(Marca(leitor, "insere"));
+                var dono = Pode(Marca(leitor, "dono"));
+                var porLinha = Marca(leitor, "por_linha");
+                tabelas.Add(nome, new PermissoesTabela
+                {
+                    Tabela = nome,
+                    PodeLer = Pode(semLeitura.Length == 0 && (leitor.GetBoolean(leitor.GetOrdinal("tem_colunas")) || Marca(leitor, "le_tabela") == true)),
+                    ColunasSemLeitura = semLeitura,
+                    PodeInserir = insere,
+                    PodeGravarIdentidade = insere,
+                    PodeEsvaziar = Pode(Marca(leitor, "esvazia")),
+                    PodeReferenciar = Pode(Marca(leitor, "referencia")),
+                    PodeAlterarRestricoes = dono,
+                    PodeDesligarTriggers = dono,
+                    LeituraFiltradaPorLinha = porLinha,
+                    EscritaRestritaPorLinha = porLinha,
+                });
+            }
+        }
+
+        var objetos = new Dictionary<(NomeObjeto Nome, bool Sequence), bool?>();
+        var consulta = ConsultaAcessoDosObjetosInicio + (versao / 10000 >= 17 ? LimparVisao17 : LimparVisao15) + ConsultaAcessoDosObjetosFim;
+        await using (var comando = new NpgsqlCommand(consulta, conexao))
+        {
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+            {
+                var nome = new NomeObjeto(leitor.GetString(leitor.GetOrdinal("esquema")), leitor.GetString(leitor.GetOrdinal("nome")));
+                var pode = leitor.GetBoolean(leitor.GetOrdinal("sumida")) ? null : E(Marca(leitor, "uso"), Marca(leitor, "pode"));
+                objetos.Add((nome, leitor.GetBoolean(leitor.GetOrdinal("sequence"))), pode);
+            }
+        }
+
+        await using (var comando = new NpgsqlCommand(ConsultaAcessoDoBanco, conexao))
+        {
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
+            var banco = new PermissoesBanco { PodeMarcarBanco = Marca(leitor, "marca"), PodeCriarEsquema = Marca(leitor, "cria") };
+            return new AcessoBruto(banco, Marca(leitor, "limpa_objetos_grandes"), tabelas, objetos);
+        }
+    }
+
+    private static bool? Marca(NpgsqlDataReader leitor, string campo)
+    {
+        var ordinal = leitor.GetOrdinal(campo);
+        return leitor.IsDBNull(ordinal) ? null : leitor.GetBoolean(ordinal);
+    }
+
+    // As duas condições: não se uma não vale; sem resposta se uma não tem resposta.
+    private static bool? E(bool? uma, bool? outra) =>
+        uma == false || outra == false ? false : uma is null || outra is null ? null : true;
 
     // A versão pelo número que a conexão já conferiu, nunca pelo texto (que pode trazer o nome de um derivado).
     private async Task<BancoLido> LerBancoAsync(CancellationToken cancelamento)
@@ -1110,6 +1274,14 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     // Uma linha da consulta dos índices únicos, antes das colações e dos nomes das colunas: a chave, a colação de cada
     // elemento e os números citados pelas expressões e pelo predicado (nulos se o índice não os tem).
     private sealed record IndiceBruto(uint Tabela, string Nome, bool Primario, bool NulosDistintos, short[] Colunas, uint[] Colacoes, short[]? DasExpressoes, short[]? DoPredicado);
+
+    /// <summary>As permissões lidas, por objeto, antes de seguirem a ordem do esquema.</summary>
+    /// <param name="Banco">As permissões no banco.</param>
+    /// <param name="LimparObjetosGrandes">Se o login apaga os large objects.</param>
+    /// <param name="Tabelas">As permissões de cada tabela.</param>
+    /// <param name="Objetos">Se o login limpa cada materialized view e ajusta cada sequence (marcada).</param>
+    internal sealed record AcessoBruto(
+        PermissoesBanco Banco, bool? LimparObjetosGrandes, Dictionary<NomeObjeto, PermissoesTabela> Tabelas, Dictionary<(NomeObjeto Nome, bool Sequence), bool?> Objetos);
 
     // O que a leitura da origem e do destino tira do banco inteiro.
     private sealed record BancoLido(PropriedadesBanco Propriedades, bool Utf8, int MaximoIdentificador);
