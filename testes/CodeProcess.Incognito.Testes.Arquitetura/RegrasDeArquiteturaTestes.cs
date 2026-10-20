@@ -50,6 +50,7 @@ public sealed class RegrasDeArquiteturaTestes
             @"\b(pg_stat_activity|pg_stat_get_\w+|pg_stat_statements|pg_prepared_statements|pg_cursors|client_dn|issuer_dn|client_serial|pg_stat_gssapi|pg_settings|pg_show_all_settings|pg_file_settings|pg_read_file|pg_read_binary_file|pg_logical_slot_\w+|pg_sequence_last_value)\b",
             @"\b(heap_page_items|get_raw_page|tuple_data_split|page_header|bt_page_items)\b",
             @"\b(lo_get|loread|lo_export)\b",
+            @"\b(relacl|attacl|nspacl|datacl|lomacl|proacl|fdwacl|srvacl|typacl|defaclacl|aclexplode|acldefault|makeaclitem)\b",
             @"\bpg_largeobject\b",
             @"\b(to_jsonb?|\w*_to_json\w*|jsonb?_agg|jsonb?_build_\w+|jsonb?_object\w*|\w*_to_xml\w*|format)\b",
             @"\brow\s*\(",
@@ -78,6 +79,7 @@ public sealed class RegrasDeArquiteturaTestes
             @"'information_schema'",
             @"new\(""pg_catalog"", ""pg_largeobject""\)",
             @"\bpg_catalog\.current_setting\('(server_version_num|search_path|client_encoding|default_transaction_read_only|standard_conforming_strings|lo_compat_privileges|max_identifier_length)'\)",
+            @"\bpg_catalog\.current_setting\('lc_monetary'\)\s*=\s*'C'",
         }.Select(padrao => new Regex(padrao, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1))),
     ];
 
@@ -116,6 +118,10 @@ public sealed class RegrasDeArquiteturaTestes
         ["ColacaoEsquema.Nome"] = "nome de colação do catálogo, nunca o locale",
         ["ColacaoEsquema.Esquema"] = "nome de esquema do catálogo",
         ["CodificacaoTexto.Nome"] = "nome de codificação, de um conjunto fechado do banco",
+        ["PermissoesTabela.Tabela"] = "nome de catálogo",
+        ["PermissoesTabela.ColunasSemLeitura"] = "nomes de coluna do catálogo",
+        ["PermissoesResidual.Nome"] = "nome de catálogo",
+        ["PermissoesSequence.Nome"] = "nome de catálogo",
         ["IdentidadeLida.Banco"] = "nome do banco do catálogo",
         ["IdentidadeLida.Servidor"] = "endereço e porta do servidor",
         ["IdentidadeLida.Linhagem"] = "exceção nomeada: identificadores numéricos do cluster e do banco",
@@ -380,6 +386,9 @@ public sealed class RegrasDeArquiteturaTestes
     [InlineData("SELECT pg_catalog.pg_stat_get_backend_activity(1)")]
     [InlineData("\"pg_get_\" + \"expr\"")]
     [InlineData("DO $$ BEGIN EXECUTE x; END $$")]
+    [InlineData("SELECT pg_catalog.current_setting('lc_monetary')")]
+    [InlineData("SELECT c.relacl FROM pg_catalog.pg_class c")]
+    [InlineData("SELECT pg_catalog.aclexplode(c.relacl) FROM pg_catalog.pg_class c")]
     public void A_lista_de_texto_opaco_pega_cada_forma_proibida(string consulta) => Assert.NotEmpty(TextoOpaco("const string C = \"\"\"\n" + consulta + "\n\"\"\";"));
 
     [Fact]
@@ -434,6 +443,33 @@ public sealed class RegrasDeArquiteturaTestes
 
         Assert.True(ausentes.Length == 0, $"Tipos congelados que não existem mais: {string.Join(", ", ausentes)}.");
         Assert.True(naoAnulaveis.Length == 0, $"Propriedades novas em tipos antigos do modelo que não são anuláveis nem listas: {string.Join(", ", naoAnulaveis)}.");
+    }
+
+    [Fact]
+    public void O_que_depende_do_login_so_fica_nas_permissoes_do_acesso_lido()
+    {
+        // As permissões dependem de quem lê, e a comparação entre a origem e o destino deixa de fora só o EsquemaBanco.Acesso:
+        // um campo do login em outro lugar faria o mesmo esquema sair diferente nos dois lados, ou passaria sem conferência
+        // quando os dois logins coincidem nele. Pelo tipo (os Permissoes*, só no AcessoLido, e o AcessoLido, só no
+        // EsquemaBanco.Acesso) e pelos nomes das capacidades, que não aparecem em outro tipo.
+        var doModelo = Tipos(Motor).Where(tipo => tipo.IsVisible && NoContrato(tipo)).ToArray();
+        var permissoes = doModelo.Where(tipo => tipo.Name.StartsWith("Permissoes", StringComparison.Ordinal)).ToHashSet();
+        var acesso = doModelo.Single(tipo => tipo.Name == "AcessoLido");
+        var capacidades = permissoes.SelectMany(tipo => tipo.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Select(propriedade => propriedade.Name)
+            .Except(["Tabela", "Nome", "Tipo"])
+            .Concat(["Administrador", "Superusuario", "LocalMonetario"])
+            .ToHashSet(StringComparer.Ordinal);
+        var foraDoLugar = PropriedadesDoContrato()
+            .Where(propriedade => propriedade.DeclaringType != acesso && !permissoes.Contains(propriedade.DeclaringType!))
+            .Where(propriedade => Desembrulhar(propriedade.PropertyType).Any(permissoes.Contains)
+                || (Desembrulhar(propriedade.PropertyType).Contains(acesso) && $"{propriedade.DeclaringType!.Name}.{propriedade.Name}" != "EsquemaBanco.Acesso")
+                || capacidades.Contains(propriedade.Name))
+            .Select(propriedade => $"{propriedade.DeclaringType!.Name}.{propriedade.Name}")
+            .ToArray();
+
+        Assert.True(permissoes.Count == 4 && capacidades.Count > 10, $"Só {permissoes.Count} tipos de permissões e {capacidades.Count} capacidades achados: a regra não está olhando o contrato.");
+        Assert.True(foraDoLugar.Length == 0, $"Campos do login fora das permissões do EsquemaBanco.Acesso: {string.Join(", ", foraDoLugar)}.");
     }
 
     [Fact]

@@ -174,3 +174,18 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   esquema, em ordem e sem ciclo; nenhuma dependência nem marca de materialized view em outro residual), e, só nos
   dialetos do repositório, a presença (a chave primária tem índice primário, salvo numa partição ou com sobreposição
   proibida; o elemento de coluna de texto tem colação; o elemento de expressão tem as colunas citadas).
+- 2026-10-20: o esquema ganha as **permissões do login** que o leu, numa subárvore só (`EsquemaBanco.Acesso`), a única
+  que a comparação entre a origem e o destino deixa de fora: o leitor da origem e o dono do destino veem o mesmo
+  esquema com permissões diferentes. As capacidades são **pela operação do motor**, não pelos verbos do banco (ler todas
+  as colunas, gravar as da carga, gravar a identidade como veio, esvaziar, referenciar, alterar as restrições, desligar
+  as triggers, limpar um objeto residual, ajustar uma sequence, marcar o banco, criar o esquema do diário), cada uma
+  exigindo também o acesso ao esquema do objeto, e a **segurança por linha efetiva** para o login (a leitura sai filtrada;
+  a carga em massa falha), não o que a tabela declara. As permissões vêm do catálogo atual, não do instante da leitura: o
+  objeto que some no meio deixa as capacidades sem resposta, nunca "sim", e a segurança por linha dele é decidida pelo
+  instante da leitura. Uma regra de arquitetura mantém os campos do login dentro dessa subárvore, pelo tipo e pelos
+  nomes. A identidade passa a dizer o **transporte**: cifrado só quando a conexão exige a cifra (o que o servidor diz
+  só rebaixa), o servidor verificado só com o nome conferido e se o servidor está na própria máquina, por endereço de
+  loopback, `localhost` ou socket, nunca por prefixo do nome. O formato monetário da sessão passa a ser imposto (`C`) e
+  conferido na abertura, em vez de lido: o modelo não ganha o único texto livre que o login poderia gravar. Na suíte, um fato confere as
+  permissões de cada lado contra um padrão com exceções por objeto, toda tabela, todo objeto residual e toda sequence
+  na ordem do esquema, e outro confere o transporte.

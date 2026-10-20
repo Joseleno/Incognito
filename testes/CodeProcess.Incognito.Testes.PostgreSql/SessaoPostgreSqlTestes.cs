@@ -32,7 +32,8 @@ public sealed class SessaoPostgreSqlTestes(ServidorPostgreSql servidor)
                OR pg_catalog.current_setting('client_encoding') <> 'UTF8'
                OR pg_catalog.current_setting('statement_timeout') <> '0'
                OR pg_catalog.current_setting('idle_session_timeout') <> '0'
-               OR pg_catalog.current_setting('idle_in_transaction_session_timeout') <> '0' THEN
+               OR pg_catalog.current_setting('idle_in_transaction_session_timeout') <> '0'
+               OR pg_catalog.current_setting('lc_monetary') <> 'C' THEN
                 RAISE EXCEPTION 'sessão sem os parâmetros impostos';
             END IF;
             """,
@@ -41,7 +42,7 @@ public sealed class SessaoPostgreSqlTestes(ServidorPostgreSql servidor)
                 await servidor.ExecutarAsync(
                     "postgres",
                     $"ALTER DATABASE {banco} SET search_path = public; ALTER DATABASE {banco} SET default_transaction_read_only = off; "
-                    + $"ALTER DATABASE {banco} SET statement_timeout = '5s'; ALTER DATABASE {banco} SET idle_session_timeout = '5s';",
+                    + $"ALTER DATABASE {banco} SET statement_timeout = '5s'; ALTER DATABASE {banco} SET idle_session_timeout = '5s'; ALTER DATABASE {banco} SET lc_monetary = 'POSIX';",
                     cancelamento);
                 await using var origem = await _provedor.ConectarOrigemAsync(conexao, cancelamento);
                 Assert.NotEmpty((await origem.Esquema.LerAsync(cancelamento)).Tabelas);
@@ -53,6 +54,7 @@ public sealed class SessaoPostgreSqlTestes(ServidorPostgreSql servidor)
     [InlineData("search_path", "public")]
     [InlineData("default_transaction_read_only", "off")]
     [InlineData("standard_conforming_strings", "off")]
+    [InlineData("lc_monetary", "POSIX")]
     [InlineData("role", Papel)]
     public async Task Parametro_mudado_no_login_e_recusado(string parametro, string valor)
     {

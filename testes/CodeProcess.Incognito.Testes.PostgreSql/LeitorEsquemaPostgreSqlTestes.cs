@@ -63,6 +63,137 @@ public sealed class LeitorEsquemaPostgreSqlTestes(ServidorPostgreSql servidor)
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_tabela_que_some_durante_a_leitura_fica_sem_permissoes_e_com_a_seguranca_por_linha_do_instante_da_leitura()
+    {
+        // As permissões vêm do catálogo atual, e a tabela vem do instante da transação: apagada no meio por outra sessão, ela
+        // continua na leitura, e as capacidades ficam sem resposta (nunca "sim"); as colunas, todas sem leitura; e a
+        // segurança por linha, ligada pelo instante da transação, também para o dono quando ela é forçada. A materialized view
+        // do leitor que some também fica sem resposta (no 15 e no 16, a posse continuaria dizendo "sim").
+        var cancelamento = TestContext.Current.CancellationToken;
+        var banco = await servidor.ClonarModeloAsync(cancelamento);
+        try
+        {
+            await servidor.ExecutarAsync(
+                banco,
+                "CREATE TABLE loja.sumida (id bigint, nota text); ALTER TABLE loja.sumida ENABLE ROW LEVEL SECURITY; GRANT SELECT (id) ON loja.sumida TO incognito_leitor; "
+                + "CREATE TABLE loja.sumida_propria (id bigint); ALTER TABLE loja.sumida_propria OWNER TO incognito_leitor; "
+                + "ALTER TABLE loja.sumida_propria ENABLE ROW LEVEL SECURITY; ALTER TABLE loja.sumida_propria FORCE ROW LEVEL SECURITY; "
+                + "CREATE MATERIALIZED VIEW loja.mv_sumida AS SELECT 1 AS um; ALTER MATERIALIZED VIEW loja.mv_sumida OWNER TO incognito_leitor;",
+                cancelamento);
+            await using var conexao = new NpgsqlConnection(servidor.StringDeConexao(banco, ServidorPostgreSql.Leitor, servidor.SenhaLeitor));
+            await conexao.OpenAsync(cancelamento);
+            await using var transacao = await conexao.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, cancelamento);
+            await using (var instante = new NpgsqlCommand("SELECT pg_catalog.count(*) FROM pg_catalog.pg_class", conexao, transacao))
+            {
+                await instante.ExecuteScalarAsync(cancelamento);
+            }
+
+            await servidor.ExecutarAsync(banco, "DROP TABLE loja.sumida, loja.sumida_propria; DROP MATERIALIZED VIEW loja.mv_sumida", cancelamento);
+            var acesso = await LeitorEsquemaPostgreSql.LerAcessoAsync(conexao, servidor.Versao, cancelamento);
+            var sumida = acesso.Tabelas[new NomeObjeto("loja", "sumida")];
+
+            Assert.True(
+                sumida is
+                {
+                    PodeLer: null, PodeInserir: null, PodeGravarIdentidade: null, PodeEsvaziar: null, PodeReferenciar: null, PodeAlterarRestricoes: null,
+                    PodeDesligarTriggers: null, LeituraFiltradaPorLinha: true, EscritaRestritaPorLinha: true,
+                },
+                "A tabela apagada no meio da leitura saiu com permissões.");
+            Assert.Equal(["id", "nota"], sumida.ColunasSemLeitura);
+            Assert.True(acesso.Tabelas[new NomeObjeto("loja", "sumida_propria")] is { PodeLer: null, LeituraFiltradaPorLinha: true }, "A tabela forçada do leitor saiu sem a segurança por linha.");
+            Assert.True(acesso.Objetos.TryGetValue((new NomeObjeto("loja", "mv_sumida"), false), out var limpar) && limpar is null, "A materialized view apagada no meio da leitura saiu com resposta.");
+            Assert.True(acesso.Tabelas[new NomeObjeto("loja", "parcial")] is { PodeLer: false, ColunasSemLeitura: ["nota"] }, "A tabela que continua mudou de permissões.");
+        }
+        finally
+        {
+            await servidor.ApagarAsync(banco);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_membro_sem_heranca_do_dono_da_tabela_nao_altera_as_restricoes_dela()
+    {
+        // Membro sem herança precisaria trocar de papel para agir como dono, e o motor não troca.
+        Assert.SkipWhen(servidor.Versao < 160000, "A concessão sem herança (WITH INHERIT FALSE) só existe do PostgreSQL 16 em diante.");
+        var cancelamento = TestContext.Current.CancellationToken;
+        var papel = $"inc_dono_{Guid.NewGuid():N}";
+        var banco = await servidor.ClonarModeloAsync(cancelamento);
+        try
+        {
+            await servidor.ExecutarAsync("postgres", $"CREATE ROLE {papel} NOLOGIN; GRANT {papel} TO {ServidorPostgreSql.Leitor} WITH INHERIT FALSE;", cancelamento);
+            await servidor.ExecutarAsync(banco, $"CREATE TABLE loja.do_papel (id bigint); ALTER TABLE loja.do_papel OWNER TO {papel}; GRANT SELECT ON loja.do_papel TO {ServidorPostgreSql.Leitor};", cancelamento);
+            await using var origem = await _provedor.ConectarOrigemAsync(new SegredoConexao(servidor.StringDeConexao(banco, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
+            var tabela = (await origem.Esquema.LerAsync(cancelamento)).Acesso!.Tabelas.Single(lida => lida.Tabela.Equals(new NomeObjeto("loja", "do_papel")));
+
+            Assert.True(tabela is { PodeLer: true, PodeAlterarRestricoes: false, PodeDesligarTriggers: false }, "O membro sem herança ficou com a posse da tabela.");
+        }
+        finally
+        {
+            await servidor.ApagarAsync(banco);
+            await servidor.ExecutarAsync("postgres", $"DROP ROLE IF EXISTS {papel}", CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_administrador_do_servidor_ignora_a_seguranca_por_linha_e_apaga_os_large_objects()
+    {
+        // Superusuário: nenhuma política vale para ele, nem a forçada, e os large objects de qualquer dono são dele.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var banco = await servidor.ClonarModeloAsync(cancelamento);
+        try
+        {
+            await using var origem = await _provedor.ConectarOrigemAsync(new SegredoConexao(servidor.StringDeConexaoDoAdministrador(banco)), cancelamento);
+            var acesso = (await origem.Esquema.LerAsync(cancelamento)).Acesso!;
+            var forcada = acesso.Tabelas.Single(tabela => tabela.Tabela.Equals(new NomeObjeto("loja", "forcada")));
+
+            Assert.True(forcada is { PodeLer: true, LeituraFiltradaPorLinha: false, EscritaRestritaPorLinha: false }, "O administrador ficou com a segurança por linha.");
+            Assert.True(acesso.Residuais.Single(residual => residual.Tipo == TipoObjetoResidual.ObjetosGrandes).PodeLimpar);
+        }
+        finally
+        {
+            await servidor.ApagarAsync(banco);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_dono_de_todos_os_large_objects_pode_apaga_los()
+    {
+        // No esquema de conformidade, um large object é do terceiro papel, e o dono do destino não os apaga; dono de todos,
+        // apaga.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var banco = await servidor.CriarDestinoAsync(cancelamento);
+        try
+        {
+            await servidor.ExecutarAsync(
+                banco,
+                """
+                DO $$
+                DECLARE
+                    objeto oid;
+                BEGIN
+                    FOR objeto IN SELECT oid FROM pg_catalog.pg_largeobject_metadata WHERE lomowner <> 'incognito_dono'::regrole LOOP
+                        EXECUTE format('ALTER LARGE OBJECT %s OWNER TO incognito_dono', objeto);
+                    END LOOP;
+                END
+                $$;
+                """,
+                cancelamento);
+            await using var destino = await _provedor.ConectarDestinoAsync(new SegredoConexao(servidor.StringDeConexao(banco, ServidorPostgreSql.Dono, servidor.SenhaDono)), cancelamento);
+            var acesso = (await destino.Esquema.LerAsync(cancelamento)).Acesso!;
+
+            Assert.True(acesso.Residuais.Single(residual => residual.Tipo == TipoObjetoResidual.ObjetosGrandes).PodeLimpar);
+        }
+        finally
+        {
+            await servidor.ApagarAsync(banco);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task Banco_sem_codificacao_declarada_mede_o_texto_em_bytes()
     {
         // No SQL_ASCII o banco guarda bytes, e o Incognito grava UTF-8 cru: até 4 bytes por caractere.

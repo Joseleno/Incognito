@@ -88,8 +88,10 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
         Assert.True(diferencas.Length == 0, $"Inventário: {string.Join("; ", diferencas)}.");
 
         // O inventário não diz tudo (as propriedades do banco têm fato próprio): com o mesmo esquema, o destino tem de sair
-        // igual à origem em tudo o que o modelo diz.
-        Assert.True(DespejoDoModelo.Texto(origem) == DespejoDoModelo.Texto(destino), "Inventário: o destino, com o mesmo esquema, foi lido diferente da origem.");
+        // igual à origem em tudo o que o modelo diz, fora as permissões do login, que dependem de quem lê.
+        Assert.True(
+            DespejoDoModelo.TextoSemAcesso(origem) == DespejoDoModelo.TextoSemAcesso(destino),
+            "Inventário: o destino, com o mesmo esquema, foi lido diferente da origem (fora as permissões do login).");
     }
 
     [Fact]
@@ -291,8 +293,12 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_seguranca_por_linha_e_apontada()
     {
+        // Quem não tem segurança por linha a declara inexistente, com o motivo: presente sem tabela não diz por quê.
+        Assert.True(
+            !Esperado.SegurancaDeLinha.Existe || Esperado.SegurancaDeLinha.Valor.Count > 0,
+            "Segurança por linha: a fixture a declara presente sem nenhuma tabela; declare inexistente, com o motivo.");
         var comSeguranca = (await LerOrigemAsync()).Tabelas.Where(tabela => tabela.SegurancaDeLinha).Select(tabela => tabela.Nome).ToArray();
-        NomeObjeto[] esperadas = Esperado.SegurancaDeLinha.Existe ? [Esperado.SegurancaDeLinha.Valor] : [];
+        var esperadas = Esperado.SegurancaDeLinha.Existe ? Esperado.SegurancaDeLinha.Valor : [];
 
         Assert.True(
             MesmoConjunto(comSeguranca, esperadas),
@@ -383,7 +389,195 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
         Assert.True(origem.Linhagem.Count > 0, "Identidade: linhagem vazia.");
     }
 
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_acesso_e_lido_em_cada_lado()
+    {
+        // O leitor da origem e o dono do destino, cada um com as suas permissões, sobre o mesmo esquema: toda tabela, todo
+        // objeto residual e toda sequence lidos têm as permissões dele, na ordem do esquema, e iguais às declaradas.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var problemas = new List<string>();
+        foreach (var (lado, dialeto, esperado) in new (string, DialetoBanco, LadoDoAcesso?)[]
+        {
+            ("origem", Par.Origem, Esperado.Acesso.Existe ? Esperado.Acesso.Valor.Origem : null),
+            ("destino", Par.Destino, Esperado.Acesso.Existe ? Esperado.Acesso.Valor.Destino : null),
+        })
+        {
+            problemas.AddRange(DiferencasDoAcesso(await dialeto.Esquema.LerAsync(cancelamento), esperado).Select(problema => $"{lado}: {problema}"));
+        }
+
+        Assert.True(problemas.Count == 0, $"Acesso: {string.Join("; ", problemas)}.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_identidade_informa_o_transporte()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var problemas = new List<string>();
+        foreach (var (lado, dialeto) in new (string, DialetoBanco)[] { ("origem", Par.Origem), ("destino", Par.Destino) })
+        {
+            var transporte = (await dialeto.Identidade.LerAsync(cancelamento)).Transporte;
+            if (!Esperado.Transporte.Existe)
+            {
+                if (transporte is not null)
+                {
+                    problemas.Add($"{lado}: transporte lido num banco que o declara inexistente");
+                }
+
+                continue;
+            }
+
+            if (transporte is null)
+            {
+                problemas.Add($"{lado}: transporte ausente");
+                continue;
+            }
+
+            if (transporte.ServidorVerificado == true && transporte.Cifrado != true)
+            {
+                problemas.Add($"{lado}: servidor verificado numa conexão que não é cifrada");
+            }
+
+            if (TransporteEsperado.De(transporte) != Esperado.Transporte.Valor)
+            {
+                problemas.Add($"{lado}: lido {TransporteEsperado.De(transporte)}, esperado {Esperado.Transporte.Valor}");
+            }
+        }
+
+        Assert.True(problemas.Count == 0, $"Transporte: {string.Join("; ", problemas)}.");
+    }
+
     private Task<EsquemaBanco> LerOrigemAsync() => Par.Origem.Esquema.LerAsync(TestContext.Current.CancellationToken);
+
+    // As permissões de um lado: presentes se declaradas, uma por objeto do esquema e na ordem dele, com o valor da exceção
+    // do objeto ou do padrão, e as colunas sem leitura coerentes com a tabela.
+    private static IEnumerable<string> DiferencasDoAcesso(EsquemaBanco esquema, LadoDoAcesso? esperado)
+    {
+        if (esperado is null)
+        {
+            if (esquema.Acesso is not null)
+            {
+                yield return "acesso do login lido num banco que o declara inexistente";
+            }
+
+            yield break;
+        }
+
+        if (esquema.Acesso is not { } acesso)
+        {
+            yield return "acesso do login ausente";
+            yield break;
+        }
+
+        if (PermissoesBancoEsperadas.De(acesso.Banco) != esperado.Banco)
+        {
+            yield return $"acesso do login com as permissões do banco lidas {PermissoesBancoEsperadas.De(acesso.Banco)}, esperadas {esperado.Banco}";
+        }
+
+        var tabelas = esquema.Tabelas.DistinctBy(tabela => tabela.Nome).ToDictionary(tabela => tabela.Nome);
+        var residuais = esquema.ObjetosResiduais.DistinctBy(residual => residual.Nome).ToDictionary(residual => residual.Nome);
+        var sequences = esquema.Sequences.Select(sequence => sequence.Nome).ToHashSet();
+        var sobras = esperado.ExcecoesDasTabelas.Keys.Where(nome => !tabelas.ContainsKey(nome)).Select(nome => $"exceção de acesso da tabela {nome}, que não foi lida")
+            .Concat(esperado.ExcecoesDosResiduais.Keys.Where(nome => !residuais.ContainsKey(nome)).Select(nome => $"exceção de acesso do objeto residual {nome}, que não foi lido"))
+            .Concat(esperado.ExcecoesDasSequences.Keys.Where(nome => !sequences.Contains(nome)).Select(nome => $"exceção de acesso da sequence {nome}, que não foi lida"));
+        foreach (var sobra in sobras)
+        {
+            yield return sobra;
+        }
+
+        var divergencias = new[]
+        {
+            Divergencia(acesso.Tabelas.Select(tabela => tabela.Tabela).ToArray(), esquema.Tabelas.Select(tabela => tabela.Nome).ToArray(), "tabela"),
+            Divergencia(acesso.Residuais.Select(residual => residual.Nome).ToArray(), esquema.ObjetosResiduais.Select(residual => residual.Nome).ToArray(), "objeto residual"),
+            Divergencia(acesso.Sequences.Select(sequence => sequence.Nome).ToArray(), esquema.Sequences.Select(sequence => sequence.Nome).ToArray(), "sequence"),
+        };
+        foreach (var divergencia in divergencias.OfType<string>())
+        {
+            yield return divergencia;
+        }
+
+        foreach (var permissoes in acesso.Tabelas.Where(permissoes => tabelas.ContainsKey(permissoes.Tabela)))
+        {
+            var nome = permissoes.Tabela;
+            var declaradas = esperado.ExcecoesDasTabelas.GetValueOrDefault(nome) ?? esperado.Tabelas;
+            if (!PermissoesTabelaEsperadas.De(permissoes).Igual(declaradas))
+            {
+                yield return $"{nome}: lidas {PermissoesTabelaEsperadas.De(permissoes)}, esperadas {declaradas}";
+            }
+
+            var posicoes = permissoes.ColunasSemLeitura.Select(coluna => tabelas[nome].Colunas.ToList().FindIndex(lida => lida.Nome == coluna)).ToArray();
+            if (posicoes.Contains(-1))
+            {
+                yield return $"{nome}: coluna sem leitura {permissoes.ColunasSemLeitura[Array.IndexOf(posicoes, -1)]}, que não existe";
+            }
+            else if (posicoes.Zip(posicoes.Skip(1)).Any(par => par.First >= par.Second))
+            {
+                yield return $"{nome}: colunas sem leitura fora da ordem da tabela";
+            }
+
+            if (permissoes.PodeLer == true && permissoes.ColunasSemLeitura.Count > 0)
+            {
+                yield return $"{nome}: com leitura e colunas sem leitura";
+            }
+        }
+
+        foreach (var permissoes in acesso.Residuais.Where(permissoes => residuais.ContainsKey(permissoes.Nome)))
+        {
+            var nome = permissoes.Nome;
+            if (permissoes.Tipo != residuais[nome].Tipo)
+            {
+                yield return $"objeto residual {nome}: tipo {permissoes.Tipo} nas permissões, {residuais[nome].Tipo} no esquema";
+            }
+
+            var declarado = esperado.ExcecoesDosResiduais.TryGetValue(nome, out var excecao) ? excecao : esperado.PodeLimpar;
+            if (permissoes.PodeLimpar != declarado)
+            {
+                yield return $"objeto residual {nome}: limpar lido {Marcas.Texto(permissoes.PodeLimpar)}, esperado {Marcas.Texto(declarado)}";
+            }
+        }
+
+        foreach (var permissoes in acesso.Sequences.Where(permissoes => sequences.Contains(permissoes.Nome)))
+        {
+            var declarado = esperado.ExcecoesDasSequences.TryGetValue(permissoes.Nome, out var excecao) ? excecao : esperado.PodeAjustar;
+            if (permissoes.PodeAjustar != declarado)
+            {
+                yield return $"sequence {permissoes.Nome}: ajustar lido {Marcas.Texto(permissoes.PodeAjustar)}, esperado {Marcas.Texto(declarado)}";
+            }
+        }
+    }
+
+    // A primeira diferença entre os objetos das permissões e os do esquema: um que falta, um a mais (ou repetido), um no
+    // lugar de outro ou a ordem.
+    private static string? Divergencia(NomeObjeto[] lidos, NomeObjeto[] doEsquema, string objeto)
+    {
+        if (lidos.SequenceEqual(doEsquema))
+        {
+            return null;
+        }
+
+        if (doEsquema.FirstOrDefault(nome => !lidos.Contains(nome)) is { } falta && lidos.Length <= doEsquema.Length)
+        {
+            return lidos.FirstOrDefault(nome => !doEsquema.Contains(nome)) is { } outro
+                ? $"acesso do login com as permissões de {objeto} {outro} no lugar de {falta}"
+                : $"acesso do login sem as permissões de {objeto} {falta}";
+        }
+
+        if (lidos.Length > doEsquema.Length)
+        {
+            var sobra = lidos.FirstOrDefault(nome => !doEsquema.Contains(nome)) ?? Repetidos(lidos).First();
+            return $"acesso do login com permissões a mais de {objeto} {sobra}";
+        }
+
+        // Com um objeto repetido no esquema (a consistência o acusa), as permissões dele podem faltar sem nenhum nome faltar.
+        var posicao = lidos.Zip(doEsquema).TakeWhile(par => par.First.Equals(par.Second)).Count();
+        if (posicao >= lidos.Length)
+        {
+            return $"acesso do login sem as permissões de {objeto} {doEsquema[posicao]}";
+        }
+
+        return $"acesso do login com as permissões de {objeto} fora da ordem do esquema: {lidos[posicao]} no lugar de {doEsquema[posicao]}";
+    }
 
     private static void ConferirHierarquia(EsquemaBanco esquema, Caso<Hierarquia> caso, TipoTabela[] tiposDoPai, TipoTabela tipoDaFilha, string recurso)
     {

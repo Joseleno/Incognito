@@ -310,3 +310,69 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Nome.get -> string!
 [INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Nome.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.TriggerEsquema() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.AcessoLido() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Banco.get -> CodeProcess.Incognito.Dialetos.PermissoesBanco!
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Banco.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Residuais.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.PermissoesResidual!>!
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Residuais.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Sequences.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.PermissoesSequence!>!
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Sequences.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Tabelas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.PermissoesTabela!>!
+[INCX001]CodeProcess.Incognito.Dialetos.AcessoLido.Tabelas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Acesso.get -> CodeProcess.Incognito.Dialetos.AcessoLido?
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Acesso.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Transporte.get -> CodeProcess.Incognito.Dialetos.TransporteConexao?
+[INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Transporte.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesBanco
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesBanco.PermissoesBanco() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesBanco.PodeCriarEsquema.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesBanco.PodeCriarEsquema.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesBanco.PodeMarcarBanco.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesBanco.PodeMarcarBanco.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.Nome.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.PermissoesResidual() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.PodeLimpar.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.PodeLimpar.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.Tipo.get -> CodeProcess.Incognito.Dialetos.TipoObjetoResidual
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesResidual.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesSequence
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesSequence.Nome.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesSequence.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesSequence.PermissoesSequence() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesSequence.PodeAjustar.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesSequence.PodeAjustar.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.ColunasSemLeitura.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.ColunasSemLeitura.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.EscritaRestritaPorLinha.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.EscritaRestritaPorLinha.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.LeituraFiltradaPorLinha.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.LeituraFiltradaPorLinha.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PermissoesTabela() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeAlterarRestricoes.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeAlterarRestricoes.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeDesligarTriggers.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeDesligarTriggers.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeEsvaziar.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeEsvaziar.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeGravarIdentidade.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeGravarIdentidade.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeInserir.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeInserir.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeLer.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeLer.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeReferenciar.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.PodeReferenciar.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.Tabela.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.PermissoesTabela.Tabela.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.Cifrado.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.Cifrado.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.Local.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.Local.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.ServidorVerificado.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.ServidorVerificado.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TransporteConexao.TransporteConexao() -> void

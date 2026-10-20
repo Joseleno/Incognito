@@ -9,14 +9,18 @@ public abstract class LeitorEsquema
     /// <summary>
     /// Lê o esquema: tabelas, colunas, chaves, sequences e objetos residuais, as tabelas, as sequences e os objetos
     /// residuais em ordem ordinal de esquema e nome (o plano e o relatório saem iguais entre leituras), as colunas na
-    /// ordem do catálogo. O esquema <c>incognito</c> (diário do Incognito) nunca entra.
+    /// ordem do catálogo, e as permissões do login que lê. O esquema <c>incognito</c> (diário do Incognito) nunca entra.
     /// </summary>
     /// <param name="cancelamento">Cancela a leitura.</param>
     /// <returns>O esquema lido.</returns>
+    /// <remarks>
+    /// Um dialeto que não vê o catálogo inteiro (por falta de privilégio do login) lança: nunca devolve um esquema parcial,
+    /// que deixaria tabelas, restrições ou objetos residuais sem conferência.
+    /// </remarks>
     public abstract Task<EsquemaBanco> LerAsync(CancellationToken cancelamento);
 }
 
-/// <summary>O banco, o servidor e a linhagem.</summary>
+/// <summary>O banco, o servidor, a linhagem e o transporte da conexão.</summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class IdentidadeBanco
 {
