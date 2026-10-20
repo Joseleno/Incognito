@@ -43,8 +43,9 @@ public sealed class ContextoCriacao
     public TipoColuna Tipo { get; }
 
     /// <summary>
-    /// O comprimento máximo da coluna em unidades UTF-16 que cabem com certeza (o dialeto converte de forma
-    /// conservadora: o <c>varchar</c> do SQL Server conta bytes); nulo quando não há limite.
+    /// O comprimento máximo da coluna em unidades UTF-16 que cabem com certeza (o <c>planejar</c> converte do limite que
+    /// o dialeto lê, na unidade do banco, de forma conservadora: o <c>varchar</c> do SQL Server conta bytes); nulo quando
+    /// não há limite.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Na atribuição: zero ou negativo.</exception>
     public int? ComprimentoMaximo

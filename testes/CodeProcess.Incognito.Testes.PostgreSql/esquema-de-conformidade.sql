@@ -251,16 +251,82 @@ CREATE TABLE loja.reservas (
     CONSTRAINT ex_reservas EXCLUDE USING gist (periodo WITH &&) WHERE (nota <> 'zqSENTINELAqz')
 );
 
--- Colações: ICU com o sentinela curto numa subtag privada e, do 16 em diante, com regras.
-CREATE COLLATION loja.colacao_sentinela (provider = icu, locale = 'und-x-zqsentin');
+-- Colações não determinísticas (a medida só roda nelas): ICU com o sentinela curto numa subtag privada (ignora a caixa) e,
+-- do 16 em diante, com regras (não é medida). As outras ficam num esquema com aspa e maiúscula no nome, como a que tem aspa
+-- e maiúscula no próprio nome: a medida cita os dois.
+CREATE COLLATION loja.colacao_sentinela (provider = icu, locale = 'und-u-ks-level2-x-zqsentin', deterministic = false);
 COMMENT ON COLLATION loja.colacao_sentinela IS 'zqSENTINELAqz';
 DO $$
 BEGIN
     IF current_setting('server_version_num')::integer >= 160000 THEN
-        EXECUTE 'CREATE COLLATION loja.colacao_regras (provider = icu, locale = ''und'', rules = ''&a < zqSENTINELAqz'')';
+        EXECUTE 'CREATE COLLATION loja.colacao_regras (provider = icu, locale = ''und'', rules = ''&a < zqSENTINELAqz'', deterministic = false)';
     END IF;
 END
 $$;
+CREATE SCHEMA "Idioma""X";
+CREATE COLLATION "Idioma""X".ci_nivel2 (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
+CREATE COLLATION "Idioma""X".sem_acento (provider = icu, locale = 'und-u-ks-level1', deterministic = false);
+CREATE COLLATION "Idioma""X".pontuacao (provider = icu, locale = 'und-u-ka-shifted', deterministic = false);
+CREATE COLLATION "Idioma""X"."Caixa""Alta.ç;--'" (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
+
+-- A semântica das colunas de texto, pelo fim da cadeia de domínios e arrays: o limite (também o de um domínio de domínio,
+-- que guarda -1, e o do elemento de um array), os espaços finais do char, a colação efetiva de cada uma e as colunas geradas,
+-- que citam outras (na ordem da tabela).
+CREATE DOMAIN loja.d_varchar AS varchar(12);
+CREATE DOMAIN loja.d_d_varchar AS loja.d_varchar;
+CREATE DOMAIN loja.d_lista AS varchar(5)[];
+CREATE DOMAIN loja.d_citext AS citext;
+CREATE DOMAIN loja.d_fixo AS char(2);
+CREATE TABLE loja.textos (
+    limitado varchar(10),
+    livre varchar,
+    fixo char(3),
+    fixos char(3)[],
+    um char,
+    listas varchar(10)[],
+    do_dominio loja.d_varchar,
+    do_dominio_de_dominio loja.d_d_varchar,
+    dominio_de_lista loja.d_lista,
+    lista_de_dominio loja.d_varchar[],
+    nome_do_catalogo name,
+    caractere "char",
+    binaria text COLLATE "C",
+    nivel2 text COLLATE "Idioma""X".ci_nivel2,
+    sem_acento text COLLATE "Idioma""X".sem_acento,
+    pontuacao text COLLATE "Idioma""X".pontuacao,
+    hostil text COLLATE "Idioma""X"."Caixa""Alta.ç;--'",
+    sentinela text COLLATE loja.colacao_sentinela,
+    caixa_do_dominio loja.d_citext,
+    fixo_do_dominio loja.d_fixo,
+    codigos loja.codigo_curto[],
+    email text,
+    email_min text GENERATED ALWAYS AS (lower(email)) STORED,
+    junto text GENERATED ALWAYS AS (limitado || livre) STORED
+);
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::integer >= 160000 THEN
+        EXECUTE 'ALTER TABLE loja.textos ADD COLUMN com_regras text COLLATE loja.colacao_regras';
+    END IF;
+END
+$$;
+
+-- A semântica dos números: precisão e escala (também negativa), e a restrição do tipo pela cadeia de domínios (o CHECK do
+-- domínio de baixo vale para o de cima; o do d_cpf tem o sentinela), e uma coluna gerada que não cita nenhuma.
+CREATE DOMAIN loja.numero AS integer CHECK (VALUE > 0);
+CREATE DOMAIN loja.numero_livre AS loja.numero;
+CREATE DOMAIN loja.d_cpf AS varchar(11) CHECK (VALUE <> 'zqSENTINELAqz-cpf');
+CREATE DOMAIN loja.d_d_cpf AS loja.d_cpf;
+CREATE DOMAIN loja.d_valor AS numeric(8, 3);
+CREATE TABLE loja.numeros (
+    centenas numeric(5, -2),
+    livre numeric,
+    positivo loja.numero,
+    positivo_derivado loja.numero_livre,
+    documento loja.d_d_cpf,
+    valor_do_dominio loja.d_valor,
+    constante integer GENERATED ALWAYS AS (1) STORED
+);
 
 -- Objetos de um terceiro papel (nem o leitor nem o dono), que no destino continuam dele.
 CREATE TABLE loja.alheia (id bigint PRIMARY KEY);
@@ -284,8 +350,16 @@ CREATE TABLE incognito.execucao (id uuid PRIMARY KEY);
 CREATE SEQUENCE incognito.seq_interna;
 CREATE MATERIALIZED VIEW incognito.resumo AS SELECT 1 AS total;
 
--- O leitor da origem: só leitura, nunca dono.
+-- Lugares que o dialeto nunca lê, fora das tabelas: parâmetro e comentário de papel (do servidor inteiro), regra de
+-- reescrita e filtro de linha de publicação.
+ALTER ROLE incognito_outro SET app.segredo = 'zqSENTINELAqz-papel';
+COMMENT ON ROLE incognito_outro IS 'zqSENTINELAqz-papel';
+CREATE RULE regra_sentinela AS ON INSERT TO loja.tipos WHERE NEW.texto = 'zqSENTINELAqz-regra' DO INSTEAD NOTHING;
+CREATE PUBLICATION publicacao_sentinela FOR TABLE loja.tipos WHERE (texto <> 'zqSENTINELAqz-publicacao') WITH (publish = 'insert');
+
+-- O leitor da origem: só leitura, nunca dono; com USAGE no esquema das colações, para medi-las.
 GRANT USAGE ON SCHEMA loja TO incognito_leitor;
+GRANT USAGE ON SCHEMA "Idioma""X" TO incognito_leitor;
 GRANT SELECT ON ALL TABLES IN SCHEMA loja TO incognito_leitor;
 
 -- Linhas com o sentinela e a estatística delas (pg_stats e pg_statistic_ext_data guardam valores reais das colunas: o

@@ -1,4 +1,8 @@
+using System.Collections;
+using System.Reflection;
+using System.Text;
 using CodeProcess.Incognito.Dialetos;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Testes.Conformidade;
 
@@ -83,8 +87,8 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
         Assert.True(diferencas.Length == 0, $"Inventário: {string.Join("; ", diferencas)}.");
 
-        // O inventário não diz tudo (a situação do tipo, por exemplo, tem fato próprio só na origem): com o mesmo esquema,
-        // o destino tem de sair igual à origem em tudo o que o modelo diz.
+        // O inventário não diz tudo (as propriedades do banco têm fato próprio): com o mesmo esquema, o destino tem de sair
+        // igual à origem em tudo o que o modelo diz.
         Assert.True(DespejoDoModelo.Texto(origem) == DespejoDoModelo.Texto(destino), "Inventário: o destino, com o mesmo esquema, foi lido diferente da origem.");
     }
 
@@ -111,20 +115,77 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
-    public async Task Os_tipos_da_matriz_sao_classificados()
+    public void A_matriz_de_tipos_e_coberta()
     {
-        var esquema = await LerOrigemAsync();
-        var situacoes = Esperado.Tipos.Select(tipo => tipo.Situacao).ToHashSet();
+        // Cada situação, tipo canônico e unidade de comprimento aparece em alguma coluna do inventário (que o fato do
+        // inventário compara com a leitura) ou é declarado inexistente, com o motivo; nunca os dois.
+        var colunas = Esperado.Inventario.Tabelas.SelectMany(tabela => tabela.Colunas).ToArray();
+        var presentes = colunas.Select(coluna => (Enum)coluna.Situacao)
+            .Concat(colunas.Where(coluna => coluna.Tipo is not null).Select(coluna => (Enum)coluna.Tipo!.Value))
+            .Concat(colunas.Where(coluna => coluna.Comprimento is not null).Select(coluna => (Enum)coluna.Comprimento!.Unidade))
+            .ToHashSet();
+        Enum[] valores =
+        [
+            .. Enum.GetValues<SituacaoTipo>().Cast<Enum>(),
+            .. Enum.GetValues<TipoColuna>().Cast<Enum>(),
+            .. Enum.GetValues<UnidadeComprimento>().Cast<Enum>(),
+        ];
 
-        Assert.True(
-            situacoes.IsSupersetOf([SituacaoTipo.Suportado, SituacaoTipo.ComRessalva, SituacaoTipo.SuportadoPorExclusao]),
-            "Tipos: a matriz declarada precisa cobrir as situações suportado, com ressalva e suportado por exclusão.");
-        var divergentes = Esperado.Tipos
-            .Select(esperada => (esperada, coluna: Coluna(esquema, esperada.Coluna, "Tipos")))
-            .Where(par => (par.coluna.Situacao, par.coluna.Tipo) != (par.esperada.Situacao, par.esperada.Tipo))
-            .Select(par => $"{par.esperada.Coluna} ({par.coluna.TipoNativo}) lida como {par.coluna.Situacao}/{par.coluna.Tipo}, esperada {par.esperada.Situacao}/{par.esperada.Tipo}")
+        var descobertos = valores.Where(valor => !presentes.Contains(valor) && !Esperado.Inexistentes.ContainsKey(valor)).Select(Nomear).ToArray();
+        Assert.True(descobertos.Length == 0, $"Matriz: valores sem coluna no inventário nem motivo de ausência: {string.Join(", ", descobertos)}.");
+        var contraditos = Esperado.Inexistentes.Keys.Where(presentes.Contains).Select(Nomear).ToArray();
+        Assert.True(contraditos.Length == 0, $"Matriz: valores declarados inexistentes e presentes no inventário: {string.Join(", ", contraditos)}.");
+        var semMotivo = Esperado.Inexistentes.Where(par => !valores.Contains(par.Key) || string.IsNullOrWhiteSpace(par.Value)).Select(par => Nomear(par.Key)).ToArray();
+        Assert.True(semMotivo.Length == 0, $"Matriz: ausências fora da matriz ou sem motivo: {string.Join(", ", semMotivo)}.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task As_propriedades_do_banco_sao_lidas()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var lados = new (string Lado, PropriedadesBanco? Lidas)[]
+        {
+            ("origem", (await Par.Origem.Esquema.LerAsync(cancelamento)).Propriedades),
+            ("destino", (await Par.Destino.Esquema.LerAsync(cancelamento)).Propriedades),
+        };
+        var esperadas = Esperado.Propriedades.Existe ? Esperado.Propriedades.Valor : null;
+        var divergentes = lados
+            .Where(lado => PropriedadesEsperadas.De(lado.Lidas) != esperadas)
+            .Select(lado => $"{lado.Lado}: lidas {Texto(PropriedadesEsperadas.De(lado.Lidas))}, esperadas {Texto(esperadas)}")
             .ToArray();
-        Assert.True(divergentes.Length == 0, $"Tipos: {string.Join("; ", divergentes)}.");
+
+        Assert.True(divergentes.Length == 0, $"Propriedades do banco: {string.Join("; ", divergentes)}.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task Nada_lido_traz_o_sentinela()
+    {
+        // Os sentinelas estão em todo texto opaco do esquema de conformidade e nas senhas; procurados também em bytes
+        // decimais e em hexadecimal, as formas em que as árvores de expressão do catálogo guardam as constantes. Nos dois
+        // lados, e lidos também pelo administrador do servidor, que vê canais que o leitor e o dono não veem.
+        var sentinelas = Esperado.Sentinelas;
+        Assert.True(sentinelas is { Count: > 0 } && sentinelas.All(sentinela => !string.IsNullOrEmpty(sentinela)), "Sentinela: a fixture precisa declarar os sentinelas, sem item vazio.");
+
+        var cancelamento = TestContext.Current.CancellationToken;
+        var textos = new List<string>();
+        await ColetarAsync(Par, textos, cancelamento);
+        await using (var privilegiado = await fixture.CriarParPrivilegiadoAsync(cancelamento))
+        {
+            await ColetarAsync(privilegiado, textos, cancelamento);
+        }
+
+        var formas = sentinelas.SelectMany(sentinela => new[]
+        {
+            sentinela,
+            string.Join(" ", Encoding.UTF8.GetBytes(sentinela)),
+            Convert.ToHexString(Encoding.UTF8.GetBytes(sentinela)),
+        }).ToArray();
+        var achados = textos.Count(texto => formas.Any(forma => texto.Contains(forma, StringComparison.OrdinalIgnoreCase)));
+
+        // Sem o texto achado na mensagem: o log do CI é público.
+        Assert.True(achados == 0, $"Sentinela: {achados} textos lidos trazem um sentinela.");
     }
 
     [Fact]
@@ -217,11 +278,12 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task Os_objetos_residuais_sao_inventariados()
     {
-        var lidos = (await LerOrigemAsync()).ObjetosResiduais.Select(objeto => new ObjetoResidualEsperado(objeto.Nome, objeto.Tipo)).ToArray();
+        var lidos = (await LerOrigemAsync()).ObjetosResiduais.Select(objeto => new ResidualInventariado(objeto.Nome, objeto.Tipo)).ToArray();
+        var esperados = Esperado.Inventario.Residuais;
 
         Assert.True(
-            MesmoConjunto(lidos, Esperado.ObjetosResiduais),
-            $"Objetos residuais: lidos [{string.Join(", ", lidos.Select(o => $"{o.Nome} {o.Tipo}"))}], esperados [{string.Join(", ", Esperado.ObjetosResiduais.Select(o => $"{o.Nome} {o.Tipo}"))}].");
+            MesmoConjunto(lidos, esperados),
+            $"Objetos residuais: lidos [{string.Join(", ", lidos.Select(o => $"{o.Nome} {o.Tipo}"))}], esperados [{string.Join(", ", esperados.Select(o => $"{o.Nome} {o.Tipo}"))}].");
     }
 
     [Fact]
@@ -350,11 +412,56 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
         return tabelas[0];
     }
 
-    private static ColunaEsquema Coluna(EsquemaBanco esquema, ReferenciaColuna referencia, string recurso)
+    private static string Nomear(Enum valor) => $"{valor.GetType().Name}.{valor}";
+
+    private static string Texto(object? valor) => valor?.ToString() ?? "nenhuma";
+
+    // O esquema e a identidade dos dois lados e o texto dos próprios dialetos.
+    private static async Task ColetarAsync(ParDeBancos par, List<string> textos, CancellationToken cancelamento)
     {
-        var colunas = Tabela(esquema, referencia.Tabela, recurso).Colunas.Where(lida => lida.Nome == referencia.Coluna).ToArray();
-        Assert.True(colunas.Length == 1, $"{recurso}: coluna {referencia} lida {colunas.Length} vezes.");
-        return colunas[0];
+        foreach (var dialeto in new DialetoBanco[] { par.Origem, par.Destino })
+        {
+            Coletar(await dialeto.Esquema.LerAsync(cancelamento), textos);
+            Coletar(await dialeto.Identidade.LerAsync(cancelamento), textos);
+            textos.Add(dialeto.ToString()!);
+        }
+    }
+
+    // Todo texto alcançável pelas propriedades públicas, inclusive o ToString de cada objeto.
+    private static void Coletar(object? valor, List<string> textos)
+    {
+        switch (valor)
+        {
+            case null:
+                return;
+            case string texto:
+                textos.Add(texto);
+                return;
+            case IDictionary dicionario:
+                foreach (DictionaryEntry par in dicionario)
+                {
+                    Coletar(par.Key, textos);
+                    Coletar(par.Value, textos);
+                }
+
+                return;
+            case IEnumerable itens:
+                foreach (var item in itens)
+                {
+                    Coletar(item, textos);
+                }
+
+                return;
+            case Enum or ValueType or Version:
+                textos.Add(valor.ToString()!);
+                return;
+        }
+
+        textos.Add(valor.ToString()!);
+        foreach (var propriedade in valor.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(propriedade => propriedade.GetIndexParameters().Length == 0))
+        {
+            Coletar(propriedade.GetValue(valor), textos);
+        }
     }
 
     // Mesmos itens, na mesma quantidade (uma duplicata lida não passa por um conjunto).
@@ -457,6 +564,11 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
                 yield return $"coluna {tabela.Nome}.{coluna.Nome} com tipo canônico fora de 'suportado'";
             }
 
+            foreach (var problema in tabela.Colunas.SelectMany(coluna => Inconsistencias(tabela, coluna, esquema.Propriedades)))
+            {
+                yield return problema;
+            }
+
             foreach (var repetida in Repetidos(tabela.ChavesEstrangeiras.Select(chave => chave.Nome)))
             {
                 yield return $"chave {repetida} de {tabela.Nome} repetida";
@@ -482,6 +594,11 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
             }
         }
 
+        if (esquema.Propriedades?.Colacao is { } padrao && !Coerente(padrao))
+        {
+            yield return "colação padrão das propriedades do banco determinística com marca que não é falsa";
+        }
+
         foreach (var sequence in esquema.Sequences)
         {
             foreach (var repetida in Repetidos(sequence.Colunas))
@@ -495,6 +612,100 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
             }
         }
     }
+
+    // A semântica da coluna. Um tipo canônico nulo (domínio, array) pode ter qualquer campo; os que só valem para um tipo
+    // canônico ficam fora dos outros. As regras de presença ("texto tem colação", "inteiro tem faixa", "gerada tem
+    // referências") valem só aqui, para os dialetos do repositório: o motor trata o campo nulo como o pior caso.
+    private static IEnumerable<string> Inconsistencias(TabelaEsquema tabela, ColunaEsquema coluna, PropriedadesBanco? propriedades)
+    {
+        var nome = $"coluna {tabela.Nome}.{coluna.Nome}";
+        var texto = coluna.Tipo is null or TipoColuna.Texto;
+        if (coluna.Colacao is not null && !texto)
+        {
+            yield return $"{nome} com colação fora de texto";
+        }
+
+        if (coluna.Tipo == TipoColuna.Texto && coluna.Colacao is null)
+        {
+            yield return $"{nome} de texto sem colação";
+        }
+
+        if (coluna.Colacao is { } colacao && !Coerente(colacao))
+        {
+            yield return $"{nome} com colação determinística e marca que não é falsa";
+        }
+
+        if ((coluna.IgnoraCaixaPeloTipo is not null || coluna.IgnoraEspacoFinalPeloTipo is not null) && !texto)
+        {
+            yield return $"{nome} com marca de texto fora de texto";
+        }
+
+        if (coluna.Comprimento is not null && coluna.Tipo is not (null or TipoColuna.Texto or TipoColuna.Binario))
+        {
+            yield return $"{nome} com comprimento fora de texto e binário";
+        }
+
+        if (coluna.Comprimento is { Unidade: UnidadeComprimento.PontosDeCodigo } && propriedades?.Codificacao.Definida == false)
+        {
+            yield return $"{nome} com comprimento em caracteres num banco sem codificação declarada";
+        }
+
+        if ((coluna.Precisao is not null || coluna.Escala is not null) && coluna.Tipo is not (null or TipoColuna.Decimal))
+        {
+            yield return $"{nome} com precisão ou escala fora de decimal";
+        }
+
+        if (coluna.Escala is not null && coluna.Precisao is null)
+        {
+            yield return $"{nome} com escala sem precisão";
+        }
+
+        if (coluna.Faixa is not null && coluna.Tipo is not (null or TipoColuna.Inteiro))
+        {
+            yield return $"{nome} com faixa fora de inteiro";
+        }
+
+        if (coluna.Tipo == TipoColuna.Inteiro && coluna.Faixa is null)
+        {
+            yield return $"{nome} inteira sem faixa";
+        }
+
+        if (coluna.Faixa is { Minimo: var minimo, Maximo: var maximo } && minimo >= maximo)
+        {
+            yield return $"{nome} com faixa vazia";
+        }
+
+        if (coluna.Faixa is { Maximo: <= 0 })
+        {
+            yield return $"{nome} com faixa sem positivos";
+        }
+
+        if ((coluna.ReferenciasDaGeracao is not null) != (coluna.Geracao != GeracaoColuna.Nenhuma))
+        {
+            yield return $"{nome} com referências da geração ausentes ou sobrando";
+        }
+
+        if (coluna.ReferenciasDaGeracao is { } referencias)
+        {
+            var posicoes = referencias.Colunas.Select(citada => tabela.Colunas.ToList().FindIndex(lida => lida.Nome == citada)).ToArray();
+            if (referencias.Colunas.Contains(coluna.Nome))
+            {
+                yield return $"{nome} com referência da geração a ela mesma";
+            }
+            else if (posicoes.Contains(-1))
+            {
+                yield return $"{nome} com referência da geração a coluna que não existe";
+            }
+            else if (posicoes.Zip(posicoes.Skip(1)).Any(par => par.First >= par.Second))
+            {
+                yield return $"{nome} com referências da geração fora da ordem das colunas";
+            }
+        }
+    }
+
+    // Uma colação determinística não ignora nada, e mediu isso: as três marcas falsas, nunca nulas.
+    private static bool Coerente(ColacaoEsquema colacao) =>
+        !colacao.Deterministica || colacao is { IgnoraCaixa: false, IgnoraAcento: false, IgnoraPontuacao: false };
 
     private static IEnumerable<T> Repetidos<T>(IEnumerable<T> itens)
         where T : notnull => itens.GroupBy(item => item).Where(grupo => grupo.Count() > 1).Select(grupo => grupo.Key);

@@ -16,7 +16,7 @@ public static class DespejoDoModelo
     {
         null => "nulo",
         string texto => "\"" + texto + "\"",
-        NomeObjeto or ReferenciaColuna or Enum or ValueType => valor.ToString()!,
+        NomeObjeto or ReferenciaColuna or Enum or ValueType or Version => valor.ToString()!,
         IEnumerable<object?> itens => "[" + string.Join(", ", itens.Select(Texto)) + "]",
         _ => valor.GetType().Name + " { " + string.Join(
             ", ",

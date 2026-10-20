@@ -174,3 +174,79 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]override CodeProcess.Incognito.Dialetos.SegredoConexao.ToString() -> string!
 [INCX001]virtual CodeProcess.Incognito.Dialetos.DialetoBanco.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.LancarSeDescartado() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao.ReferenciasDaExpressao() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.ColacaoEsquema() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LimiteComprimento
+[INCX001]CodeProcess.Incognito.Dialetos.LimiteComprimento.LimiteComprimento() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.FaixaInteira
+[INCX001]CodeProcess.Incognito.Dialetos.FaixaInteira.FaixaInteira() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.CodificacaoTexto() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.PropriedadesBanco() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao.Colunas.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao.Colunas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao.Incompletas.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao.Incompletas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.Esquema.get -> string?
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.Esquema.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.Deterministica.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.Deterministica.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.TemRegras.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.TemRegras.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.IgnoraCaixa.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.IgnoraCaixa.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.IgnoraAcento.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.IgnoraAcento.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.IgnoraPontuacao.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ColacaoEsquema.IgnoraPontuacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LimiteComprimento.Valor.get -> int?
+[INCX001]CodeProcess.Incognito.Dialetos.LimiteComprimento.Valor.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LimiteComprimento.Unidade.get -> CodeProcess.Incognito.Dialetos.UnidadeComprimento
+[INCX001]CodeProcess.Incognito.Dialetos.LimiteComprimento.Unidade.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.FaixaInteira.Minimo.get -> long
+[INCX001]CodeProcess.Incognito.Dialetos.FaixaInteira.Minimo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.FaixaInteira.Maximo.get -> long
+[INCX001]CodeProcess.Incognito.Dialetos.FaixaInteira.Maximo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.Definida.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.Definida.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.Unicode.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.Unicode.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.BytesPorCaractereMaximo.get -> int
+[INCX001]CodeProcess.Incognito.Dialetos.CodificacaoTexto.BytesPorCaractereMaximo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.Versao.get -> System.Version!
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.Versao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.Codificacao.get -> CodeProcess.Incognito.Dialetos.CodificacaoTexto!
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.Codificacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.Colacao.get -> CodeProcess.Incognito.Dialetos.ColacaoEsquema!
+[INCX001]CodeProcess.Incognito.Dialetos.PropriedadesBanco.Colacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Propriedades.get -> CodeProcess.Incognito.Dialetos.PropriedadesBanco?
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Propriedades.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Colacao.get -> CodeProcess.Incognito.Dialetos.ColacaoEsquema?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Colacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.IgnoraCaixaPeloTipo.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.IgnoraCaixaPeloTipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.IgnoraEspacoFinalPeloTipo.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.IgnoraEspacoFinalPeloTipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Comprimento.get -> CodeProcess.Incognito.Dialetos.LimiteComprimento?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Comprimento.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Precisao.get -> int?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Precisao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Escala.get -> int?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Escala.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Faixa.get -> CodeProcess.Incognito.Dialetos.FaixaInteira?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.Faixa.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.ReferenciasDaGeracao.get -> CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.ReferenciasDaGeracao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.RestritaPeloTipo.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.RestritaPeloTipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento
+[INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento.Bytes = 2 -> CodeProcess.Incognito.Dialetos.UnidadeComprimento
+[INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento.PontosDeCodigo = 0 -> CodeProcess.Incognito.Dialetos.UnidadeComprimento
+[INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento.UnidadesUtf16 = 1 -> CodeProcess.Incognito.Dialetos.UnidadeComprimento

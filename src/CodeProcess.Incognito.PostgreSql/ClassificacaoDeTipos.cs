@@ -17,6 +17,8 @@ internal static class ClassificacaoDeTipos
     // OIDs fixos dos tipos embutidos (pg_type.dat).
     private const uint Bool = 16;
     private const uint Bytea = 17;
+    private const uint Char = 18;
+    private const uint Name = 19;
     private const uint Int8 = 20;
     private const uint Int2 = 21;
     private const uint Int4 = 23;
@@ -81,7 +83,64 @@ internal static class ClassificacaoDeTipos
             _ => (SituacaoTipo.ComRessalva, null),
         };
     }
+
+    /// <summary>
+    /// A semântica do tipo pelo fim da cadeia de domínios e arrays (num array, vale para cada elemento): faixa do inteiro,
+    /// as duas marcas de texto, o comprimento e a precisão do decimal.
+    /// </summary>
+    /// <param name="final">O OID do fim da cadeia.</param>
+    /// <param name="finalCitext">Se o fim da cadeia é o <c>citext</c> da extensão.</param>
+    /// <param name="modificador">O primeiro modificador de tipo da cadeia que não é -1 (o da coluna, depois o de cada domínio).</param>
+    /// <param name="semCodificacao">Se o banco é <c>SQL_ASCII</c>: o texto é medido em bytes.</param>
+    /// <param name="maximoIdentificador">O <c>max_identifier_length</c> do servidor, o limite do tipo <c>name</c>.</param>
+    /// <returns>A semântica.</returns>
+    internal static SemanticaDoTipo Semantica(uint final, bool finalCitext, int modificador, bool semCodificacao, int maximoIdentificador)
+    {
+        var caracteres = semCodificacao ? UnidadeComprimento.Bytes : UnidadeComprimento.PontosDeCodigo;
+        LimiteComprimento? comprimento = final switch
+        {
+            // O typmod do varchar e do char guarda o tamanho mais 4 (o cabeçalho de um varlena).
+            Varchar or Bpchar => Limite(modificador == -1 ? null : modificador - 4, caracteres),
+            Text => Limite(null, caracteres),
+            _ when finalCitext => Limite(null, caracteres),
+            Name => Limite(maximoIdentificador, UnidadeComprimento.Bytes),
+            Char => Limite(1, UnidadeComprimento.Bytes),
+            Bytea => Limite(null, UnidadeComprimento.Bytes),
+            _ => null,
+        };
+        var texto = final is Text or Varchar or Bpchar or Name or Char || finalCitext;
+
+        // O typmod do numeric: a precisão nos 16 bits altos, a escala nos 11 baixos com sinal (negativa no 15+).
+        var precisao = final == Numeric && modificador != -1 ? ((modificador - 4) >> 16) & 0xFFFF : (int?)null;
+        var escala = precisao is null ? (int?)null : (((modificador - 4) & 0x7FF) ^ 0x400) - 0x400;
+        FaixaInteira? faixa = final switch
+        {
+            Int2 => new() { Minimo = short.MinValue, Maximo = short.MaxValue },
+            Int4 => new() { Minimo = int.MinValue, Maximo = int.MaxValue },
+            Int8 => new() { Minimo = long.MinValue, Maximo = long.MaxValue },
+            _ => null,
+        };
+        return new(
+            comprimento,
+            precisao,
+            escala,
+            faixa,
+            texto ? finalCitext : null,
+            texto ? final == Bpchar : null);
+    }
+
+    private static LimiteComprimento Limite(int? valor, UnidadeComprimento unidade) => new() { Valor = valor, Unidade = unidade };
 }
+
+/// <summary>A semântica do tipo de uma coluna.</summary>
+/// <param name="Comprimento">O limite de comprimento; nulo fora de texto e binário (e no <c>bit</c>, que não é medido).</param>
+/// <param name="Precisao">A precisão do decimal.</param>
+/// <param name="Escala">A escala do decimal.</param>
+/// <param name="Faixa">A faixa do inteiro.</param>
+/// <param name="IgnoraCaixa">Se o tipo ignora a caixa; nulo fora de texto.</param>
+/// <param name="IgnoraEspacoFinal">Se o tipo ignora os espaços finais; nulo fora de texto.</param>
+internal readonly record struct SemanticaDoTipo(
+    LimiteComprimento? Comprimento, int? Precisao, int? Escala, FaixaInteira? Faixa, bool? IgnoraCaixa, bool? IgnoraEspacoFinal);
 
 /// <summary>O que o catálogo diz do tipo de uma coluna.</summary>
 /// <param name="Oid">O OID do tipo.</param>

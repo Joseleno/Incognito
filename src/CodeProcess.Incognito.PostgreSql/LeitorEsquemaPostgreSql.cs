@@ -1,5 +1,7 @@
 using System.Data;
+using System.Globalization;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 
@@ -10,8 +12,9 @@ namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 /// <remarks>
 /// Nomes saem das colunas do catálogo, nunca de um cast para <c>regclass</c> (que depende do caminho de busca). Nada que
 /// guarde valor de linha é lido: nem estatísticas, comentários, texto de default, limites de partição, expressões de
-/// política nem o conteúdo dos large objects. Das expressões da chave de partição só saem, extraídos no servidor, os
-/// números das colunas citadas.
+/// política, locale e regras de colação nem o conteúdo dos large objects. Das expressões da chave de partição só saem,
+/// extraídos no servidor, os números das colunas citadas; das colunas geradas, as citadas, pelo <c>pg_depend</c>. O
+/// comportamento de uma colação não determinística é medido no servidor com textos sintéticos, nunca deduzido do locale.
 /// </remarks>
 internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorEsquema
 {
@@ -79,20 +82,30 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     // O tipo nativo pelo format_type sem o modificador (character varying, não character varying(20)); a extensão dona do
     // tipo pelo pg_depend. A cadeia do tipo, do domínio ao tipo base e do array ao elemento: o tipo base (o fim dos
-    // domínios) e o fim da cadeia inteira. E o tipo da coluna sem default próprio, porque o default do domínio vale para
-    // ela: só o do tipo da coluna (o domínio criado sobre outro copia o default dele na criação, e o banco não sobe a
+    // domínios), o fim da cadeia inteira, o primeiro modificador que não é -1 (o da coluna, depois o de cada domínio: o
+    // domínio de domínio e a coluna de domínio guardam -1) e se algum domínio da cadeia tem CHECK. A colação da coluna já
+    // é a efetiva (a do domínio ou a do COLLATE). E o tipo da coluna sem default próprio, porque o default do domínio vale
+    // para ela: só o do tipo da coluna (o domínio criado sobre outro copia o default dele na criação, e o banco não sobe a
     // cadeia).
     private const string ConsultaColunasInicio = Tabelas + """
-        SELECT a.attrelid, a.attnum, a.attname, pg_catalog.format_type(a.atttypid, NULL), a.attnotnull, a.attgenerated, a.attidentity,
-               t.oid, t.typname, t.typtype,
+        SELECT a.attrelid AS tabela, a.attnum AS numero, a.attname AS nome, pg_catalog.format_type(a.atttypid, NULL) AS tipo_nativo,
+               a.attnotnull AS nao_nulo, a.attgenerated AS geracao, a.attidentity AS identidade, a.attcollation AS colacao,
+               t.oid AS tipo, t.typname AS nome_do_tipo, t.typtype AS categoria,
                (SELECT e.extname
                 FROM pg_catalog.pg_depend d
                 JOIN pg_catalog.pg_extension e ON e.oid = d.refobjid
                 WHERE d.classid = 'pg_catalog.pg_type'::pg_catalog.regclass AND d.objid = t.oid
                   AND d.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass AND d.deptype = 'e'
-                LIMIT 1),
-               CASE WHEN t.typtype = 'd' THEN pg_catalog.format_type(k.base, NULL) END, k.final,
-               CASE WHEN NOT a.atthasdef THEN t.oid END
+                LIMIT 1) AS extensao,
+               CASE WHEN t.typtype = 'd' THEN pg_catalog.format_type(k.base, NULL) END AS tipo_base, k.final AS final,
+               f.typname = 'citext' AND f.typtype = 'b' AND EXISTS (
+                   SELECT 1
+                   FROM pg_catalog.pg_depend d
+                   JOIN pg_catalog.pg_extension e ON e.oid = d.refobjid
+                   WHERE d.classid = 'pg_catalog.pg_type'::pg_catalog.regclass AND d.objid = f.oid
+                     AND d.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass AND d.deptype = 'e' AND e.extname = 'citext') AS final_citext,
+               k.modificador AS modificador, k.restrita AS restrita,
+               CASE WHEN NOT a.atthasdef THEN t.oid END AS tipo_sem_default
         """;
 
     // No 18, o attnotnull também vale para um NOT NULL ainda não validado, e a coluna pode ter NULL; antes do 18 não há
@@ -100,7 +113,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private const string ColunaNaoNuloInvalido = """
         ,
                EXISTS (SELECT 1 FROM pg_catalog.pg_constraint k
-                       WHERE k.conrelid = a.attrelid AND k.contype = 'n' AND NOT k.convalidated AND a.attnum = ANY (k.conkey))
+                       WHERE k.conrelid = a.attrelid AND k.contype = 'n' AND NOT k.convalidated AND a.attnum = ANY (k.conkey)) AS nao_nulo_invalido
         """;
 
     private const string ConsultaColunasFim = """
@@ -109,20 +122,70 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         JOIN pg_catalog.pg_attribute a ON a.attrelid = tabelas.oid
         JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
         CROSS JOIN LATERAL (
-            WITH RECURSIVE cadeia (tipo, passo, so_dominios) AS (
-                SELECT a.atttypid, 0, true
+            WITH RECURSIVE cadeia (tipo, passo, so_dominios, modificador) AS (
+                SELECT a.atttypid, 0, true, a.atttypmod
                 UNION ALL
-                SELECT CASE WHEN b.typtype = 'd' THEN b.typbasetype ELSE b.typelem END, c.passo + 1, c.so_dominios AND b.typtype = 'd'
+                SELECT CASE WHEN b.typtype = 'd' THEN b.typbasetype ELSE b.typelem END, c.passo + 1, c.so_dominios AND b.typtype = 'd',
+                       CASE WHEN c.modificador <> -1 THEN c.modificador WHEN b.typtype = 'd' THEN b.typtypmod ELSE -1 END
                 FROM cadeia c
                 JOIN pg_catalog.pg_type b ON b.oid = c.tipo
                 WHERE b.typtype = 'd' OR b.typsubscript = 'pg_catalog.array_subscript_handler'::pg_catalog.regproc
             )
             SELECT (SELECT c.tipo FROM cadeia c WHERE c.so_dominios ORDER BY c.passo DESC LIMIT 1) AS base,
-                   (SELECT c.tipo FROM cadeia c ORDER BY c.passo DESC LIMIT 1) AS final
+                   (SELECT c.tipo FROM cadeia c ORDER BY c.passo DESC LIMIT 1) AS final,
+                   (SELECT c.modificador FROM cadeia c ORDER BY c.passo DESC LIMIT 1) AS modificador,
+                   EXISTS (SELECT 1 FROM cadeia c JOIN pg_catalog.pg_constraint r ON r.contypid = c.tipo WHERE r.contype = 'c') AS restrita
         ) k
+        JOIN pg_catalog.pg_type f ON f.oid = k.final
         WHERE a.attnum > 0 AND NOT a.attisdropped
         ORDER BY a.attrelid, a.attnum
         """;
+
+    // As colunas que uma coluna gerada cita, pelas dependências da expressão dela (pg_attrdef): uma normal ('n') sobre cada
+    // coluna citada da própria tabela. A expressão (adbin) nunca é lida.
+    private const string ConsultaReferenciasDaGeracao = Tabelas + """
+        SELECT ad.adrelid AS tabela, ad.adnum AS coluna, d.refobjsubid AS citada
+        FROM pg_catalog.pg_attrdef ad
+        JOIN pg_catalog.pg_depend d ON d.classid = 'pg_catalog.pg_attrdef'::pg_catalog.regclass AND d.objid = ad.oid
+        WHERE d.refclassid = 'pg_catalog.pg_class'::pg_catalog.regclass AND d.refobjid = ad.adrelid AND d.deptype = 'n' AND d.refobjsubid > 0
+          AND ad.adrelid IN (SELECT oid FROM tabelas)
+        """;
+
+    // A codificação pelo número (0 é SQL_ASCII, 6 é UTF8) e o nome dela, de um conjunto fechado; o limite do tipo name. Nunca
+    // o locale do banco: só o provedor e, no 16+, se há regras.
+    private const string ConsultaBancoInicio = """
+        SELECT pg_catalog.pg_encoding_to_char(d.encoding) AS codificacao, d.encoding AS numero, pg_catalog.pg_encoding_max_length(d.encoding) AS bytes,
+               d.datlocprovider AS provedor, pg_catalog.current_setting('max_identifier_length')::integer AS maximo_identificador
+        """;
+
+    private const string BancoRegras16 = ", d.daticurules IS NOT NULL AS regras";
+
+    private const string BancoRegras15 = ", false AS regras";
+
+    private const string ConsultaBancoFim = """
+
+        FROM pg_catalog.pg_database d
+        WHERE d.datname = pg_catalog.current_database()
+        """;
+
+    // As colações usadas pelas colunas: nome, esquema e se o login tem USAGE no esquema (sem ele, a medida falharia e
+    // abortaria a transação). Nunca o locale.
+    private const string ConsultaColacoesInicio = """
+        SELECT k.oid AS oid, k.collname AS nome, n.nspname AS esquema, k.collprovider AS provedor, k.collisdeterministic AS deterministica,
+               pg_catalog.has_schema_privilege(k.collnamespace, 'USAGE') AS acesso
+        """;
+
+    private const string ColacaoRegras16 = ", k.collicurules IS NOT NULL AS regras";
+
+    private const string ColacaoRegras15 = ", false AS regras";
+
+    private const string ConsultaColacoesFim = """
+
+        FROM pg_catalog.pg_collation k
+        JOIN pg_catalog.pg_namespace n ON n.oid = k.collnamespace
+        WHERE k.oid = ANY ($1)
+        """;
+
 
     private const string ConsultaChavesPrimarias = Tabelas + """
         SELECT k.conrelid, a.attname
@@ -183,7 +246,16 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)
         """;
 
+    // Os números das codificações (pg_wchar.h): sem codificação declarada e UTF-8.
+    private const int SqlAscii = 0;
+    private const int Utf8 = 6;
+
     private static readonly DialetoSqlPostgreSql _sql = new();
+
+    // Os provedores de locale do banco que o dialeto conhece: libc, ICU e, no 17+, o embutido; as colações têm também o 'd',
+    // a padrão do banco.
+    private static readonly char[] _provedoresDoBanco = ['c', 'i', 'b'];
+    private static readonly char[] _provedoresDeColacao = ['d', 'c', 'i', 'b'];
 
     // Um objeto só para os large objects do banco inteiro.
     private static readonly NomeObjeto _objetosGrandes = new("pg_catalog", "pg_largeobject");
@@ -194,9 +266,10 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         var transacao = await TransacaoDeLeitura.AbrirAsync(conexao.Conexao, cancelamento).ConfigureAwait(false);
         await using (transacao.ConfigureAwait(false))
         {
+            var banco = await LerBancoAsync(cancelamento).ConfigureAwait(false);
             var tabelas = await LerTabelasAsync(cancelamento).ConfigureAwait(false);
             var outrosPais = await LerOutrosPaisAsync(cancelamento).ConfigureAwait(false);
-            var colunas = await LerColunasAsync(tabelas, cancelamento).ConfigureAwait(false);
+            var colunas = await LerColunasAsync(tabelas, banco, cancelamento).ConfigureAwait(false);
             var chavesDeParticao = await LerChavesDeParticaoAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var chavesPrimarias = await LerChavesPrimariasAsync(cancelamento).ConfigureAwait(false);
             var chavesEstrangeiras = await LerChavesEstrangeirasAsync(cancelamento).ConfigureAwait(false);
@@ -224,8 +297,49 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                     .ToArray(),
                 Sequences = sequences,
                 ObjetosResiduais = residuais,
+                Propriedades = banco.Propriedades,
             };
         }
+    }
+
+    // A versão pelo número que a conexão já conferiu, nunca pelo texto (que pode trazer o nome de um derivado).
+    private async Task<BancoLido> LerBancoAsync(CancellationToken cancelamento)
+    {
+        var dezesseis = conexao.Versao / 10000 >= 16;
+        await using var comando = new NpgsqlCommand(ConsultaBancoInicio + (dezesseis ? BancoRegras16 : BancoRegras15) + ConsultaBancoFim, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
+        var numero = leitor.GetInt32(leitor.GetOrdinal("numero"));
+        if (!_provedoresDoBanco.Contains(leitor.GetChar(leitor.GetOrdinal("provedor"))))
+        {
+            throw CatalogoDesconhecido("o provedor de locale do banco");
+        }
+
+        // A colação padrão do banco é sempre determinística: as marcas são falsas sem medida.
+        var colacao = new ColacaoEsquema
+        {
+            Nome = "default",
+            Deterministica = true,
+            TemRegras = leitor.GetBoolean(leitor.GetOrdinal("regras")),
+            IgnoraCaixa = false,
+            IgnoraAcento = false,
+            IgnoraPontuacao = false,
+        };
+
+        // Sem codificação declarada, o Incognito grava UTF-8 cru: até 4 bytes por caractere.
+        var propriedades = new PropriedadesBanco
+        {
+            Versao = new Version(conexao.Versao / 10000, conexao.Versao % 10000),
+            Codificacao = new CodificacaoTexto
+            {
+                Nome = leitor.GetString(leitor.GetOrdinal("codificacao")),
+                Definida = numero != SqlAscii,
+                Unicode = numero == Utf8,
+                BytesPorCaractereMaximo = numero == SqlAscii ? 4 : leitor.GetInt32(leitor.GetOrdinal("bytes")),
+            },
+            Colacao = colacao,
+        };
+        return new BancoLido(propriedades, numero == Utf8, leitor.GetInt32(leitor.GetOrdinal("maximo_identificador")));
     }
 
     private async Task<Dictionary<uint, TabelaLida>> LerTabelasAsync(CancellationToken cancelamento)
@@ -316,58 +430,216 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         return chaves;
     }
 
-    private async Task<Dictionary<uint, List<ColunaLida>>> LerColunasAsync(Dictionary<uint, TabelaLida> tabelas, CancellationToken cancelamento)
+    // As colunas por nome de campo (a consulta cresce sem renumerar), depois a colação e as referências da geração de cada
+    // uma, que dependem de todas as colunas lidas.
+    private async Task<Dictionary<uint, List<ColunaLida>>> LerColunasAsync(Dictionary<uint, TabelaLida> tabelas, BancoLido banco, CancellationToken cancelamento)
     {
-        var colunas = new Dictionary<uint, List<ColunaLida>>();
-        await using var comando = new NpgsqlCommand(ConsultaColunasInicio + ColunaNaoNuloInvalido + ConsultaColunasFim, conexao.Conexao);
-        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
-        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        var brutas = new List<ColunaBruta>();
+        await using (var comando = new NpgsqlCommand(ConsultaColunasInicio + ColunaNaoNuloInvalido + ConsultaColunasFim, conexao.Conexao))
         {
-            var tabela = leitor.GetFieldValue<uint>(0);
-            var geracao = leitor.GetChar(5) switch
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            var campos = new CamposDaColuna(leitor);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
             {
-                's' => GeracaoColuna.Armazenada,
-                'v' => GeracaoColuna.Virtual,
-                _ => GeracaoColuna.Nenhuma,
-            };
-            var identidade = leitor.GetChar(6) switch
-            {
-                'a' => IdentidadeColuna.Sempre,
-                'd' => IdentidadeColuna.PorPadrao,
-                _ => IdentidadeColuna.Nenhuma,
-            };
-            var tipo = new TipoLido(
-                leitor.GetFieldValue<uint>(7),
-                leitor.GetString(8),
-                leitor.GetChar(9),
-                leitor.IsDBNull(10) ? null : leitor.GetString(10),
-                leitor.GetFieldValue<uint>(12));
-            var (situacao, canonico) = ClassificacaoDeTipos.Classificar(tipo, geracao, tabelas[tabela].Estrangeira);
-
-            // Anulável se a coluna não tem NOT NULL validado. O NOT NULL de um domínio não conta: o banco aceita NULL numa
-            // coluna de domínio NOT NULL em casos documentados (subconsulta vazia, junção externa).
-            var naoNulo = leitor.GetBoolean(4) && !leitor.GetBoolean(14);
-            var coluna = new ColunaEsquema
-            {
-                Nome = leitor.GetString(2),
-                TipoNativo = leitor.GetString(3),
-                Situacao = situacao,
-                Tipo = canonico,
-                Anulavel = !naoNulo,
-                Geracao = geracao,
-                Identidade = identidade,
-                TipoBase = leitor.IsDBNull(11) ? null : leitor.GetString(11),
-            };
-            if (!colunas.TryGetValue(tabela, out var daTabela))
-            {
-                colunas[tabela] = daTabela = [];
+                brutas.Add(campos.Ler(leitor));
             }
+        }
 
-            daTabela.Add(new ColunaLida(leitor.GetInt16(1), coluna, leitor.IsDBNull(13) ? null : leitor.GetFieldValue<uint>(13)));
+        var referencias = await LerReferenciasDaGeracaoAsync(cancelamento).ConfigureAwait(false);
+        var colacoes = await LerColacoesAsync([.. brutas.Select(bruta => bruta.Colacao).Where(oid => oid != 0).Distinct()], banco, cancelamento).ConfigureAwait(false);
+
+        var colunas = new Dictionary<uint, List<ColunaLida>>();
+        foreach (var daTabela in brutas.GroupBy(bruta => bruta.Tabela))
+        {
+            var ordenadas = daTabela.OrderBy(bruta => bruta.Numero).ToArray();
+            var nomes = ordenadas.ToDictionary(bruta => bruta.Numero, bruta => bruta.Nome);
+            colunas[daTabela.Key] = [.. ordenadas.Select(bruta => Montar(bruta, tabelas[bruta.Tabela], nomes, referencias, colacoes, banco))];
         }
 
         return colunas;
     }
+
+    private static ColunaLida Montar(
+        ColunaBruta bruta, TabelaLida tabela, Dictionary<short, string> nomes, ILookup<(uint Tabela, short Coluna), short> referencias,
+        Dictionary<uint, ColacaoEsquema> colacoes, BancoLido banco)
+    {
+        var geracao = bruta.Geracao switch
+        {
+            's' => GeracaoColuna.Armazenada,
+            'v' => GeracaoColuna.Virtual,
+            _ => GeracaoColuna.Nenhuma,
+        };
+        var identidade = bruta.Identidade switch
+        {
+            'a' => IdentidadeColuna.Sempre,
+            'd' => IdentidadeColuna.PorPadrao,
+            _ => IdentidadeColuna.Nenhuma,
+        };
+        var (situacao, canonico) = ClassificacaoDeTipos.Classificar(bruta.Tipo, geracao, tabela.Estrangeira);
+        var semantica = ClassificacaoDeTipos.Semantica(bruta.Tipo.Final, bruta.FinalCitext, bruta.Modificador, !banco.Propriedades.Codificacao.Definida, banco.MaximoIdentificador);
+
+        // As citadas pela geração, na ordem da tabela; um número que não é coluna viva deixa as referências incompletas. A
+        // geração pela linha inteira o banco recusa.
+        ReferenciasDaExpressao? daGeracao = null;
+        if (geracao != GeracaoColuna.Nenhuma)
+        {
+            var citadas = referencias[(bruta.Tabela, bruta.Numero)].Distinct().Order().ToArray();
+            daGeracao = new ReferenciasDaExpressao
+            {
+                Colunas = [.. citadas.Where(nomes.ContainsKey).Select(numero => nomes[numero])],
+                Incompletas = !citadas.All(nomes.ContainsKey),
+            };
+        }
+
+        // Anulável se a coluna não tem NOT NULL validado. O NOT NULL de um domínio não conta: o banco aceita NULL numa
+        // coluna de domínio NOT NULL em casos documentados (subconsulta vazia, junção externa).
+        var coluna = new ColunaEsquema
+        {
+            Nome = bruta.Nome,
+            TipoNativo = bruta.TipoNativo,
+            Situacao = situacao,
+            Tipo = canonico,
+            Anulavel = !(bruta.NaoNulo && !bruta.NaoNuloInvalido),
+            Geracao = geracao,
+            Identidade = identidade,
+            TipoBase = bruta.TipoBase,
+            Colacao = bruta.Colacao == 0 ? null : colacoes[bruta.Colacao],
+            IgnoraCaixaPeloTipo = semantica.IgnoraCaixa,
+            IgnoraEspacoFinalPeloTipo = semantica.IgnoraEspacoFinal,
+            Comprimento = semantica.Comprimento,
+            Precisao = semantica.Precisao,
+            Escala = semantica.Escala,
+            Faixa = semantica.Faixa,
+            ReferenciasDaGeracao = daGeracao,
+            RestritaPeloTipo = bruta.Restrita,
+        };
+        return new ColunaLida(bruta.Numero, coluna, bruta.TipoSemDefault);
+    }
+
+    private async Task<ILookup<(uint Tabela, short Coluna), short>> LerReferenciasDaGeracaoAsync(CancellationToken cancelamento)
+    {
+        var lidas = new List<(uint Tabela, short Coluna, short Citada)>();
+        await using var comando = new NpgsqlCommand(ConsultaReferenciasDaGeracao, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            lidas.Add((leitor.GetFieldValue<uint>(0), leitor.GetInt16(1), (short)leitor.GetInt32(2)));
+        }
+
+        return lidas.ToLookup(lida => (lida.Tabela, lida.Coluna), lida => lida.Citada);
+    }
+
+    // A colação padrão do banco vale para o provedor 'd'. A determinística não ignora nada; a não determinística é medida no
+    // servidor só quando a medida não pode abortar a transação nem mentir: sem regras do usuário (que igualam quaisquer
+    // caracteres), num banco UTF-8 (onde os textos da medida existem) e com USAGE no esquema da colação. Fora disso, as
+    // marcas ficam nulas, o pior caso.
+    private async Task<Dictionary<uint, ColacaoEsquema>> LerColacoesAsync(uint[] oids, BancoLido banco, CancellationToken cancelamento)
+    {
+        var lidas = new List<(uint Oid, string Nome, string Esquema, char Provedor, bool Deterministica, bool Acesso, bool TemRegras)>();
+        var dezesseis = conexao.Versao / 10000 >= 16;
+        await using (var comando = new NpgsqlCommand(ConsultaColacoesInicio + (dezesseis ? ColacaoRegras16 : ColacaoRegras15) + ConsultaColacoesFim, conexao.Conexao))
+        {
+            comando.Parameters.Add(new NpgsqlParameter { Value = oids, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Oid });
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+            {
+                var acesso = leitor.GetOrdinal("acesso");
+                lidas.Add((
+                    leitor.GetFieldValue<uint>(leitor.GetOrdinal("oid")),
+                    leitor.GetString(leitor.GetOrdinal("nome")),
+                    leitor.GetString(leitor.GetOrdinal("esquema")),
+                    leitor.GetChar(leitor.GetOrdinal("provedor")),
+                    leitor.GetBoolean(leitor.GetOrdinal("deterministica")),
+                    !leitor.IsDBNull(acesso) && leitor.GetBoolean(acesso),
+                    leitor.GetBoolean(leitor.GetOrdinal("regras"))));
+            }
+        }
+
+        var colacoes = new Dictionary<uint, ColacaoEsquema>();
+        foreach (var lida in lidas)
+        {
+            if (!_provedoresDeColacao.Contains(lida.Provedor))
+            {
+                throw CatalogoDesconhecido("o provedor de uma colação");
+            }
+
+            if (lida.Provedor == 'd')
+            {
+                colacoes[lida.Oid] = banco.Propriedades.Colacao;
+                continue;
+            }
+
+            var medida = lida.Deterministica ? (false, false, false)
+                : !lida.TemRegras && banco.Utf8 && lida.Acesso ? await MedirAsync(lida.Esquema, lida.Nome, lida.Oid, cancelamento).ConfigureAwait(false)
+                : ((bool?)null, (bool?)null, (bool?)null);
+            colacoes[lida.Oid] = new ColacaoEsquema
+            {
+                Nome = lida.Nome,
+                Esquema = lida.Esquema,
+                Deterministica = lida.Deterministica,
+                TemRegras = lida.TemRegras,
+                IgnoraCaixa = medida.Item1,
+                IgnoraAcento = medida.Item2,
+                IgnoraPontuacao = medida.Item3,
+            };
+        }
+
+        return colacoes;
+    }
+
+    // O único SQL montado com nomes do catálogo, citados. Só saem booleanos de textos sintéticos. A guarda olhou o oid no
+    // instante da leitura, e o COLLATE resolve o nome no catálogo atual: o to_regcollation confere que o nome ainda é o
+    // mesmo oid. Qualquer erro vira uma recusa sem a mensagem do banco.
+    private Task<(bool?, bool?, bool?)> MedirAsync(string esquema, string nome, uint oid, CancellationToken cancelamento) =>
+        SemErroDoBancoAsync(esquema, nome, async () =>
+        {
+            var citada = _sql.Citar(new NomeObjeto(esquema, nome));
+            var medida = $"SELECT 'a' = 'A' COLLATE {citada}, 'a' = 'á' COLLATE {citada}, 'a-b.c' = 'abc' COLLATE {citada}, pg_catalog.to_regcollation($1)::pg_catalog.oid = $2";
+            await using var comando = new NpgsqlCommand(medida, conexao.Conexao);
+            comando.Parameters.Add(new NpgsqlParameter { Value = citada, NpgsqlDbType = NpgsqlDbType.Text });
+            comando.Parameters.Add(new NpgsqlParameter { Value = oid, NpgsqlDbType = NpgsqlDbType.Oid });
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
+            if (leitor.IsDBNull(3) || !leitor.GetBoolean(3))
+            {
+                throw ErroDaMedida(esquema, nome);
+            }
+
+            return ((bool?)leitor.GetBoolean(0), (bool?)leitor.GetBoolean(1), (bool?)leitor.GetBoolean(2));
+        });
+
+    /// <summary>
+    /// Roda a medida de uma colação e troca qualquer erro do banco (cuja mensagem, detalhe e contexto podem trazer valores)
+    /// pela recusa só com o nome da colação, sem a exceção original.
+    /// </summary>
+    /// <typeparam name="T">O resultado da medida.</typeparam>
+    /// <param name="esquema">O esquema da colação.</param>
+    /// <param name="nome">O nome da colação.</param>
+    /// <param name="medir">A medida.</param>
+    /// <returns>O resultado.</returns>
+    internal static async Task<T> SemErroDoBancoAsync<T>(string esquema, string nome, Func<Task<T>> medir)
+    {
+        try
+        {
+            return await medir().ConfigureAwait(false);
+        }
+        catch (NpgsqlException)
+        {
+            throw ErroDaMedida(esquema, nome);
+        }
+    }
+
+    // O nome citado e com os caracteres de controle escapados: um nome com quebra de linha não forja linhas no registro.
+    private static IncognitoException ErroDaMedida(string esquema, string nome) => new(
+        CodigosPostgreSql.MedidaDeColacao,
+        $"A medida do comportamento da colação {Visivel(_sql.Citar(new NomeObjeto(esquema, nome)))} falhou ou a colação mudou durante a leitura do esquema; leia de novo.");
+
+    private static string Visivel(string texto) =>
+        string.Concat(texto.Select(caractere => char.IsControl(caractere) ? "\\u" + ((int)caractere).ToString("X4", CultureInfo.InvariantCulture) : caractere.ToString()));
+
+    private static IncognitoException CatalogoDesconhecido(string campo) => new(
+        CodigosPostgreSql.CatalogoDesconhecido,
+        $"O catálogo do PostgreSQL tem um valor que o Incognito não conhece em {campo} (versão mais nova do servidor?).");
 
     private async Task<Dictionary<uint, List<string>>> LerChavesPrimariasAsync(CancellationToken cancelamento)
     {
@@ -498,6 +770,60 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         }
 
         return residuais.OrderBy(objeto => objeto.Nome, OrdemDeNomes.Instancia).ToArray();
+    }
+
+    // O que a leitura da origem e do destino tira do banco inteiro.
+    private sealed record BancoLido(PropriedadesBanco Propriedades, bool Utf8, int MaximoIdentificador);
+
+    // Uma linha da consulta das colunas, antes da colação e das referências da geração.
+    private sealed record ColunaBruta(
+        uint Tabela, short Numero, string Nome, string TipoNativo, bool NaoNulo, bool NaoNuloInvalido, char Geracao, char Identidade, uint Colacao,
+        TipoLido Tipo, string? TipoBase, bool FinalCitext, int Modificador, bool Restrita, uint? TipoSemDefault);
+
+    // Os campos da consulta das colunas, pelo nome, procurados uma vez.
+    private sealed class CamposDaColuna(NpgsqlDataReader leitor)
+    {
+        private readonly int _tabela = leitor.GetOrdinal("tabela");
+        private readonly int _numero = leitor.GetOrdinal("numero");
+        private readonly int _nome = leitor.GetOrdinal("nome");
+        private readonly int _tipoNativo = leitor.GetOrdinal("tipo_nativo");
+        private readonly int _naoNulo = leitor.GetOrdinal("nao_nulo");
+        private readonly int _naoNuloInvalido = leitor.GetOrdinal("nao_nulo_invalido");
+        private readonly int _geracao = leitor.GetOrdinal("geracao");
+        private readonly int _identidade = leitor.GetOrdinal("identidade");
+        private readonly int _colacao = leitor.GetOrdinal("colacao");
+        private readonly int _tipo = leitor.GetOrdinal("tipo");
+        private readonly int _nomeDoTipo = leitor.GetOrdinal("nome_do_tipo");
+        private readonly int _categoria = leitor.GetOrdinal("categoria");
+        private readonly int _extensao = leitor.GetOrdinal("extensao");
+        private readonly int _tipoBase = leitor.GetOrdinal("tipo_base");
+        private readonly int _final = leitor.GetOrdinal("final");
+        private readonly int _finalCitext = leitor.GetOrdinal("final_citext");
+        private readonly int _modificador = leitor.GetOrdinal("modificador");
+        private readonly int _restrita = leitor.GetOrdinal("restrita");
+        private readonly int _tipoSemDefault = leitor.GetOrdinal("tipo_sem_default");
+
+        internal ColunaBruta Ler(NpgsqlDataReader linha) => new(
+            linha.GetFieldValue<uint>(_tabela),
+            linha.GetInt16(_numero),
+            linha.GetString(_nome),
+            linha.GetString(_tipoNativo),
+            linha.GetBoolean(_naoNulo),
+            linha.GetBoolean(_naoNuloInvalido),
+            linha.GetChar(_geracao),
+            linha.GetChar(_identidade),
+            linha.GetFieldValue<uint>(_colacao),
+            new TipoLido(
+                linha.GetFieldValue<uint>(_tipo),
+                linha.GetString(_nomeDoTipo),
+                linha.GetChar(_categoria),
+                linha.IsDBNull(_extensao) ? null : linha.GetString(_extensao),
+                linha.GetFieldValue<uint>(_final)),
+            linha.IsDBNull(_tipoBase) ? null : linha.GetString(_tipoBase),
+            linha.GetBoolean(_finalCitext),
+            linha.GetInt32(_modificador),
+            linha.GetBoolean(_restrita),
+            linha.IsDBNull(_tipoSemDefault) ? null : linha.GetFieldValue<uint>(_tipoSemDefault));
     }
 
     private sealed record TabelaLida(

@@ -85,7 +85,25 @@ FROM (VALUES
         WHERE k.collname = 'colacao_sentinela' AND pg_catalog.to_jsonb(k)::text LIKE '%zqsentin%')),
     ('regras de colação', pg_catalog.current_setting('server_version_num')::integer < 160000 OR EXISTS (
         SELECT 1 FROM pg_catalog.pg_collation k
-        WHERE k.collname = 'colacao_regras' AND pg_catalog.to_jsonb(k)::text LIKE '%zqSENTINELAqz%'))
+        WHERE k.collname = 'colacao_regras' AND pg_catalog.to_jsonb(k)::text LIKE '%zqSENTINELAqz%')),
+    ('coluna com a colação do sentinela', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_collation k ON k.oid = a.attcollation
+        WHERE k.collname = 'colacao_sentinela' AND a.attrelid = 'loja.textos'::regclass)),
+    ('coluna com a colação de regras', pg_catalog.current_setting('server_version_num')::integer < 160000 OR EXISTS (
+        SELECT 1 FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_collation k ON k.oid = a.attcollation
+        WHERE k.collname = 'colacao_regras' AND a.attrelid = 'loja.textos'::regclass)),
+    ('parâmetro de papel', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_db_role_setting s WHERE s.setconfig::text LIKE '%zqSENTINELAqz%')),
+    ('comentário de papel', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_shdescription d WHERE d.description LIKE '%zqSENTINELAqz%')),
+    ('regra de reescrita', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_rewrite r
+        WHERE r.rulename = 'regra_sentinela' AND pg_catalog.pg_get_ruledef(r.oid) LIKE '%zqSENTINELAqz%')),
+    ('filtro de publicação', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_publication_rel p WHERE pg_catalog.pg_get_expr(p.prqual, p.prrelid) LIKE '%zqSENTINELAqz%')),
+    ('CHECK de domínio', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_constraint k
+        WHERE k.contypid = 'loja.d_cpf'::regtype AND pg_catalog.pg_get_constraintdef(k.oid) LIKE '%zqSENTINELAqz%'))
 ) AS l (lugar, presente)
 WHERE NOT presente
 ORDER BY lugar;

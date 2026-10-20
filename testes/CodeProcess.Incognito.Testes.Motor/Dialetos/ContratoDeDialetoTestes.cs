@@ -72,7 +72,7 @@ public sealed class ContratoDeDialetoTestes
         var nome = new NomeObjeto("loja", "ficha");
         var pais = new List<NomeObjeto> { new("loja", "endereco") };
         var chave = new List<string> { "canal" };
-        var tabela = new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = pais, ChaveParticao = new ChaveParticao { Colunas = chave } };
+        var tabela = new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = pais, ChaveParticao = new ChaveParticao { Colunas = chave, ColunasIncompletas = false } };
         pais.Clear();
         chave.Clear();
 
@@ -83,10 +83,51 @@ public sealed class ContratoDeDialetoTestes
         Assert.Equal("OutrosPais", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = [null!] }).ParamName);
         Assert.Equal("OutrosPais", Assert.Throws<ArgumentNullException>(() => new TabelaEsquema { Nome = nome, Colunas = [], OutrosPais = null! }).ParamName);
         Assert.Equal("Extensao", Assert.Throws<ArgumentException>(() => new TabelaEsquema { Nome = nome, Colunas = [], Extensao = "" }).ParamName);
-        Assert.Equal("Colunas", Assert.Throws<ArgumentException>(() => new ChaveParticao { Colunas = [""] }).ParamName);
-        Assert.Equal("Colunas", Assert.Throws<ArgumentNullException>(() => new ChaveParticao { Colunas = null! }).ParamName);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentException>(() => new ChaveParticao { Colunas = [""], ColunasIncompletas = false }).ParamName);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentNullException>(() => new ChaveParticao { Colunas = null!, ColunasIncompletas = false }).ParamName);
         Assert.Throws<ArgumentException>(() => new ColunaEsquema { Nome = "id", TipoNativo = "loja.codigo", Situacao = SituacaoTipo.ComRessalva, TipoBase = "" });
         Assert.Null(new ColunaEsquema { Nome = "id", TipoNativo = "text", Situacao = SituacaoTipo.Suportado }.TipoBase);
+    }
+
+    [Fact]
+    public void A_semantica_da_coluna_e_do_banco_copia_as_listas_e_recusa_nulos_vazios_e_valores_fora_da_faixa()
+    {
+        var citadas = new List<string> { "a", "b" };
+        var referencias = new ReferenciasDaExpressao { Colunas = citadas, Incompletas = false };
+        citadas.Clear();
+
+        Assert.Equal(["a", "b"], referencias.Colunas);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentException>(() => new ReferenciasDaExpressao { Colunas = ["a", "a"], Incompletas = false }).ParamName);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentException>(() => new ReferenciasDaExpressao { Colunas = [""], Incompletas = false }).ParamName);
+        Assert.Equal("Colunas", Assert.Throws<ArgumentNullException>(() => new ReferenciasDaExpressao { Colunas = null!, Incompletas = false }).ParamName);
+
+        Assert.Equal("Nome", Assert.Throws<ArgumentException>(() => new ColacaoEsquema { Nome = "", Deterministica = true, TemRegras = false }).ParamName);
+        Assert.Equal("Esquema", Assert.Throws<ArgumentException>(() => new ColacaoEsquema { Nome = "c", Esquema = "", Deterministica = true, TemRegras = false }).ParamName);
+        Assert.Null(new ColacaoEsquema { Nome = "default", Deterministica = true, TemRegras = false }.Esquema);
+
+        Assert.Null(new LimiteComprimento { Valor = null, Unidade = UnidadeComprimento.PontosDeCodigo }.Valor);
+        Assert.Equal("Valor", Assert.Throws<ArgumentOutOfRangeException>(() => new LimiteComprimento { Valor = 0, Unidade = UnidadeComprimento.Bytes }).ParamName);
+        Assert.Equal("Unidade", Assert.Throws<ArgumentOutOfRangeException>(() => new LimiteComprimento { Valor = 1, Unidade = (UnidadeComprimento)99 }).ParamName);
+
+        Assert.Equal("Nome", Assert.Throws<ArgumentException>(() => new CodificacaoTexto { Nome = "", Definida = true, Unicode = true, BytesPorCaractereMaximo = 4 }).ParamName);
+        Assert.Equal(4, new CodificacaoTexto { Nome = "UTF8", Definida = true, Unicode = true, BytesPorCaractereMaximo = 4 }.BytesPorCaractereMaximo);
+        Assert.Equal(1, new CodificacaoTexto { Nome = "LATIN1", Definida = true, Unicode = false, BytesPorCaractereMaximo = 1 }.BytesPorCaractereMaximo);
+        Assert.Equal("BytesPorCaractereMaximo", Assert.Throws<ArgumentOutOfRangeException>(() => new CodificacaoTexto { Nome = "x", Definida = true, Unicode = true, BytesPorCaractereMaximo = 0 }).ParamName);
+        Assert.Equal("BytesPorCaractereMaximo", Assert.Throws<ArgumentOutOfRangeException>(() => new CodificacaoTexto { Nome = "x", Definida = true, Unicode = true, BytesPorCaractereMaximo = 5 }).ParamName);
+
+        var codificacao = new CodificacaoTexto { Nome = "UTF8", Definida = true, Unicode = true, BytesPorCaractereMaximo = 4 };
+        var colacao = new ColacaoEsquema { Nome = "default", Deterministica = true, TemRegras = false };
+        Assert.Equal("Versao", Assert.Throws<ArgumentNullException>(() => new PropriedadesBanco { Versao = null!, Codificacao = codificacao, Colacao = colacao }).ParamName);
+        Assert.Equal("Codificacao", Assert.Throws<ArgumentNullException>(() => new PropriedadesBanco { Versao = new(18, 0), Codificacao = null!, Colacao = colacao }).ParamName);
+        Assert.Equal("Colacao", Assert.Throws<ArgumentNullException>(() => new PropriedadesBanco { Versao = new(18, 0), Codificacao = codificacao, Colacao = null! }).ParamName);
+
+        Assert.Equal("Precisao", Assert.Throws<ArgumentOutOfRangeException>(() => new ColunaEsquema { Nome = "v", TipoNativo = "numeric", Situacao = SituacaoTipo.Suportado, Precisao = 0 }).ParamName);
+        Assert.Equal(-2, new ColunaEsquema { Nome = "v", TipoNativo = "numeric", Situacao = SituacaoTipo.Suportado, Precisao = 5, Escala = -2 }.Escala);
+
+        // A semântica nova da coluna e as propriedades do banco começam nulas: o dialeto que não as preenche fica no pior caso.
+        var coluna = new ColunaEsquema { Nome = "v", TipoNativo = "text", Situacao = SituacaoTipo.Suportado };
+        Assert.True(coluna is { Colacao: null, IgnoraCaixaPeloTipo: null, IgnoraEspacoFinalPeloTipo: null, Comprimento: null, Precisao: null, Escala: null, Faixa: null, ReferenciasDaGeracao: null, RestritaPeloTipo: null });
+        Assert.Null(new EsquemaBanco { Tabelas = [] }.Propriedades);
     }
 
     [Fact]
