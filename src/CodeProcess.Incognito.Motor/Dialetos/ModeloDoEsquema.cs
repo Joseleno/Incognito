@@ -147,6 +147,10 @@ public sealed class TabelaEsquema
     private readonly IReadOnlyList<ChaveEstrangeira> _chavesEstrangeiras = [];
     private readonly IReadOnlyList<NomeObjeto> _outrosPais = [];
     private readonly string? _extensao;
+    private readonly IReadOnlyList<IndiceUnico> _indicesUnicos = [];
+    private readonly IReadOnlyList<RestricaoCheck> _restricoesCheck = [];
+    private readonly IReadOnlyList<RestricaoExclusao> _restricoesExclusao = [];
+    private readonly IReadOnlyList<TriggerEsquema> _triggers = [];
 
     /// <summary>O nome.</summary>
     public required NomeObjeto Nome { get => _nome; init => _nome = value ?? throw new ArgumentNullException(nameof(Nome)); }
@@ -208,6 +212,24 @@ public sealed class TabelaEsquema
     /// no SQL Server): falha segura, a contagem de linhas não a detecta.
     /// </summary>
     public bool SegurancaDeLinha { get; init; }
+
+    // Os objetos da tabela, cada lista em ordem ordinal de nome. Vazia diz "não há": um dialeto que não as preenche fica
+    // com o caso otimista (a suíte de conformidade confere os do repositório pelo inventário).
+
+    /// <summary>
+    /// Os índices únicos, inclusive o da chave primária, em ordem ordinal de nome; vazia se não há (um dialeto que não a
+    /// preenche fica com o caso otimista).
+    /// </summary>
+    public IReadOnlyList<IndiceUnico> IndicesUnicos { get => _indicesUnicos; init => _indicesUnicos = Lista.Copiar(value, nameof(IndicesUnicos)); }
+
+    /// <summary>Os <c>CHECK</c>s, em ordem ordinal de nome; vazia se não há, como em <see cref="IndicesUnicos"/>.</summary>
+    public IReadOnlyList<RestricaoCheck> RestricoesCheck { get => _restricoesCheck; init => _restricoesCheck = Lista.Copiar(value, nameof(RestricoesCheck)); }
+
+    /// <summary>As restrições de exclusão, em ordem ordinal de nome; vazia se não há, como em <see cref="IndicesUnicos"/>.</summary>
+    public IReadOnlyList<RestricaoExclusao> RestricoesExclusao { get => _restricoesExclusao; init => _restricoesExclusao = Lista.Copiar(value, nameof(RestricoesExclusao)); }
+
+    /// <summary>As triggers de usuário, em ordem ordinal de nome; vazia se não há, como em <see cref="IndicesUnicos"/>.</summary>
+    public IReadOnlyList<TriggerEsquema> Triggers { get => _triggers; init => _triggers = Lista.Copiar(value, nameof(Triggers)); }
 }
 
 /// <summary>As colunas que decidem a partição: tratar uma delas pode mudar a linha de partição ou recusá-la.</summary>
@@ -419,6 +441,23 @@ public sealed class ChaveEstrangeira
 
     /// <summary>As colunas referenciadas, na mesma ordem de <see cref="Colunas"/>.</summary>
     public required IReadOnlyList<string> ColunasReferenciadas { get => _colunasReferenciadas; init => _colunasReferenciadas = Lista.CopiarNomes(value, nameof(ColunasReferenciadas)); }
+
+    /// <summary>
+    /// Se o banco confere a chave agora, nas gravações de uma sessão comum. <c>false</c>: a conferência está desligada na
+    /// chave ou na cópia dela numa partição (triggers de integridade desabilitadas ou só de réplica, <c>NOT ENFORCED</c> no
+    /// PostgreSQL 18, desabilitada no SQL Server). <c>true</c> não prova que as linhas de agora a respeitam: quem confere é
+    /// a verificação depois da carga. Nulo: não informado, o pior caso. Uma aplicação que grave com
+    /// <c>session_replication_role</c> em réplica não é detectável.
+    /// </summary>
+    public bool? Imposta { get; init; }
+
+    /// <summary>
+    /// Se o banco conferiu as linhas que já existiam quando a conferência foi ligada (na criação da chave ou depois), em
+    /// todas as cópias dela. <c>false</c> (<c>NOT VALID</c>, <c>WITH NOCHECK</c>): pode haver linha órfã. <c>true</c>
+    /// também não prova que não há: as gravadas com a conferência desligada não são revistas (ver <see cref="Imposta"/>).
+    /// Nulo: não informado, o pior caso.
+    /// </summary>
+    public bool? Validada { get; init; }
 }
 
 /// <summary>Uma sequence e as colunas que a usam (mais de uma: sequence compartilhada).</summary>
@@ -462,6 +501,7 @@ public sealed class ObjetoResidual
 {
     private readonly NomeObjeto _nome = null!;
     private readonly TipoObjetoResidual _tipo;
+    private readonly IReadOnlyList<NomeObjeto> _dependeDe = [];
 
     /// <summary>O nome.</summary>
     public required NomeObjeto Nome { get => _nome; init => _nome = value ?? throw new ArgumentNullException(nameof(Nome)); }
@@ -472,6 +512,26 @@ public sealed class ObjetoResidual
         get => _tipo;
         init => _tipo = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(Tipo), "Tipo de objeto residual desconhecido.");
     }
+
+    /// <summary>
+    /// As materialized views que esta lê, direto ou passando por views, em ordem ordinal de esquema e nome: atualizadas
+    /// antes dela. Vazia se não lê nenhuma. Sem ciclo: a que a leitura traria de volta a esta (ou esta mesma) fica de fora,
+    /// e <see cref="DependenciasIncompletas"/> vem <c>true</c>.
+    /// </summary>
+    public IReadOnlyList<NomeObjeto> DependeDe { get => _dependeDe; init => _dependeDe = Lista.Copiar(value, nameof(DependeDe)); }
+
+    /// <summary>
+    /// Se a leitura passa por uma função ou por um operador de usuário, que o banco não liga às tabelas que a função lê, ou
+    /// volta a esta materialized view por um ciclo: a ordem de <see cref="DependeDe"/> pode estar incompleta, e a
+    /// atualização se repete até nada mudar. Não são
+    /// detectadas uma função do sistema que executa SQL em texto (<c>query_to_xml</c> e semelhantes) nem a política de
+    /// segurança por linha de uma tabela lida que leia outra materialized view. Nulo fora de materialized view ou não
+    /// informado.
+    /// </summary>
+    public bool? DependenciasIncompletas { get; init; }
+
+    /// <summary>Se a materialized view tem dados (criada ou atualizada sem <c>WITH NO DATA</c>); nulo fora dela ou não informado.</summary>
+    public bool? Populada { get; init; }
 }
 
 /// <summary>O banco, o servidor e a linhagem lidos de um banco.</summary>

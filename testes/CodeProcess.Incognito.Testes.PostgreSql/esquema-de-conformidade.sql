@@ -1,9 +1,10 @@
 -- Esquema de conformidade do PostgreSQL, criado pelo administrador nos dois bancos-modelo que cada teste clona (no da
 -- origem fica tudo do administrador; no do destino, a posse passa ao dono). Só dados sintéticos. O texto zqSENTINELAqz
--- aparece em default de coluna e de domínio, valor de coluna acrescentada com default (attmissingval), CHECK, predicado de
--- índice e de exclusão, expressão da chave de partição, comentários (tabela, coluna, índice, restrição, trigger e
--- colação), linhas (com estatística comum e estendida), large object, limite de partição, expressão de coluna gerada,
--- política de segurança por linha, materialized view, corpo de função, argumentos e WHEN de trigger, opções de foreign
+-- aparece em default de coluna e de domínio, valor de coluna acrescentada com default (attmissingval), CHECK (também
+-- constante), expressão e predicado de índice único, expressão e predicado de exclusão, expressão da chave de partição,
+-- comentários (tabela, coluna, índice, restrição, trigger e colação), linhas (com estatística comum e estendida), large
+-- object, limite de partição, expressão de coluna gerada, política de segurança por linha, materialized view e view lida
+-- por ela, corpo de função, argumentos e WHEN de trigger, opções de foreign
 -- table, de servidor e de mapeamento de usuário, regras de colação (16+) e, em minúsculas e curto (o BCP 47 limita a 8), no
 -- locale de uma colação ICU: nenhuma leitura do esquema pode devolvê-lo. A presenca-do-sentinela.sql confere que ele está
 -- em cada um desses lugares.
@@ -61,7 +62,7 @@ CREATE TABLE loja.tipos (
 COMMENT ON TABLE loja.tipos IS 'zqSENTINELAqz';
 COMMENT ON COLUMN loja.tipos.texto IS 'zqSENTINELAqz';
 COMMENT ON CONSTRAINT ck_tipos_texto ON loja.tipos IS 'zqSENTINELAqz';
-CREATE UNIQUE INDEX ix_tipos_curto ON loja.tipos (curto) WHERE curto <> 'zqSENTINELAqz';
+CREATE UNIQUE INDEX ix_tipos_curto ON loja.tipos (curto) WHERE curto <> 'zqSENTINELAqz' AND id > 0;
 COMMENT ON INDEX loja.ix_tipos_curto IS 'zqSENTINELAqz';
 CREATE STATISTICS loja.est_tipos (mcv) ON texto, curto FROM loja.tipos;
 
@@ -327,6 +328,151 @@ CREATE TABLE loja.numeros (
     valor_do_dominio loja.d_valor,
     constante integer GENERATED ALWAYS AS (1) STORED
 );
+
+-- Os índices únicos: a restrição com um NULL só por combinação e coluna incluída, a colação do elemento diferente da
+-- coluna (também a do sentinela e a hostil), expressões (uma com o sentinela) num índice parcial (o predicado também), a
+-- coluna gerada, a linha inteira por função (incompleta) e a chave primária. E os CHECKs: de duas colunas, constante (com o
+-- sentinela), da linha inteira (numa tabela sem herdeira nem partição: com ele, a herança falha), não validado e, no 18,
+-- não imposto.
+CREATE EXTENSION btree_gist;
+CREATE TABLE loja.indexada (
+    id bigint PRIMARY KEY,
+    a integer,
+    b integer,
+    g text,
+    apelido text,
+    email text,
+    ini integer,
+    fim integer,
+    minusculo text GENERATED ALWAYS AS (lower(email)) STORED,
+    CONSTRAINT uq_indexada_ab UNIQUE NULLS NOT DISTINCT (a, b) INCLUDE (g) DEFERRABLE,
+    CONSTRAINT uq_indexada_email UNIQUE (email),
+    CONSTRAINT ck_indexada_faixa CHECK (ini <= fim),
+    CONSTRAINT ck_indexada_constante CHECK ('zqSENTINELAqz-constante' <> '')
+);
+CREATE UNIQUE INDEX ix_indexada_apelido ON loja.indexada (apelido COLLATE "Idioma""X".ci_nivel2);
+CREATE UNIQUE INDEX ix_indexada_colacoes ON loja.indexada (g COLLATE "Idioma""X"."Caixa""Alta.ç;--'", apelido COLLATE loja.colacao_sentinela);
+CREATE UNIQUE INDEX ix_indexada_expressoes ON loja.indexada ((lower(email) || 'zqSENTINELAqz-expressao'), (ini + fim))
+    WHERE b > 0 AND id::text <> 'zqSENTINELAqz-predicado';
+CREATE UNIQUE INDEX ix_indexada_minusculo ON loja.indexada (minusculo);
+CREATE UNIQUE INDEX ix_indexada_misto ON loja.indexada (g, (ini * 2));
+CREATE FUNCTION loja.chave_da_linha(loja.indexada) RETURNS text IMMUTABLE LANGUAGE sql AS 'SELECT $1.email';
+CREATE UNIQUE INDEX ix_indexada_linha ON loja.indexada ((loja.chave_da_linha(indexada)));
+ALTER TABLE loja.indexada ADD CONSTRAINT ck_indexada_nao_validado CHECK (a > 0) NOT VALID;
+CREATE TABLE loja.checada (id integer, nota text);
+CREATE FUNCTION loja.linha_valida(loja.checada) RETURNS boolean IMMUTABLE LANGUAGE sql AS 'SELECT $1.id > 0';
+ALTER TABLE loja.checada ADD CONSTRAINT ck_checada_linha CHECK (loja.linha_valida(checada));
+ALTER TABLE loja.sem_colunas ADD CONSTRAINT ck_sem_colunas_linha CHECK (sem_colunas IS NOT NULL);
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::integer >= 180000 THEN
+        EXECUTE 'ALTER TABLE loja.indexada ADD CONSTRAINT ck_indexada_nao_imposto CHECK (b > 0) NOT ENFORCED';
+    END IF;
+END
+$$;
+
+-- Uma particionada com o índice só do pai (ON ONLY, inválido: a partição não tem o dela anexado), um índice próprio da
+-- partição, o CHECK do pai (herdado pela partição, que só vale pelo pai) e um local, a trigger do pai (copiada na
+-- partição) e uma própria. E o CHECK herdado numa herdeira, que vale nela.
+CREATE TABLE loja.lotes (id integer, parte integer, CONSTRAINT ck_lotes_parte CHECK (parte > 0)) PARTITION BY LIST (parte);
+CREATE TABLE loja.lotes_1 PARTITION OF loja.lotes FOR VALUES IN (1);
+ALTER TABLE loja.lotes_1 ADD CONSTRAINT ck_lotes_1_local CHECK (id <> 7);
+CREATE UNIQUE INDEX ix_lotes_so_pai ON ONLY loja.lotes (id, parte);
+CREATE UNIQUE INDEX ix_lotes_1_proprio ON loja.lotes_1 (id);
+CREATE FUNCTION loja.disparar() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END';
+CREATE TRIGGER tg_lotes BEFORE INSERT ON loja.lotes FOR EACH ROW EXECUTE FUNCTION loja.disparar();
+CREATE TRIGGER tg_lotes_1_proprio BEFORE INSERT ON loja.lotes_1 FOR EACH ROW EXECUTE FUNCTION loja.disparar();
+ALTER TABLE loja.pessoa ADD CONSTRAINT ck_pessoa_id CHECK (id > 0);
+
+-- Exclusões: a de cima, com predicado, uma com coluna só incluída, uma de expressão (com o sentinela), do 17 em diante
+-- numa particionada (a cópia da partição fica no pai) e, no 18, a chave primária com WITHOUT OVERLAPS (exclusão, não
+-- índice único).
+ALTER TABLE loja.reservas ADD CONSTRAINT ex_reservas_sala EXCLUDE USING gist (sala WITH =, periodo WITH &&) INCLUDE (nota);
+ALTER TABLE loja.reservas ADD CONSTRAINT ex_reservas_expressao EXCLUDE USING gist ((lower(nota) || 'zqSENTINELAqz-exclusao') WITH =);
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::integer >= 170000 THEN
+        EXECUTE 'CREATE TABLE loja.salas (sala integer, periodo int4range, CONSTRAINT ex_salas EXCLUDE USING gist (sala WITH =, periodo WITH &&)) PARTITION BY LIST (sala)';
+        EXECUTE 'CREATE TABLE loja.salas_1 PARTITION OF loja.salas FOR VALUES IN (1)';
+    END IF;
+    IF current_setting('server_version_num')::integer >= 180000 THEN
+        EXECUTE 'CREATE TABLE loja.periodos (sala integer, periodo int4range, PRIMARY KEY (sala, periodo WITHOUT OVERLAPS))';
+    END IF;
+END
+$$;
+
+-- Triggers em cada estado (habilitada, desabilitada, só de réplica, sempre) e uma de TRUNCATE.
+CREATE TABLE loja.disparos (id integer, valor text);
+CREATE TRIGGER tg_ligada BEFORE INSERT ON loja.disparos FOR EACH ROW EXECUTE FUNCTION loja.disparar();
+CREATE TRIGGER tg_desligada BEFORE INSERT ON loja.disparos FOR EACH ROW EXECUTE FUNCTION loja.disparar();
+CREATE TRIGGER tg_replica BEFORE INSERT ON loja.disparos FOR EACH ROW EXECUTE FUNCTION loja.disparar();
+CREATE TRIGGER tg_sempre BEFORE INSERT ON loja.disparos FOR EACH ROW EXECUTE FUNCTION loja.disparar();
+CREATE TRIGGER tg_esvaziar BEFORE TRUNCATE ON loja.disparos FOR EACH STATEMENT EXECUTE FUNCTION loja.disparar();
+ALTER TABLE loja.disparos DISABLE TRIGGER tg_desligada;
+ALTER TABLE loja.disparos ENABLE REPLICA TRIGGER tg_replica;
+ALTER TABLE loja.disparos ENABLE ALWAYS TRIGGER tg_sempre;
+
+-- Chaves estrangeiras com a integridade desligada (pelo administrador, que pode mexer nas triggers do sistema): todas as
+-- triggers da tabela, as da chave só de réplica (o ENABLE REPLICA TRIGGER ALL não existe: uma por uma), as de uma partição
+-- só (a cópia da chave nela); não validada e, no 18, não imposta (sem trigger nenhuma).
+CREATE TABLE loja.vinculo_desligado (loja integer CONSTRAINT fk_desligado REFERENCES loja.lojas (id));
+ALTER TABLE loja.vinculo_desligado DISABLE TRIGGER ALL;
+CREATE TABLE loja.vinculo_replica (loja integer CONSTRAINT fk_replica REFERENCES loja.lojas (id));
+DO $$
+DECLARE
+    gatilho record;
+BEGIN
+    FOR gatilho IN
+        SELECT t.tgrelid::regclass AS tabela, t.tgname
+        FROM pg_catalog.pg_trigger t
+        JOIN pg_catalog.pg_constraint k ON k.oid = t.tgconstraint
+        WHERE k.conname = 'fk_replica' AND k.conrelid = 'loja.vinculo_replica'::regclass
+    LOOP
+        EXECUTE format('ALTER TABLE %s ENABLE REPLICA TRIGGER %I', gatilho.tabela, gatilho.tgname);
+    END LOOP;
+END
+$$;
+CREATE TABLE loja.remessas (loja integer CONSTRAINT fk_remessas REFERENCES loja.lojas (id), parte integer NOT NULL) PARTITION BY LIST (parte);
+CREATE TABLE loja.remessas_1 PARTITION OF loja.remessas FOR VALUES IN (1);
+CREATE TABLE loja.remessas_2 PARTITION OF loja.remessas FOR VALUES IN (2);
+ALTER TABLE loja.remessas_2 DISABLE TRIGGER ALL;
+CREATE TABLE loja.vinculo_pendente (loja integer);
+ALTER TABLE loja.vinculo_pendente ADD CONSTRAINT fk_pendente FOREIGN KEY (loja) REFERENCES loja.lojas (id) NOT VALID;
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::integer >= 180000 THEN
+        EXECUTE 'CREATE TABLE loja.vinculo_solto (loja integer, CONSTRAINT fk_solto FOREIGN KEY (loja) REFERENCES loja.lojas (id) NOT ENFORCED)';
+    END IF;
+END
+$$;
+
+-- Materialized views que leem outras: uma passando por uma view (com o sentinela; a regra de INSERT da view, que lê outra
+-- materialized view, não conta: o REFRESH só usa a de leitura), outra direto (as duas na dependência, em ordem), uma vazia,
+-- uma que lê por função e outra por operador de usuário (a dependência fica incompleta), uma que uma view lê de volta e
+-- duas que se leem por views (o ciclo sai das dependências, que ficam incompletas).
+CREATE MATERIALIZED VIEW loja.mv_base AS SELECT count(*) AS total FROM loja.lojas;
+CREATE MATERIALIZED VIEW loja.mv_vazia AS SELECT 1 AS um WITH NO DATA;
+CREATE VIEW loja.v_intermediaria AS SELECT total FROM loja.mv_base WHERE total::text <> 'zqSENTINELAqz-visao';
+CREATE RULE r_v_intermediaria AS ON INSERT TO loja.v_intermediaria DO INSTEAD INSERT INTO loja.lojas SELECT um FROM loja.mv_vazia;
+CREATE MATERIALIZED VIEW loja.mv_derivada AS SELECT v.total FROM loja.v_intermediaria v CROSS JOIN loja.resumo_vendas r;
+CREATE FUNCTION loja.contar_lojas() RETURNS bigint STABLE LANGUAGE sql AS 'SELECT count(*) FROM loja.lojas';
+CREATE MATERIALIZED VIEW loja.mv_por_funcao AS SELECT loja.contar_lojas() AS total;
+CREATE FUNCTION loja.mesmo_total(bigint, bigint) RETURNS boolean STABLE LANGUAGE sql AS 'SELECT $1 = $2 AND EXISTS (SELECT 1 FROM loja.mv_base)';
+CREATE OPERATOR loja.=== (LEFTARG = bigint, RIGHTARG = bigint, FUNCTION = loja.mesmo_total);
+CREATE MATERIALIZED VIEW loja.mv_por_operador AS SELECT id FROM loja.lojas WHERE id::bigint OPERATOR(loja.===) 1;
+CREATE VIEW loja.v_de_volta AS SELECT 1 AS id;
+CREATE MATERIALIZED VIEW loja.mv_de_volta AS SELECT id FROM loja.v_de_volta;
+CREATE OR REPLACE VIEW loja.v_de_volta AS SELECT id FROM loja.mv_de_volta;
+CREATE VIEW loja.v_ciclo_a AS SELECT 1 AS id;
+CREATE MATERIALIZED VIEW loja.mv_ciclo_b AS SELECT id FROM loja.v_ciclo_a;
+CREATE VIEW loja.v_ciclo_b AS SELECT id FROM loja.mv_ciclo_b;
+CREATE MATERIALIZED VIEW loja.mv_ciclo_a AS SELECT id FROM loja.v_ciclo_b;
+CREATE OR REPLACE VIEW loja.v_ciclo_a AS SELECT id FROM loja.mv_ciclo_a;
+
+-- Uma tabela com valores repetidos, para o índice único CONCURRENTLY que falha (fica inválido): fora deste script, que roda
+-- numa transação (ServidorPostgreSql).
+CREATE TABLE loja.duplicadas (v integer);
+INSERT INTO loja.duplicadas VALUES (1), (1);
 
 -- Objetos de um terceiro papel (nem o leitor nem o dono), que no destino continuam dele.
 CREATE TABLE loja.alheia (id bigint PRIMARY KEY);

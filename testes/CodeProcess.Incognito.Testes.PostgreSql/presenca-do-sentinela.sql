@@ -101,6 +101,22 @@ FROM (VALUES
         WHERE r.rulename = 'regra_sentinela' AND pg_catalog.pg_get_ruledef(r.oid) LIKE '%zqSENTINELAqz%')),
     ('filtro de publicação', EXISTS (
         SELECT 1 FROM pg_catalog.pg_publication_rel p WHERE pg_catalog.pg_get_expr(p.prqual, p.prrelid) LIKE '%zqSENTINELAqz%')),
+    ('expressão de índice único', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_index i
+        WHERE i.indexrelid = 'loja.ix_indexada_expressoes'::regclass AND pg_catalog.pg_get_expr(i.indexprs, i.indrelid) LIKE '%zqSENTINELAqz-expressao%')),
+    ('predicado de índice único com expressão', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_index i
+        WHERE i.indexrelid = 'loja.ix_indexada_expressoes'::regclass AND pg_catalog.pg_get_expr(i.indpred, i.indrelid) LIKE '%zqSENTINELAqz-predicado%')),
+    ('expressão de exclusão', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_constraint k JOIN pg_catalog.pg_index i ON i.indexrelid = k.conindid
+        WHERE k.conname = 'ex_reservas_expressao' AND pg_catalog.pg_get_expr(i.indexprs, i.indrelid) LIKE '%zqSENTINELAqz-exclusao%')),
+    ('view lida por materialized view', pg_catalog.pg_get_viewdef('loja.v_intermediaria'::regclass) LIKE '%zqSENTINELAqz-visao%'),
+    ('CHECK constante', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_constraint k
+        WHERE k.conname = 'ck_indexada_constante' AND k.conkey IS NULL AND pg_catalog.pg_get_constraintdef(k.oid) LIKE '%zqSENTINELAqz-constante%')),
+    ('elemento de índice com a colação do sentinela', EXISTS (
+        SELECT 1 FROM pg_catalog.pg_index i JOIN pg_catalog.pg_collation k ON k.oid = ANY (i.indcollation::pg_catalog.oid[])
+        WHERE k.collname = 'colacao_sentinela' AND i.indexrelid = 'loja.ix_indexada_colacoes'::regclass)),
     ('CHECK de domínio', EXISTS (
         SELECT 1 FROM pg_catalog.pg_constraint k
         WHERE k.contypid = 'loja.d_cpf'::regtype AND pg_catalog.pg_get_constraintdef(k.oid) LIKE '%zqSENTINELAqz%'))

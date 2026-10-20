@@ -250,3 +250,63 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento.Bytes = 2 -> CodeProcess.Incognito.Dialetos.UnidadeComprimento
 [INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento.PontosDeCodigo = 0 -> CodeProcess.Incognito.Dialetos.UnidadeComprimento
 [INCX001]CodeProcess.Incognito.Dialetos.UnidadeComprimento.UnidadesUtf16 = 1 -> CodeProcess.Incognito.Dialetos.UnidadeComprimento
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Imposta.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Imposta.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Validada.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.Validada.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ElementoIndice
+[INCX001]CodeProcess.Incognito.Dialetos.ElementoIndice.Colacao.get -> CodeProcess.Incognito.Dialetos.ColacaoEsquema?
+[INCX001]CodeProcess.Incognito.Dialetos.ElementoIndice.Colacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ElementoIndice.Coluna.get -> string?
+[INCX001]CodeProcess.Incognito.Dialetos.ElementoIndice.Coluna.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ElementoIndice.ElementoIndice() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Elementos.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ElementoIndice!>!
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Elementos.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.IndiceUnico() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.NulosDistintos.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.NulosDistintos.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Predicado.get -> CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao?
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Predicado.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Primario.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.Primario.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.ReferenciasDasExpressoes.get -> CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao?
+[INCX001]CodeProcess.Incognito.Dialetos.IndiceUnico.ReferenciasDasExpressoes.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.DependeDe.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.NomeObjeto!>!
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.DependeDe.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.DependenciasIncompletas.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.DependenciasIncompletas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.Populada.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoResidual.Populada.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.Imposta.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.Imposta.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.Referencias.get -> CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao!
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.Referencias.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoCheck.RestricaoCheck() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoExclusao
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoExclusao.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoExclusao.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoExclusao.Referencias.get -> CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao!
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoExclusao.Referencias.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.RestricaoExclusao.RestricaoExclusao() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.IndicesUnicos.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.IndiceUnico!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.IndicesUnicos.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.RestricoesCheck.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.RestricaoCheck!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.RestricoesCheck.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.RestricoesExclusao.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.RestricaoExclusao!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.RestricoesExclusao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Triggers.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.TriggerEsquema!>!
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Triggers.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Herdada.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Herdada.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Ligada.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Ligada.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerEsquema.TriggerEsquema() -> void

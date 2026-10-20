@@ -1,6 +1,6 @@
 -- A posse do banco-modelo do destino passa do administrador ao dono, objeto por objeto, depois do esquema de
--- conformidade: esquemas, relações (o ALTER no pai não desce às partições), tipos e domínios, funções, colações,
--- estatísticas estendidas e large objects. Nunca REASSIGN OWNED, que também passaria os bancos e os objetos
+-- conformidade: esquemas, relações (o ALTER no pai não desce às partições), tipos e domínios, funções, operadores,
+-- colações, estatísticas estendidas e large objects. Nunca REASSIGN OWNED, que também passaria os bancos e os objetos
 -- compartilhados. Ficam com o administrador os membros de extensão e os wrappers e servidores de foreign data (o dono
 -- só ganha USAGE no servidor das foreign tables; o mapeamento de usuário não tem dono); com o terceiro papel, os objetos
 -- dele; e seguem o dono da tabela as sequences ligadas a coluna (serial e identity), os índices, os tipos de linha e os
@@ -50,6 +50,12 @@ BEGIN
         JOIN pg_catalog.pg_namespace n ON n.oid = k.collnamespace
         WHERE k.collowner = administrador AND NOT starts_with(n.nspname, 'pg_') AND n.nspname <> 'information_schema'
           AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_depend e WHERE e.classid = 'pg_catalog.pg_collation'::regclass AND e.objid = k.oid AND e.deptype = 'e')
+        UNION ALL
+        SELECT format('ALTER OPERATOR %s OWNER TO incognito_dono', o.oid::regoperator)
+        FROM pg_catalog.pg_operator o
+        JOIN pg_catalog.pg_namespace n ON n.oid = o.oprnamespace
+        WHERE o.oprowner = administrador AND NOT starts_with(n.nspname, 'pg_') AND n.nspname <> 'information_schema'
+          AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_depend e WHERE e.classid = 'pg_catalog.pg_operator'::regclass AND e.objid = o.oid AND e.deptype = 'e')
         UNION ALL
         SELECT format('ALTER STATISTICS %I.%I OWNER TO incognito_dono', n.nspname, s.stxname)
         FROM pg_catalog.pg_statistic_ext s

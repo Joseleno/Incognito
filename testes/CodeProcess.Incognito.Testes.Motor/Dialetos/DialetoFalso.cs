@@ -93,6 +93,35 @@ public enum Defeito
     MatrizContraditoria,
     MatrizSemMotivo,
 
+    // Os objetos da tabela e as dependências dos residuais: o inventário e a consistência.
+    IndiceUnicoOmitido,
+    IndiceAnexadoDaParticaoListado,
+    ExclusaoComoIndiceUnico,
+    TriggerInternaListada,
+    CheckHerdadoNaParticao,
+    CheckInventado,
+    FkComRiDesligadaComoImposta,
+    ElementoDeExpressaoSemReferencias,
+    PredicadoCitaColunaInexistente,
+    IndicePrimarioDivergenteDaChave,
+    DoisIndicesPrimarios,
+    DependenciaCircular,
+    DependenciaDeResidualInexistente,
+    TriggerHerdadaForaDeParticao,
+    ElementoTextoSemColacao,
+    PrimariaSemIndiceForaDeParticao,
+    ColacaoEmElementoNaoTexto,
+    ElementoDeColunaInexistente,
+    ExpressoesSemElementoDeExpressao,
+    ReferenciasDoIndiceForaDeOrdem,
+    CheckCitaColunaInexistente,
+    ExclusaoForaDeOrdem,
+    DependenciasForaDeOrdem,
+    ColacaoDoElementoIncoerente,
+    ExclusaoQueNaoCobreAPrimaria,
+    DependenciaDeObjetosGrandes,
+    ObjetosGrandesComMarcas,
+
     // A classe concreta da suíte aninhada em outra, ou aberta.
     SuiteAninhada,
     SuiteAberta,
@@ -145,6 +174,9 @@ internal static class BancoFalso
                 ChaveParticao = completo ? new ChaveParticao { Colunas = ["loja", "id"], ColunasIncompletas = false } : null,
                 Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")],
                 ChavePrimaria = ["loja", "id"],
+                IndicesUnicos = [Indice("pk_pedidos", primario: true, Elemento("loja"), Elemento("id"))],
+                RestricoesCheck = completo ? [new() { Nome = "ck_pedidos_loja", Referencias = Referencias("loja"), Imposta = true }] : [],
+                Triggers = completo ? [new() { Nome = "tg_pedidos", Ligada = true, Herdada = false }] : [],
             },
             new()
             {
@@ -152,7 +184,7 @@ internal static class BancoFalso
                 Colunas = [Inteiro("pedido", anulavel: false), Inteiro("loja", anulavel: false), Inteiro("numero")],
                 ChavesEstrangeiras =
                 [
-                    new() { Nome = "fk_itens_pedidos", Colunas = ["loja", "pedido"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["loja", "id"] },
+                    new() { Nome = "fk_itens_pedidos", Colunas = ["loja", "pedido"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["loja", "id"], Imposta = true, Validada = true },
                 ],
             },
             new() { Nome = new NomeObjeto("incognito", "execucao"), Colunas = [Texto("status")] },
@@ -162,8 +194,26 @@ internal static class BancoFalso
         {
             tabelas.AddRange(
             [
-                new() { Nome = Nome("pedidos_2025"), Tipo = TipoTabela.Particao, Pai = Nome("pedidos"), Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")] },
-                new() { Nome = Nome("pedidos_2026"), Tipo = TipoTabela.Particao, Pai = Nome("pedidos"), Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")] },
+                // As partições têm a chave primária, com o índice anexado ao do pai (que fica no pai), e a cópia da trigger
+                // do pai.
+                new()
+                {
+                    Nome = Nome("pedidos_2025"),
+                    Tipo = TipoTabela.Particao,
+                    Pai = Nome("pedidos"),
+                    Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")],
+                    ChavePrimaria = ["loja", "id"],
+                    Triggers = [new() { Nome = "tg_pedidos", Ligada = true, Herdada = true }],
+                },
+                new()
+                {
+                    Nome = Nome("pedidos_2026"),
+                    Tipo = TipoTabela.Particao,
+                    Pai = Nome("pedidos"),
+                    Colunas = [Inteiro("loja", anulavel: false), Inteiro("id", anulavel: false), Inteiro("numero")],
+                    ChavePrimaria = ["loja", "id"],
+                    Triggers = [new() { Nome = "tg_pedidos", Ligada = true, Herdada = true }],
+                },
                 Tabela("pessoa", Texto("nome")),
                 new() { Nome = Nome("funcionario"), Tipo = TipoTabela.Herdeira, Pai = Nome("pessoa"), Colunas = [Texto("nome"), Texto("cargo")] },
                 Tabela("contato", Texto("canal")),
@@ -176,7 +226,61 @@ internal static class BancoFalso
                     Pai = Nome("contato"),
                     OutrosPais = [Nome("endereco"), Nome("telefone")],
                     Colunas = [Texto("canal"), Texto("cidade"), Texto("numero")],
-                    ChavesEstrangeiras = [new() { Nome = "fk_ficha_contato", Colunas = ["canal"], Referenciada = Nome("contato"), ColunasReferenciadas = ["canal"] }],
+                    ChavesEstrangeiras =
+                    [
+                        new() { Nome = "fk_ficha_contato", Colunas = ["canal"], Referenciada = Nome("contato"), ColunasReferenciadas = ["canal"], Imposta = false, Validada = false },
+                    ],
+                },
+
+                // Os objetos da tabela: um índice de dois elementos (um de expressão, com colação não determinística),
+                // parcial e com um NULL só; um CHECK incompleto e não imposto; exclusões; uma trigger ligada e uma desligada.
+                new()
+                {
+                    Nome = Nome("indexada"),
+                    Colunas =
+                    [
+                        Inteiro("id", anulavel: false),
+                        Texto("apelido"),
+                        Texto("email"),
+                        Inteiro("ini"),
+                        Inteiro("fim"),
+                        Clonar(Texto("codigo"), (nameof(ColunaEsquema.TipoNativo), "loja.codigo"), (nameof(ColunaEsquema.Situacao), SituacaoTipo.ComRessalva), (nameof(ColunaEsquema.Tipo), null)),
+                    ],
+                    ChavePrimaria = ["id"],
+                    IndicesUnicos =
+                    [
+                        Indice("ix_indexada_codigo", primario: false, Elemento("codigo", Padrao)),
+                        new()
+                        {
+                            Nome = "ix_indexada_expressoes",
+                            Primario = false,
+                            Elementos = [Elemento("apelido", _semCaixa), Elemento(null, _semCaixa)],
+                            ReferenciasDasExpressoes = Referencias("email", "ini"),
+                            Predicado = Referencias("id", "fim"),
+                            NulosDistintos = false,
+                        },
+                        Indice("pk_indexada", primario: true, Elemento("id")),
+                    ],
+                    RestricoesCheck =
+                    [
+                        new() { Nome = "ck_indexada_faixa", Referencias = Referencias("ini", "fim"), Imposta = true },
+                        new() { Nome = "ck_indexada_linha", Referencias = new() { Colunas = [], Incompletas = true }, Imposta = false },
+                    ],
+                    RestricoesExclusao =
+                    [
+                        new() { Nome = "ex_indexada", Referencias = Referencias("ini", "fim") },
+                        new() { Nome = "ex_indexada_email", Referencias = Referencias("email") },
+                    ],
+                    Triggers = [new() { Nome = "tg_desligada", Ligada = false, Herdada = false }, new() { Nome = "tg_ligada", Ligada = true, Herdada = false }],
+                },
+
+                // A chave primária com sobreposição proibida: uma exclusão que cita todas as colunas dela, sem índice primário.
+                new()
+                {
+                    Nome = Nome("periodos"),
+                    Colunas = [Inteiro("sala", anulavel: false), Inteiro("inicio", anulavel: false)],
+                    ChavePrimaria = ["sala", "inicio"],
+                    RestricoesExclusao = [new() { Nome = "pk_periodos", Referencias = Referencias("sala", "inicio") }],
                 },
 
                 // Uma coluna por tipo canônico, as três unidades de comprimento e as colações não determinísticas.
@@ -230,8 +334,24 @@ internal static class BancoFalso
         return sequences;
     }
 
+    // Uma materialized view que lê outras duas (uma vazia) e passa por função.
     internal static List<ObjetoResidual> Residuais(bool completo) =>
-        completo ? [new() { Nome = Nome("resumo_vendas"), Tipo = TipoObjetoResidual.VisaoMaterializada }] : [];
+        completo
+            ?
+            [
+                new() { Nome = Nome("mv_base"), Tipo = TipoObjetoResidual.VisaoMaterializada, DependeDe = [], DependenciasIncompletas = false, Populada = false },
+                new() { Nome = Nome("mv_clientes"), Tipo = TipoObjetoResidual.VisaoMaterializada, DependeDe = [], DependenciasIncompletas = false, Populada = true },
+                new()
+                {
+                    Nome = Nome("resumo_vendas"),
+                    Tipo = TipoObjetoResidual.VisaoMaterializada,
+                    DependeDe = [Nome("mv_base"), Nome("mv_clientes")],
+                    DependenciasIncompletas = true,
+                    Populada = true,
+                },
+                new() { Nome = new NomeObjeto("pg_catalog", "pg_largeobject"), Tipo = TipoObjetoResidual.ObjetosGrandes },
+            ]
+            : [];
 
     // Uma codificação que não é Unicode, para a perturbação ter o que alterar em cada campo.
     internal static PropriedadesBanco? Propriedades(bool completo) => completo
@@ -352,11 +472,21 @@ internal static class BancoFalso
                 SegurancaDeLinha = tabela.SegurancaDeLinha,
                 Colunas = [.. tabela.Colunas.Select(Projetar)],
                 ChavePrimaria = tabela.ChavePrimaria,
-                ChavesEstrangeiras = [.. tabela.ChavesEstrangeiras.Select(chave => new ChaveEstrangeiraInventariada(chave.Nome, chave.Colunas, chave.Referenciada, chave.ColunasReferenciadas))],
+                ChavesEstrangeiras =
+                [
+                    .. tabela.ChavesEstrangeiras.Select(chave => new ChaveEstrangeiraInventariada(chave.Nome, chave.Colunas, chave.Referenciada, chave.ColunasReferenciadas, chave.Imposta, chave.Validada)),
+                ],
+                IndicesUnicos = [.. tabela.IndicesUnicos.Select(IndiceInventariado.De)],
+                Checks = [.. tabela.RestricoesCheck.Select(CheckInventariado.De)],
+                Exclusoes = [.. tabela.RestricoesExclusao.Select(ExclusaoInventariada.De)],
+                Triggers = [.. tabela.Triggers.Select(TriggerInventariada.De)],
             }),
         ],
         [.. Sequences(completo).Where(sequence => sequence.Nome.Esquema != "incognito").Select(sequence => new SequenceEsperada(sequence.Nome, sequence.Colunas))],
-        [.. Residuais(completo).Select(residual => new ResidualInventariado(residual.Nome, residual.Tipo))]);
+        [
+            .. Residuais(completo).Select(residual =>
+                new ResidualInventariado(residual.Nome, residual.Tipo, residual.DependenciasIncompletas, residual.Populada) { DependeDe = residual.DependeDe }),
+        ]);
 
     private static ColunaInventariada Projetar(ColunaEsquema coluna) => new()
     {
@@ -367,6 +497,7 @@ internal static class BancoFalso
         Anulavel = coluna.Anulavel,
         Identidade = coluna.Identidade,
         Geracao = coluna.Geracao,
+        Mascarada = coluna.Mascarada,
         TipoBase = coluna.TipoBase,
         Colacao = ColacaoEsperada.De(coluna.Colacao),
         IgnoraCaixaPeloTipo = coluna.IgnoraCaixaPeloTipo,
@@ -382,6 +513,13 @@ internal static class BancoFalso
     private static TabelaEsquema Tabela(string nome, params ColunaEsquema[] colunas) => new() { Nome = Nome(nome), Colunas = colunas };
 
     private static LimiteComprimento Limite(int? valor, UnidadeComprimento unidade) => new() { Valor = valor, Unidade = unidade };
+
+    private static ReferenciasDaExpressao Referencias(params string[] colunas) => new() { Colunas = colunas, Incompletas = false };
+
+    private static ElementoIndice Elemento(string? coluna, ColacaoEsquema? colacao = null) => new() { Coluna = coluna, Colacao = colacao };
+
+    private static IndiceUnico Indice(string nome, bool primario, params ElementoIndice[] elementos) =>
+        new() { Nome = nome, Primario = primario, Elementos = elementos, NulosDistintos = true };
 
     // A semântica que o leitor de verdade devolve em toda coluna de texto: colação, as duas marcas do tipo e o limite.
     private static ColunaEsquema Texto(string nome) => new()
@@ -652,6 +790,90 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
             case Defeito.ReferenciasForaDeOrdem:
                 TrocarColuna(tabelas, "calculos", "dobro", (nameof(ColunaEsquema.ReferenciasDaGeracao), new ReferenciasDaExpressao { Colunas = ["extra", "base"], Incompletas = false }));
                 break;
+            case Defeito.IndiceUnicoOmitido:
+                Trocar(tabelas, "indexada", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.IndicesUnicos), tabela.IndicesUnicos.Skip(1).ToArray())));
+                break;
+            case Defeito.IndiceAnexadoDaParticaoListado:
+                Trocar(tabelas, "pedidos_2025", (nameof(TabelaEsquema.IndicesUnicos), new[] { BancoFalso.Clonar(Objeto(tabelas, "pedidos").IndicesUnicos[0], (nameof(IndiceUnico.Nome), "pedidos_2025_pkey")) }));
+                break;
+            case Defeito.ExclusaoComoIndiceUnico:
+                TrocarIndice(tabelas, indices => [.. indices, new() { Nome = "ex_indexada", Primario = false, Elementos = [new() { Coluna = "ini" }, new() { Coluna = "fim" }], NulosDistintos = true }]);
+                break;
+            case Defeito.TriggerInternaListada:
+                Trocar(tabelas, "indexada", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Triggers), tabela.Triggers.Prepend(new() { Nome = "RI_ConstraintTrigger_c_1", Ligada = true, Herdada = false }).ToArray())));
+                break;
+            case Defeito.CheckHerdadoNaParticao:
+                Trocar(tabelas, "pedidos_2025", (nameof(TabelaEsquema.RestricoesCheck), Objeto(tabelas, "pedidos").RestricoesCheck.ToArray()));
+                break;
+            case Defeito.CheckInventado:
+                Trocar(tabelas, "endereco", (nameof(TabelaEsquema.RestricoesCheck), new RestricaoCheck[] { new() { Nome = "ck_endereco_cidade", Referencias = new() { Colunas = ["cidade"], Incompletas = false }, Imposta = true } }));
+                break;
+            case Defeito.FkComRiDesligadaComoImposta:
+                TrocarChave(tabelas, f => [BancoFalso.Clonar(f, (nameof(ChaveEstrangeira.Imposta), true))], "ficha");
+                break;
+            case Defeito.ElementoDeExpressaoSemReferencias:
+                TrocarIndice(tabelas, indices => [indices[0], BancoFalso.Clonar(indices[1], (nameof(IndiceUnico.ReferenciasDasExpressoes), null)), indices[2]]);
+                break;
+            case Defeito.PredicadoCitaColunaInexistente:
+                TrocarIndice(tabelas, indices => [indices[0], BancoFalso.Clonar(indices[1], (nameof(IndiceUnico.Predicado), new ReferenciasDaExpressao { Colunas = ["id", "fantasma"], Incompletas = false })), indices[2]]);
+                break;
+            case Defeito.IndicePrimarioDivergenteDaChave:
+                TrocarIndice(tabelas, indices => [indices[0], indices[1], BancoFalso.Clonar(indices[2], (nameof(IndiceUnico.Elementos), new ElementoIndice[] { new() { Coluna = "ini" } }))]);
+                break;
+            case Defeito.DoisIndicesPrimarios:
+                TrocarIndice(tabelas, indices => [indices[0], BancoFalso.Clonar(indices[1], (nameof(IndiceUnico.Primario), true)), indices[2]]);
+                break;
+            case Defeito.ElementoTextoSemColacao:
+                TrocarIndice(tabelas, indices => [indices[0], BancoFalso.Clonar(indices[1], (nameof(IndiceUnico.Elementos), indices[1].Elementos.Select((e, i) => i == 0 ? BancoFalso.Clonar(e, (nameof(ElementoIndice.Colacao), null)) : e).ToArray())), indices[2]]);
+                break;
+            case Defeito.ColacaoEmElementoNaoTexto:
+                TrocarIndice(tabelas, indices => [indices[0], indices[1], BancoFalso.Clonar(indices[2], (nameof(IndiceUnico.Elementos), new ElementoIndice[] { new() { Coluna = "id", Colacao = BancoFalso.Padrao } }))]);
+                break;
+            case Defeito.PrimariaSemIndiceForaDeParticao:
+                Trocar(tabelas, "pedidos", (nameof(TabelaEsquema.IndicesUnicos), Array.Empty<IndiceUnico>()));
+                break;
+            case Defeito.TriggerHerdadaForaDeParticao:
+                Trocar(tabelas, "indexada", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Triggers), tabela.Triggers.Select(t => t.Nome == "tg_ligada" ? BancoFalso.Clonar(t, (nameof(TriggerEsquema.Herdada), true)) : t).ToArray())));
+                break;
+            case Defeito.ElementoDeColunaInexistente:
+                TrocarIndice(tabelas, indices => [indices[0], indices[1], BancoFalso.Clonar(indices[2], (nameof(IndiceUnico.Elementos), new ElementoIndice[] { new() { Coluna = "fantasma" } }))]);
+                break;
+            case Defeito.ExpressoesSemElementoDeExpressao:
+                TrocarIndice(tabelas, indices => [indices[0], indices[1], BancoFalso.Clonar(indices[2], (nameof(IndiceUnico.ReferenciasDasExpressoes), new ReferenciasDaExpressao { Colunas = ["id"], Incompletas = false }))]);
+                break;
+            case Defeito.ReferenciasDoIndiceForaDeOrdem:
+                TrocarIndice(tabelas, indices => [indices[0], BancoFalso.Clonar(indices[1], (nameof(IndiceUnico.ReferenciasDasExpressoes), new ReferenciasDaExpressao { Colunas = ["ini", "email"], Incompletas = false })), indices[2]]);
+                break;
+            case Defeito.CheckCitaColunaInexistente:
+                Trocar(tabelas, "indexada", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.RestricoesCheck), tabela.RestricoesCheck
+                    .Select(c => c.Nome == "ck_indexada_faixa" ? BancoFalso.Clonar(c, (nameof(RestricaoCheck.Referencias), new ReferenciasDaExpressao { Colunas = ["ini", "fantasma"], Incompletas = false })) : c).ToArray())));
+                break;
+            case Defeito.ExclusaoForaDeOrdem:
+                Trocar(tabelas, "indexada", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.RestricoesExclusao), tabela.RestricoesExclusao
+                    .Select(e => e.Nome == "ex_indexada" ? BancoFalso.Clonar(e, (nameof(RestricaoExclusao.Referencias), new ReferenciasDaExpressao { Colunas = ["fim", "ini"], Incompletas = false })) : e).ToArray())));
+                break;
+            case Defeito.DependenciasForaDeOrdem:
+                TrocarResidual(residuais, "resumo_vendas", r => BancoFalso.Clonar(r, (nameof(ObjetoResidual.DependeDe), r.DependeDe.Reverse().ToArray())));
+                break;
+            case Defeito.ColacaoDoElementoIncoerente:
+                TrocarIndice(tabelas, indices => [BancoFalso.Clonar(indices[0], (nameof(IndiceUnico.Elementos), new ElementoIndice[] { new() { Coluna = "codigo", Colacao = BancoFalso.Clonar(BancoFalso.Padrao, (nameof(ColacaoEsquema.IgnoraCaixa), true)) } })), indices[1], indices[2]]);
+                break;
+            case Defeito.ExclusaoQueNaoCobreAPrimaria:
+                Trocar(tabelas, "periodos", (nameof(TabelaEsquema.RestricoesExclusao), new RestricaoExclusao[] { new() { Nome = "pk_periodos", Referencias = new() { Colunas = ["sala"], Incompletas = false } } }));
+                break;
+            case Defeito.DependenciaDeObjetosGrandes:
+                TrocarResidual(residuais, "resumo_vendas", r => BancoFalso.Clonar(r, (nameof(ObjetoResidual.DependeDe), r.DependeDe.Append(new NomeObjeto("pg_catalog", "pg_largeobject")).ToArray())));
+                break;
+            case Defeito.ObjetosGrandesComMarcas:
+                residuais[residuais.FindIndex(residual => residual.Tipo == TipoObjetoResidual.ObjetosGrandes)] =
+                    BancoFalso.Clonar(residuais.Single(residual => residual.Tipo == TipoObjetoResidual.ObjetosGrandes), (nameof(ObjetoResidual.Populada), true));
+                break;
+            case Defeito.DependenciaCircular:
+                TrocarResidual(residuais, "mv_base", r => BancoFalso.Clonar(r, (nameof(ObjetoResidual.DependeDe), new[] { BancoFalso.Nome("resumo_vendas") })));
+                break;
+            case Defeito.DependenciaDeResidualInexistente:
+                TrocarResidual(residuais, "resumo_vendas", r => BancoFalso.Clonar(r, (nameof(ObjetoResidual.DependeDe), r.DependeDe.Append(BancoFalso.Nome("mv_sumida")).ToArray())));
+                break;
 
             // Só o administrador vê: o sentinela, em bytes decimais, num nome que o modelo devolve.
             case Defeito.SentinelaNumNome when privilegiado:
@@ -674,6 +896,18 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
 
     private static void Trocar(List<TabelaEsquema> tabelas, string nome, params (string Propriedade, object? Valor)[] trocas) =>
         Trocar(tabelas, nome, tabela => BancoFalso.Clonar(tabela, trocas));
+
+    private static TabelaEsquema Objeto(List<TabelaEsquema> tabelas, string nome) => tabelas.Single(tabela => tabela.Nome.Equals(BancoFalso.Nome(nome)));
+
+    // Os índices da loja.indexada: o da coluna de domínio, o de expressões e o primário, nessa ordem.
+    private static void TrocarIndice(List<TabelaEsquema> tabelas, Func<IReadOnlyList<IndiceUnico>, IndiceUnico[]> trocar) =>
+        Trocar(tabelas, "indexada", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.IndicesUnicos), trocar(tabela.IndicesUnicos))));
+
+    private static void TrocarResidual(List<ObjetoResidual> residuais, string nome, Func<ObjetoResidual, ObjetoResidual> trocar)
+    {
+        var indice = residuais.FindIndex(residual => residual.Nome.Equals(BancoFalso.Nome(nome)));
+        residuais[indice] = trocar(residuais[indice]);
+    }
 
     private static void TrocarSequence(List<SequenceEsquema> sequences, string nome, Func<SequenceEsquema, SequenceEsquema> trocar)
     {

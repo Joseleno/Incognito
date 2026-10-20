@@ -278,8 +278,9 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task Os_objetos_residuais_sao_inventariados()
     {
-        var lidos = (await LerOrigemAsync()).ObjetosResiduais.Select(objeto => new ResidualInventariado(objeto.Nome, objeto.Tipo)).ToArray();
-        var esperados = Esperado.Inventario.Residuais;
+        // Só os nomes e os tipos: o resto o inventário compara.
+        var lidos = (await LerOrigemAsync()).ObjetosResiduais.Select(objeto => (objeto.Nome, objeto.Tipo)).ToArray();
+        var esperados = Esperado.Inventario.Residuais.Select(objeto => (objeto.Nome, objeto.Tipo)).ToArray();
 
         Assert.True(
             MesmoConjunto(lidos, esperados),
@@ -564,7 +565,7 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
                 yield return $"coluna {tabela.Nome}.{coluna.Nome} com tipo canônico fora de 'suportado'";
             }
 
-            foreach (var problema in tabela.Colunas.SelectMany(coluna => Inconsistencias(tabela, coluna, esquema.Propriedades)))
+            foreach (var problema in tabela.Colunas.SelectMany(coluna => Inconsistencias(tabela, coluna, esquema.Propriedades)).Concat(InconsistenciasDosObjetos(tabela)))
             {
                 yield return problema;
             }
@@ -611,6 +612,160 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
                 yield return $"sequence {sequence.Nome} usada pela coluna {coluna}, que não existe";
             }
         }
+
+        // As dependências entre materialized views: só das que existem, sem a própria, em ordem e sem ciclo (a atualização
+        // segue essa ordem).
+        var visoes = esquema.ObjetosResiduais.Where(objeto => objeto.Tipo == TipoObjetoResidual.VisaoMaterializada).DistinctBy(objeto => objeto.Nome).ToDictionary(objeto => objeto.Nome);
+        foreach (var residual in esquema.ObjetosResiduais)
+        {
+            if (residual.Tipo != TipoObjetoResidual.VisaoMaterializada && (residual.DependeDe.Count > 0 || residual.DependenciasIncompletas is not null || residual.Populada is not null))
+            {
+                yield return $"residual {residual.Nome} ({residual.Tipo}) com dependências ou marcas de materialized view";
+            }
+            else if (residual.DependeDe.Contains(residual.Nome))
+            {
+                yield return $"residual {residual.Nome} depende dele mesmo";
+            }
+            else if (residual.DependeDe.FirstOrDefault(dependencia => !visoes.ContainsKey(dependencia)) is { } fora)
+            {
+                yield return $"residual {residual.Nome} depende de {fora}, que não é materialized view do esquema";
+            }
+            else if (!EmOrdem(residual.DependeDe))
+            {
+                yield return $"residual {residual.Nome} com dependências fora da ordem ordinal de esquema e nome";
+            }
+            else if (EmCiclo(residual, visoes))
+            {
+                yield return $"residual {residual.Nome} numa dependência circular";
+            }
+        }
+    }
+
+    // Os índices, CHECKs, exclusões e triggers da tabela. As regras de presença (o elemento de expressão tem referências,
+    // o elemento de texto tem colação, a chave primária tem índice) valem só aqui, como as das colunas.
+    private static IEnumerable<string> InconsistenciasDosObjetos(TabelaEsquema tabela)
+    {
+        var colunas = tabela.Colunas.DistinctBy(coluna => coluna.Nome).ToDictionary(coluna => coluna.Nome, StringComparer.Ordinal);
+        var repetidos = Repetidos(tabela.IndicesUnicos.Select(indice => $"índice {indice.Nome} de {tabela.Nome} repetido"))
+            .Concat(Repetidos(tabela.RestricoesCheck.Select(check => $"CHECK {check.Nome} de {tabela.Nome} repetido")))
+            .Concat(Repetidos(tabela.RestricoesExclusao.Select(exclusao => $"exclusão {exclusao.Nome} de {tabela.Nome} repetida")))
+            .Concat(Repetidos(tabela.Triggers.Select(trigger => $"trigger {trigger.Nome} de {tabela.Nome} repetida")));
+        foreach (var repetido in repetidos)
+        {
+            yield return repetido;
+        }
+
+        foreach (var indice in tabela.IndicesUnicos)
+        {
+            var nome = $"índice {indice.Nome} de {tabela.Nome}";
+            foreach (var inexistente in indice.Elementos.Select(elemento => elemento.Coluna).OfType<string>().Where(coluna => !colunas.ContainsKey(coluna)))
+            {
+                yield return $"{nome} com o elemento {inexistente}, coluna que não existe";
+            }
+
+            if (indice.Elementos.Any(elemento => elemento.Coluna is null) != (indice.ReferenciasDasExpressoes is not null))
+            {
+                yield return $"{nome} com referências das expressões ausentes ou sobrando";
+            }
+
+            foreach (var elemento in indice.Elementos.Where(elemento => elemento.Coluna is { } coluna && colunas.ContainsKey(coluna)))
+            {
+                var tipo = colunas[elemento.Coluna!].Tipo;
+                if (tipo == TipoColuna.Texto && elemento.Colacao is null)
+                {
+                    yield return $"{nome} com elemento de texto {elemento.Coluna} sem colação";
+                }
+                else if (tipo is not (null or TipoColuna.Texto) && elemento.Colacao is not null)
+                {
+                    yield return $"{nome} com colação no elemento {elemento.Coluna}, que não é texto";
+                }
+            }
+
+            foreach (var (elemento, posicao) in indice.Elementos.Select((elemento, posicao) => (elemento, posicao + 1)).Where(par => par.elemento.Colacao is { } colacao && !Coerente(colacao)))
+            {
+                yield return $"{nome} com colação determinística e marca que não é falsa no elemento {posicao} ({elemento.Coluna ?? "expressão"})";
+            }
+
+            foreach (var (parte, referencias) in new[] { ("expressões", indice.ReferenciasDasExpressoes), ("predicado", indice.Predicado) })
+            {
+                if (referencias is not null && Problema(referencias, tabela) is { } problema)
+                {
+                    yield return $"{nome} com {parte} {problema}";
+                }
+            }
+        }
+
+        foreach (var problema in InconsistenciasDaChavePrimaria(tabela))
+        {
+            yield return problema;
+        }
+
+        foreach (var (objeto, referencias) in tabela.RestricoesCheck.Select(check => ($"CHECK {check.Nome}", check.Referencias))
+            .Concat(tabela.RestricoesExclusao.Select(exclusao => ($"exclusão {exclusao.Nome}", exclusao.Referencias))))
+        {
+            if (Problema(referencias, tabela) is { } problema)
+            {
+                yield return $"{objeto} de {tabela.Nome} {problema}";
+            }
+        }
+
+        foreach (var trigger in tabela.Triggers.Where(trigger => trigger.Herdada && tabela.Tipo != TipoTabela.Particao))
+        {
+            yield return $"trigger {trigger.Nome} de {tabela.Nome} herdada fora de partição";
+        }
+    }
+
+    // No máximo um índice primário, com as colunas da chave primária; a chave primária sem índice primário só numa partição
+    // (o índice anexado fica no pai) ou com sobreposição proibida (uma exclusão que cita todas as colunas dela).
+    private static IEnumerable<string> InconsistenciasDaChavePrimaria(TabelaEsquema tabela)
+    {
+        var primarios = tabela.IndicesUnicos.Where(indice => indice.Primario).ToArray();
+        if (primarios.Length > 1)
+        {
+            yield return $"tabela {tabela.Nome} com {primarios.Length} índices primários";
+        }
+        else if (primarios is [var primario] && !primario.Elementos.Select(elemento => elemento.Coluna).SequenceEqual(tabela.ChavePrimaria))
+        {
+            yield return $"índice primário {primario.Nome} de {tabela.Nome} diferente da chave primária";
+        }
+        else if (primarios.Length == 0 && tabela.ChavePrimaria.Count > 0 && tabela.Tipo != TipoTabela.Particao
+            && !tabela.RestricoesExclusao.Any(exclusao => tabela.ChavePrimaria.All(exclusao.Referencias.Colunas.Contains)))
+        {
+            yield return $"chave primária de {tabela.Nome} sem índice primário fora de partição";
+        }
+    }
+
+    // O que há de errado nas colunas citadas: uma que não existe, ou fora da ordem das colunas da tabela.
+    private static string? Problema(ReferenciasDaExpressao referencias, TabelaEsquema tabela)
+    {
+        var posicoes = referencias.Colunas.Select(citada => tabela.Colunas.ToList().FindIndex(lida => lida.Nome == citada)).ToArray();
+        return posicoes.Contains(-1) ? $"citando {referencias.Colunas[Array.IndexOf(posicoes, -1)]}, coluna que não existe"
+            : posicoes.Zip(posicoes.Skip(1)).Any(par => par.First >= par.Second) ? "citando colunas fora da ordem da tabela"
+            : null;
+    }
+
+    // Se as dependências de uma materialized view voltam a ela.
+    private static bool EmCiclo(ObjetoResidual inicio, Dictionary<NomeObjeto, ObjetoResidual> visoes)
+    {
+        var vistas = new HashSet<NomeObjeto>();
+        var pendentes = new Stack<NomeObjeto>(inicio.DependeDe);
+        while (pendentes.TryPop(out var atual))
+        {
+            if (atual.Equals(inicio.Nome))
+            {
+                return true;
+            }
+
+            if (vistas.Add(atual) && visoes.TryGetValue(atual, out var visao))
+            {
+                foreach (var proxima in visao.DependeDe)
+                {
+                    pendentes.Push(proxima);
+                }
+            }
+        }
+
+        return false;
     }
 
     // A semântica da coluna. Um tipo canônico nulo (domínio, array) pode ter qualquer campo; os que só valem para um tipo

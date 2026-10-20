@@ -12,9 +12,11 @@ namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 /// <remarks>
 /// Nomes saem das colunas do catálogo, nunca de um cast para <c>regclass</c> (que depende do caminho de busca). Nada que
 /// guarde valor de linha é lido: nem estatísticas, comentários, texto de default, limites de partição, expressões de
-/// política, locale e regras de colação nem o conteúdo dos large objects. Das expressões da chave de partição só saem,
-/// extraídos no servidor, os números das colunas citadas; das colunas geradas, as citadas, pelo <c>pg_depend</c>. O
-/// comportamento de uma colação não determinística é medido no servidor com textos sintéticos, nunca deduzido do locale.
+/// política, de índice e de restrição, condição e argumentos de trigger, texto de regra de reescrita, locale e regras de
+/// colação nem o conteúdo dos large objects. Das expressões da chave de partição e dos índices e dos predicados só saem,
+/// extraídos no servidor, os números das colunas citadas; dos <c>CHECK</c>s e das exclusões, as colunas da chave da
+/// restrição; das colunas geradas e das materialized views, as dependências, pelo <c>pg_depend</c>. O comportamento de uma
+/// colação não determinística é medido no servidor com textos sintéticos, nunca deduzido do locale.
 /// </remarks>
 internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorEsquema
 {
@@ -23,13 +25,18 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     // sem LIKE: o escape do LIKE depende de standard_conforming_strings.
     private const string FiltroDeEsquema = "NOT pg_catalog.starts_with(n.nspname, 'pg_') AND n.nspname NOT IN ('information_schema', 'incognito')";
 
-    private const string Tabelas = $"""
-        WITH tabelas AS (
+    private const string DefinicaoDasTabelas = $"""
+        tabelas AS (
             SELECT c.oid
             FROM pg_catalog.pg_class c
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             WHERE c.relkind IN ('r', 'p', 'f') AND {FiltroDeEsquema})
         """;
+
+    private const string Tabelas = "WITH " + DefinicaoDasTabelas;
+
+    // Para as consultas que precisam de uma CTE recursiva depois da das tabelas.
+    private const string TabelasERecursiva = "WITH RECURSIVE " + DefinicaoDasTabelas + ",";
 
     // A primeira mãe é a de menor inhseqno (o banco não renumera: com NO INHERIT da primeira, as outras guardam 2, 3...),
     // a da partição e a da herdeira; as outras mães da herança múltipla saem à parte. O inhdetachpending marca a partição
@@ -210,6 +217,91 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         ORDER BY k.conrelid, k.conname, k.oid, u.ordem
         """;
 
+    // O estado de cada chave estrangeira, pela família dela: a original e as cópias que o banco cria nas partições (dos dois
+    // lados). Imposta se nenhuma trigger de integridade da família está desabilitada ou só de réplica (e, no 18, se nenhuma
+    // está NOT ENFORCED, que não tem trigger); validada se todas foram validadas.
+    private const string ConsultaEstadoDasChavesInicio = TabelasERecursiva + """
+        familia AS (
+            SELECT k.oid, k.oid AS raiz
+            FROM pg_catalog.pg_constraint k
+            WHERE k.contype = 'f' AND k.conparentid = 0 AND k.conrelid IN (SELECT oid FROM tabelas)
+            UNION ALL
+            SELECT c.oid, f.raiz
+            FROM pg_catalog.pg_constraint c
+            JOIN familia f ON c.conparentid = f.oid)
+        SELECT f.raiz AS restricao,
+               NOT EXISTS (SELECT 1
+                           FROM familia g
+                           JOIN pg_catalog.pg_trigger t ON t.tgconstraint = g.oid
+                           WHERE g.raiz = f.raiz AND t.tgenabled NOT IN ('O', 'A'))
+        """;
+
+    private const string EstadoDasChavesImposta18 = " AND pg_catalog.bool_and(c.conenforced)";
+
+    private const string ConsultaEstadoDasChavesFim = """
+         AS imposta,
+               pg_catalog.bool_and(c.convalidated) AS validada
+        FROM familia f
+        JOIN pg_catalog.pg_constraint c ON c.oid = f.oid
+        GROUP BY f.raiz
+        """;
+
+    // Os índices únicos, também o da chave primária e o inválido, sem os de exclusão (que são restrições de exclusão) e sem
+    // os anexados ao índice de uma particionada (ficam no pai). A chave sai inteira, com as colunas só incluídas, e o cliente
+    // toma as primeiras; das expressões e do predicado, só os números das colunas citadas, extraídos no servidor.
+    private const string ConsultaIndicesUnicos = Tabelas + """
+        SELECT i.indrelid AS tabela, x.relname AS nome, i.indisprimary AS primario, i.indnullsnotdistinct AS nulos_iguais, i.indnkeyatts AS tamanho,
+               i.indkey::pg_catalog.int2[] AS colunas, i.indcollation::pg_catalog.oid[] AS colacoes,
+               i.indexprs IS NOT NULL AS tem_expressoes, i.indpred IS NOT NULL AS parcial,
+               ARRAY(SELECT DISTINCT m[1]::pg_catalog.int2 FROM pg_catalog.regexp_matches(i.indexprs::text, ':varattno (-?[0-9]+)', 'g') AS m) AS das_expressoes,
+               ARRAY(SELECT DISTINCT m[1]::pg_catalog.int2 FROM pg_catalog.regexp_matches(i.indpred::text, ':varattno (-?[0-9]+)', 'g') AS m) AS do_predicado
+        FROM pg_catalog.pg_index i
+        JOIN pg_catalog.pg_class x ON x.oid = i.indexrelid
+        WHERE i.indisunique AND NOT i.indisexclusion AND i.indrelid IN (SELECT oid FROM tabelas)
+          AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_inherits h WHERE h.inhrelid = i.indexrelid)
+        """;
+
+    // Os CHECKs (os NOT NULL do 18 também estão em pg_constraint, com outro tipo). Numa partição, só os locais: os herdados
+    // do pai valem pelo pai. Sem colunas: o CHECK constante; 0: a linha inteira.
+    private const string ConsultaChecksInicio = Tabelas + """
+        SELECT k.conrelid AS tabela, k.conname AS nome, k.conkey AS colunas
+        """;
+
+    private const string ChecksImposto18 = ", k.conenforced AS imposto";
+
+    private const string ChecksImposto15 = ", true AS imposto";
+
+    private const string ConsultaChecksFim = """
+
+        FROM pg_catalog.pg_constraint k
+        JOIN pg_catalog.pg_class c ON c.oid = k.conrelid
+        WHERE k.contype = 'c' AND (k.conislocal OR NOT c.relispartition) AND k.conrelid IN (SELECT oid FROM tabelas)
+        """;
+
+    // As restrições de exclusão (no 18, também a chave primária ou única com WITHOUT OVERLAPS), sem as cópias nas partições.
+    // As colunas: as da chave da restrição (sem as só incluídas; 0 é um elemento de expressão) e as citadas pelas expressões
+    // e pelo predicado do índice dela.
+    private const string ConsultaExclusoesInicio = Tabelas + """
+        SELECT k.conrelid AS tabela, k.conname AS nome, k.conkey AS colunas,
+               ARRAY(SELECT DISTINCT m[1]::pg_catalog.int2 FROM pg_catalog.regexp_matches(i.indexprs::text, ':varattno (-?[0-9]+)', 'g') AS m) AS das_expressoes,
+               ARRAY(SELECT DISTINCT m[1]::pg_catalog.int2 FROM pg_catalog.regexp_matches(i.indpred::text, ':varattno (-?[0-9]+)', 'g') AS m) AS do_predicado
+        FROM pg_catalog.pg_constraint k
+        JOIN pg_catalog.pg_index i ON i.indexrelid = k.conindid
+        WHERE k.conparentid = 0 AND k.conrelid IN (SELECT oid FROM tabelas)
+        """;
+
+    private const string ExclusoesTipo18 = " AND (k.contype = 'x' OR (k.contype IN ('p', 'u') AND k.conperiod))";
+
+    private const string ExclusoesTipo15 = " AND k.contype = 'x'";
+
+    // As triggers de usuário (sem as internas, de integridade e de unicidade adiada): o nome, o estado e se é a cópia da
+    // trigger da particionada. Nunca a condição, os argumentos nem a função.
+    private const string ConsultaTriggers = Tabelas + """
+        SELECT t.tgrelid AS tabela, t.tgname AS nome, t.tgenabled AS estado, t.tgparentid <> 0 AS herdada
+        FROM pg_catalog.pg_trigger t
+        WHERE NOT t.tgisinternal AND t.tgrelid IN (SELECT oid FROM tabelas)
+        """;
+
     // As colunas que tiram valor de uma sequence: pelo default da coluna (o pg_attrdef depende da sequence), pelo default
     // de um domínio (o pg_type depende dela; vale para as colunas sem default próprio) e pela identity (a sequence depende
     // da coluna, internamente). O OWNED BY sozinho não conta: sem default, a coluna não tira valor da sequence.
@@ -239,11 +331,37 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     // Os large objects pelos metadados, legíveis por todos; o conteúdo (pg_largeobject) nunca.
     private const string ConsultaResiduais = $"""
-        SELECT n.nspname, c.relname
+        SELECT c.oid, n.nspname, c.relname, c.relispopulated
         FROM pg_catalog.pg_class c
         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind = 'm' AND {FiltroDeEsquema};
         SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)
+        """;
+
+    // O que cada materialized view lê, pelas dependências das regras de reescrita dela e das regras de SELECT das views por
+    // onde a leitura passa (nunca o texto das regras; as regras de INSERT, UPDATE e DELETE de uma view não são lidas pelo
+    // REFRESH): as materialized views lidas e se alguma regra da cadeia depende de uma função ou de um operador, que o banco
+    // não liga às tabelas que a função dele lê. A dependência da regra sobre a própria relação (no 15) fica de fora pelo
+    // dono da regra.
+    private const string ConsultaDependenciasDosResiduais = $"""
+        WITH RECURSIVE regras (visao, regra, dona) AS (
+            SELECT c.oid, r.oid, r.ev_class
+            FROM pg_catalog.pg_class c
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            JOIN pg_catalog.pg_rewrite r ON r.ev_class = c.oid
+            WHERE c.relkind = 'm' AND {FiltroDeEsquema}
+            UNION
+            SELECT g.visao, r.oid, r.ev_class
+            FROM regras g
+            JOIN pg_catalog.pg_depend d ON d.classid = 'pg_catalog.pg_rewrite'::pg_catalog.regclass AND d.objid = g.regra
+            JOIN pg_catalog.pg_class v ON v.oid = d.refobjid AND v.relkind = 'v'
+            JOIN pg_catalog.pg_rewrite r ON r.ev_class = v.oid AND r.ev_type = '1'
+            WHERE d.refclassid = 'pg_catalog.pg_class'::pg_catalog.regclass AND d.refobjid <> g.dona)
+        SELECT DISTINCT g.visao, d.refclassid IN ('pg_catalog.pg_proc'::pg_catalog.regclass, 'pg_catalog.pg_operator'::pg_catalog.regclass) AS funcao, l.oid AS lida
+        FROM regras g
+        JOIN pg_catalog.pg_depend d ON d.classid = 'pg_catalog.pg_rewrite'::pg_catalog.regclass AND d.objid = g.regra
+        LEFT JOIN pg_catalog.pg_class l ON d.refclassid = 'pg_catalog.pg_class'::pg_catalog.regclass AND l.oid = d.refobjid AND l.relkind = 'm' AND l.oid <> g.dona
+        WHERE d.refclassid IN ('pg_catalog.pg_proc'::pg_catalog.regclass, 'pg_catalog.pg_operator'::pg_catalog.regclass) OR l.oid IS NOT NULL
         """;
 
     // Os números das codificações (pg_wchar.h): sem codificação declarada e UTF-8.
@@ -257,6 +375,9 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private static readonly char[] _provedoresDoBanco = ['c', 'i', 'b'];
     private static readonly char[] _provedoresDeColacao = ['d', 'c', 'i', 'b'];
 
+    // Os estados de uma trigger: habilitada, desabilitada, só de réplica e sempre.
+    private static readonly char[] _estadosDeTrigger = ['O', 'D', 'R', 'A'];
+
     // Um objeto só para os large objects do banco inteiro.
     private static readonly NomeObjeto _objetosGrandes = new("pg_catalog", "pg_largeobject");
 
@@ -269,10 +390,22 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             var banco = await LerBancoAsync(cancelamento).ConfigureAwait(false);
             var tabelas = await LerTabelasAsync(cancelamento).ConfigureAwait(false);
             var outrosPais = await LerOutrosPaisAsync(cancelamento).ConfigureAwait(false);
-            var colunas = await LerColunasAsync(tabelas, banco, cancelamento).ConfigureAwait(false);
+            var brutas = await LerColunasBrutasAsync(cancelamento).ConfigureAwait(false);
+            var indices = await LerIndicesBrutosAsync(cancelamento).ConfigureAwait(false);
+
+            // As colações das colunas e dos elementos dos índices, lidas e medidas uma vez.
+            var colacoes = await LerColacoesAsync(
+                [.. brutas.Select(bruta => bruta.Colacao).Concat(indices.SelectMany(indice => indice.Colacoes)).Where(oid => oid != 0).Distinct()],
+                banco,
+                cancelamento).ConfigureAwait(false);
+            var colunas = await MontarColunasAsync(brutas, tabelas, banco, colacoes, cancelamento).ConfigureAwait(false);
             var chavesDeParticao = await LerChavesDeParticaoAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var chavesPrimarias = await LerChavesPrimariasAsync(cancelamento).ConfigureAwait(false);
             var chavesEstrangeiras = await LerChavesEstrangeirasAsync(cancelamento).ConfigureAwait(false);
+            var indicesUnicos = MontarIndices(indices, colunas, colacoes);
+            var checks = await LerChecksAsync(colunas, cancelamento).ConfigureAwait(false);
+            var exclusoes = await LerExclusoesAsync(colunas, cancelamento).ConfigureAwait(false);
+            var triggers = await LerTriggersAsync(cancelamento).ConfigureAwait(false);
             var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
 
@@ -292,6 +425,10 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                         ChavePrimaria = chavesPrimarias.TryGetValue(tabela.Oid, out var chave) ? chave : [],
                         ChavesEstrangeiras = chavesEstrangeiras.TryGetValue(tabela.Oid, out var estrangeiras) ? estrangeiras : [],
                         SegurancaDeLinha = tabela.SegurancaDeLinha,
+                        IndicesUnicos = Ordenados(indicesUnicos[tabela.Oid], indice => indice.Nome),
+                        RestricoesCheck = Ordenados(checks[tabela.Oid], check => check.Nome),
+                        RestricoesExclusao = Ordenados(exclusoes[tabela.Oid], exclusao => exclusao.Nome),
+                        Triggers = Ordenados(triggers[tabela.Oid], trigger => trigger.Nome),
                     })
                     .OrderBy(tabela => tabela.Nome, OrdemDeNomes.Instancia)
                     .ToArray(),
@@ -430,24 +567,26 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         return chaves;
     }
 
-    // As colunas por nome de campo (a consulta cresce sem renumerar), depois a colação e as referências da geração de cada
-    // uma, que dependem de todas as colunas lidas.
-    private async Task<Dictionary<uint, List<ColunaLida>>> LerColunasAsync(Dictionary<uint, TabelaLida> tabelas, BancoLido banco, CancellationToken cancelamento)
+    // As colunas por nome de campo (a consulta cresce sem renumerar).
+    private async Task<List<ColunaBruta>> LerColunasBrutasAsync(CancellationToken cancelamento)
     {
         var brutas = new List<ColunaBruta>();
-        await using (var comando = new NpgsqlCommand(ConsultaColunasInicio + ColunaNaoNuloInvalido + ConsultaColunasFim, conexao.Conexao))
+        await using var comando = new NpgsqlCommand(ConsultaColunasInicio + ColunaNaoNuloInvalido + ConsultaColunasFim, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        var campos = new CamposDaColuna(leitor);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
-            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
-            var campos = new CamposDaColuna(leitor);
-            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
-            {
-                brutas.Add(campos.Ler(leitor));
-            }
+            brutas.Add(campos.Ler(leitor));
         }
 
-        var referencias = await LerReferenciasDaGeracaoAsync(cancelamento).ConfigureAwait(false);
-        var colacoes = await LerColacoesAsync([.. brutas.Select(bruta => bruta.Colacao).Where(oid => oid != 0).Distinct()], banco, cancelamento).ConfigureAwait(false);
+        return brutas;
+    }
 
+    // A colação e as referências da geração de cada coluna, que dependem de todas as colunas lidas.
+    private async Task<Dictionary<uint, List<ColunaLida>>> MontarColunasAsync(
+        List<ColunaBruta> brutas, Dictionary<uint, TabelaLida> tabelas, BancoLido banco, Dictionary<uint, ColacaoEsquema> colacoes, CancellationToken cancelamento)
+    {
+        var referencias = await LerReferenciasDaGeracaoAsync(cancelamento).ConfigureAwait(false);
         var colunas = new Dictionary<uint, List<ColunaLida>>();
         foreach (var daTabela in brutas.GroupBy(bruta => bruta.Tabela))
         {
@@ -641,6 +780,129 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         CodigosPostgreSql.CatalogoDesconhecido,
         $"O catálogo do PostgreSQL tem um valor que o Incognito não conhece em {campo} (versão mais nova do servidor?).");
 
+    private async Task<List<IndiceBruto>> LerIndicesBrutosAsync(CancellationToken cancelamento)
+    {
+        var indices = new List<IndiceBruto>();
+        await using var comando = new NpgsqlCommand(ConsultaIndicesUnicos, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            // A chave sem as colunas só incluídas; a colação de cada coluna da chave (0 sem colação).
+            var tamanho = leitor.GetInt16(leitor.GetOrdinal("tamanho"));
+            indices.Add(new IndiceBruto(
+                leitor.GetFieldValue<uint>(leitor.GetOrdinal("tabela")),
+                leitor.GetString(leitor.GetOrdinal("nome")),
+                leitor.GetBoolean(leitor.GetOrdinal("primario")),
+                !leitor.GetBoolean(leitor.GetOrdinal("nulos_iguais")),
+                [.. leitor.GetFieldValue<short[]>(leitor.GetOrdinal("colunas")).Take(tamanho)],
+                [.. leitor.GetFieldValue<uint[]>(leitor.GetOrdinal("colacoes")).Take(tamanho)],
+                leitor.GetBoolean(leitor.GetOrdinal("tem_expressoes")) ? leitor.GetFieldValue<short[]>(leitor.GetOrdinal("das_expressoes")) : null,
+                leitor.GetBoolean(leitor.GetOrdinal("parcial")) ? leitor.GetFieldValue<short[]>(leitor.GetOrdinal("do_predicado")) : null));
+        }
+
+        return indices;
+    }
+
+    // Um elemento é coluna ou expressão (0); uma coluna da chave que não é coluna viva conta como expressão incompleta.
+    private static ILookup<uint, IndiceUnico> MontarIndices(List<IndiceBruto> indices, Dictionary<uint, List<ColunaLida>> colunas, Dictionary<uint, ColacaoEsquema> colacoes) =>
+        indices.ToLookup(indice => indice.Tabela, indice =>
+        {
+            var daTabela = colunas.GetValueOrDefault(indice.Tabela) ?? [];
+            var elementos = indice.Colunas
+                .Select((numero, posicao) => new ElementoIndice
+                {
+                    Coluna = numero == 0 ? null : daTabela.Find(coluna => coluna.Numero == numero)?.Modelo.Nome,
+                    Colacao = indice.Colacoes[posicao] == 0 ? null : colacoes[indice.Colacoes[posicao]],
+                })
+                .ToArray();
+            var semNome = indice.Colunas.Where(numero => numero != 0 && daTabela.TrueForAll(coluna => coluna.Numero != numero)).Select(_ => (short)0);
+            return new IndiceUnico
+            {
+                Nome = indice.Nome,
+                Primario = indice.Primario,
+                Elementos = elementos,
+                ReferenciasDasExpressoes = elementos.Any(elemento => elemento.Coluna is null) ? Referencias((indice.DasExpressoes ?? []).Concat(semNome), daTabela) : null,
+                Predicado = indice.DoPredicado is { } predicado ? Referencias(predicado, daTabela) : null,
+                NulosDistintos = indice.NulosDistintos,
+            };
+        });
+
+    private async Task<ILookup<uint, RestricaoCheck>> LerChecksAsync(Dictionary<uint, List<ColunaLida>> colunas, CancellationToken cancelamento)
+    {
+        var dezoito = conexao.Versao / 10000 >= 18;
+        var checks = new List<(uint Tabela, RestricaoCheck Check)>();
+        await using var comando = new NpgsqlCommand(ConsultaChecksInicio + (dezoito ? ChecksImposto18 : ChecksImposto15) + ConsultaChecksFim, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            var tabela = leitor.GetFieldValue<uint>(leitor.GetOrdinal("tabela"));
+            var citadas = leitor.GetOrdinal("colunas");
+            checks.Add((tabela, new RestricaoCheck
+            {
+                Nome = leitor.GetString(leitor.GetOrdinal("nome")),
+                Referencias = Referencias(leitor.IsDBNull(citadas) ? [] : leitor.GetFieldValue<short[]>(citadas), colunas.GetValueOrDefault(tabela) ?? []),
+                Imposta = leitor.GetBoolean(leitor.GetOrdinal("imposto")),
+            }));
+        }
+
+        return checks.ToLookup(check => check.Tabela, check => check.Check);
+    }
+
+    // Da chave da restrição, só as colunas: o 0 é um elemento de expressão, cujas colunas vêm das expressões do índice.
+    private async Task<ILookup<uint, RestricaoExclusao>> LerExclusoesAsync(Dictionary<uint, List<ColunaLida>> colunas, CancellationToken cancelamento)
+    {
+        var dezoito = conexao.Versao / 10000 >= 18;
+        var exclusoes = new List<(uint Tabela, RestricaoExclusao Exclusao)>();
+        await using var comando = new NpgsqlCommand(ConsultaExclusoesInicio + (dezoito ? ExclusoesTipo18 : ExclusoesTipo15), conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            var tabela = leitor.GetFieldValue<uint>(leitor.GetOrdinal("tabela"));
+            var numeros = leitor.GetFieldValue<short[]>(leitor.GetOrdinal("colunas")).Where(numero => numero != 0)
+                .Concat(leitor.GetFieldValue<short[]>(leitor.GetOrdinal("das_expressoes")))
+                .Concat(leitor.GetFieldValue<short[]>(leitor.GetOrdinal("do_predicado")));
+            exclusoes.Add((tabela, new RestricaoExclusao { Nome = leitor.GetString(leitor.GetOrdinal("nome")), Referencias = Referencias(numeros, colunas.GetValueOrDefault(tabela) ?? []) }));
+        }
+
+        return exclusoes.ToLookup(exclusao => exclusao.Tabela, exclusao => exclusao.Exclusao);
+    }
+
+    // Ligada se dispara numa sessão comum: habilitada ('O') ou sempre ('A'); desabilitada ('D') e só de réplica ('R') não. Um
+    // estado que o dialeto não conhece é recusado.
+    private async Task<ILookup<uint, TriggerEsquema>> LerTriggersAsync(CancellationToken cancelamento)
+    {
+        var triggers = new List<(uint Tabela, TriggerEsquema Trigger)>();
+        await using var comando = new NpgsqlCommand(ConsultaTriggers, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            var estado = leitor.GetChar(leitor.GetOrdinal("estado"));
+            if (!_estadosDeTrigger.Contains(estado))
+            {
+                throw CatalogoDesconhecido("o estado de uma trigger");
+            }
+
+            triggers.Add((leitor.GetFieldValue<uint>(leitor.GetOrdinal("tabela")), new TriggerEsquema
+            {
+                Nome = leitor.GetString(leitor.GetOrdinal("nome")),
+                Ligada = estado is 'O' or 'A',
+                Herdada = leitor.GetBoolean(leitor.GetOrdinal("herdada")),
+            }));
+        }
+
+        return triggers.ToLookup(trigger => trigger.Tabela, trigger => trigger.Trigger);
+    }
+
+    // As colunas citadas pelos números, na ordem da tabela, sem as de sistema (negativas); a linha inteira (0) ou um número
+    // que não é coluna viva deixa as referências incompletas.
+    private static ReferenciasDaExpressao Referencias(IEnumerable<short> numeros, List<ColunaLida> colunas)
+    {
+        var nomes = numeros.Where(numero => numero >= 0).Distinct().Order().Select(numero => colunas.Find(coluna => coluna.Numero == numero)?.Modelo.Nome).ToArray();
+        return new ReferenciasDaExpressao { Colunas = [.. nomes.OfType<string>()], Incompletas = nomes.Contains(null) };
+    }
+
+    private static T[] Ordenados<T>(IEnumerable<T> objetos, Func<T, string> nome) => [.. objetos.OrderBy(nome, StringComparer.Ordinal)];
+
     private async Task<Dictionary<uint, List<string>>> LerChavesPrimariasAsync(CancellationToken cancelamento)
     {
         var chaves = new Dictionary<uint, List<string>>();
@@ -662,6 +924,17 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     private async Task<Dictionary<uint, List<ChaveEstrangeira>>> LerChavesEstrangeirasAsync(CancellationToken cancelamento)
     {
+        var estados = new Dictionary<uint, (bool Imposta, bool Validada)>();
+        var dezoito = conexao.Versao / 10000 >= 18;
+        await using (var comando = new NpgsqlCommand(ConsultaEstadoDasChavesInicio + (dezoito ? EstadoDasChavesImposta18 : "") + ConsultaEstadoDasChavesFim, conexao.Conexao))
+        {
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+            {
+                estados.Add(leitor.GetFieldValue<uint>(leitor.GetOrdinal("restricao")), (leitor.GetBoolean(leitor.GetOrdinal("imposta")), leitor.GetBoolean(leitor.GetOrdinal("validada"))));
+            }
+        }
+
         var lidas = new List<(uint Tabela, uint Restricao, string Nome, string Coluna, NomeObjeto Referenciada, string ColunaReferenciada)>();
         await using (var comando = new NpgsqlCommand(ConsultaChavesEstrangeiras, conexao.Conexao))
         {
@@ -690,6 +963,8 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                     Colunas = restricao.Select(lida => lida.Coluna).ToArray(),
                     Referenciada = restricao.First().Referenciada,
                     ColunasReferenciadas = restricao.Select(lida => lida.ColunaReferenciada).ToArray(),
+                    Imposta = estados.TryGetValue(restricao.Key.Restricao, out var estado) ? estado.Imposta : null,
+                    Validada = estados.TryGetValue(restricao.Key.Restricao, out var validacao) ? validacao.Validada : null,
                 }).ToList());
     }
 
@@ -754,23 +1029,87 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     private async Task<ObjetoResidual[]> LerResiduaisAsync(CancellationToken cancelamento)
     {
-        var residuais = new List<ObjetoResidual>();
-        await using var comando = new NpgsqlCommand(ConsultaResiduais, conexao.Conexao);
-        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
-        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        var visoes = new Dictionary<uint, (NomeObjeto Nome, bool Populada)>();
+        bool objetosGrandes;
+        await using (var comando = new NpgsqlCommand(ConsultaResiduais, conexao.Conexao))
         {
-            residuais.Add(new ObjetoResidual { Nome = new NomeObjeto(leitor.GetString(0), leitor.GetString(1)), Tipo = TipoObjetoResidual.VisaoMaterializada });
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+            {
+                visoes.Add(leitor.GetFieldValue<uint>(0), (new NomeObjeto(leitor.GetString(1), leitor.GetString(2)), leitor.GetBoolean(3)));
+            }
+
+            await leitor.NextResultAsync(cancelamento).ConfigureAwait(false);
+            await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
+            objetosGrandes = leitor.GetBoolean(0);
         }
 
-        await leitor.NextResultAsync(cancelamento).ConfigureAwait(false);
-        await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
-        if (leitor.GetBoolean(0))
+        // As lidas fora dos esquemas lidos (o do diário) ficam de fora: o Incognito não as atualiza.
+        var dependencias = new List<(uint Visao, bool Funcao, uint? Lida)>();
+        await using (var comando = new NpgsqlCommand(ConsultaDependenciasDosResiduais, conexao.Conexao))
+        {
+            await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+            while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+            {
+                dependencias.Add((leitor.GetFieldValue<uint>(0), leitor.GetBoolean(1), leitor.IsDBNull(2) ? null : leitor.GetFieldValue<uint>(2)));
+            }
+        }
+
+        // Uma view do caminho pode ler de volta a própria materialized view ou outra que a lê (o banco aceita, e o REFRESH lê
+        // o conteúdo antigo): a dependência que fecha o ciclo sai, e as do ciclo ficam incompletas, atualizadas até nada mudar.
+        var lidas = visoes.Keys.ToDictionary(
+            visao => visao,
+            visao => dependencias.Where(dependencia => dependencia.Visao == visao && dependencia.Lida is { } lida && visoes.ContainsKey(lida)).Select(dependencia => dependencia.Lida!.Value).ToHashSet());
+        var residuais = visoes
+            .Select(visao => new ObjetoResidual
+            {
+                Nome = visao.Value.Nome,
+                Tipo = TipoObjetoResidual.VisaoMaterializada,
+                DependeDe = lidas[visao.Key]
+                    .Where(lida => !Alcanca(lidas, lida, visao.Key))
+                    .Select(lida => visoes[lida].Nome)
+                    .OrderBy(nome => nome, OrdemDeNomes.Instancia)
+                    .ToArray(),
+                DependenciasIncompletas = dependencias.Exists(dependencia => dependencia.Visao == visao.Key && dependencia.Funcao)
+                    || lidas[visao.Key].Any(lida => Alcanca(lidas, lida, visao.Key)),
+                Populada = visao.Value.Populada,
+            })
+            .ToList();
+        if (objetosGrandes)
         {
             residuais.Add(new ObjetoResidual { Nome = _objetosGrandes, Tipo = TipoObjetoResidual.ObjetosGrandes });
         }
 
         return residuais.OrderBy(objeto => objeto.Nome, OrdemDeNomes.Instancia).ToArray();
     }
+
+    // Se a leitura de uma materialized view chega a outra (ou a ela mesma), seguindo as que cada uma lê.
+    private static bool Alcanca(Dictionary<uint, HashSet<uint>> lidas, uint inicio, uint alvo)
+    {
+        var vistas = new HashSet<uint>();
+        var pendentes = new Stack<uint>([inicio]);
+        while (pendentes.TryPop(out var atual))
+        {
+            if (atual == alvo)
+            {
+                return true;
+            }
+
+            if (vistas.Add(atual))
+            {
+                foreach (var proxima in lidas[atual])
+                {
+                    pendentes.Push(proxima);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Uma linha da consulta dos índices únicos, antes das colações e dos nomes das colunas: a chave, a colação de cada
+    // elemento e os números citados pelas expressões e pelo predicado (nulos se o índice não os tem).
+    private sealed record IndiceBruto(uint Tabela, string Nome, bool Primario, bool NulosDistintos, short[] Colunas, uint[] Colacoes, short[]? DasExpressoes, short[]? DoPredicado);
 
     // O que a leitura da origem e do destino tira do banco inteiro.
     private sealed record BancoLido(PropriedadesBanco Propriedades, bool Utf8, int MaximoIdentificador);

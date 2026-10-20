@@ -105,6 +105,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             new(Coluna("textos", "email_min"), GeracaoColuna.Armazenada),
             new(Coluna("textos", "junto"), GeracaoColuna.Armazenada),
             new(Coluna("numeros", "constante"), GeracaoColuna.Armazenada),
+            new(Coluna("indexada", "minusculo"), GeracaoColuna.Armazenada),
         ];
         return new()
         {
@@ -190,6 +191,8 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     ColTexto("observacao", Texto, suportadoTexto),
                 ],
                 ChavePrimaria = ["id"],
+                IndicesUnicos = [Indice("ix_tipos_curto", [Elemento("curto")], predicado: new(["id", "curto"])), Primario("tipos_pkey", "id")],
+                Checks = [new("ck_tipos_texto", new(["texto"]))],
             },
             new()
             {
@@ -204,6 +207,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     Col("lista", "loja.lista_lo", Classe.NaoSuportado, tipoBase: "public.lo[]"),
                 ],
                 ChavePrimaria = ["id"],
+                IndicesUnicos = [Primario("objetos_pkey", "id")],
             },
             new()
             {
@@ -232,6 +236,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     .. dezoito ? [Col("triplo", Inteiro, Classe.Exclusao, geracao: GeracaoColuna.Virtual, referencias: new(["valor"]))] : Array.Empty<ColunaInventariada>(),
                 ],
                 ChavePrimaria = ["id"],
+                IndicesUnicos = [Primario("calculos_pkey", "id")],
             },
             new()
             {
@@ -243,6 +248,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     Col("serie", Inteiro, suportadoInteiro, nula: false),
                 ],
                 ChavePrimaria = ["sempre"],
+                IndicesUnicos = [Primario("contadores_pkey", "sempre")],
             },
             new()
             {
@@ -262,7 +268,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     Col("tipo", Inteiro, suportadoInteiro, nula: false),
                 ],
             },
-            new() { Nome = Nome("lojas"), Colunas = [Col("id", Inteiro, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
+            new() { Nome = Nome("lojas"), Colunas = [Col("id", Inteiro, suportadoInteiro, nula: false)], ChavePrimaria = ["id"], IndicesUnicos = [Primario("lojas_pkey", "id")] },
             new()
             {
                 Nome = Nome("pedidos"),
@@ -271,6 +277,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Colunas = pedido,
                 ChavePrimaria = ["loja", "id"],
                 ChavesEstrangeiras = [new("pedidos_loja_fkey", ["loja"], Nome("lojas"), ["id"])],
+                IndicesUnicos = [Primario("pedidos_pkey", "loja", "id")],
             },
             Particao("pedidos_1", "pedidos", pedido, ["loja", "id"]),
             Particao("pedidos_2", "pedidos", pedido, ["loja", "id"]),
@@ -293,16 +300,19 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 ],
                 ChavesEstrangeiras = [new("fk_itens_pedidos", ["loja", "pedido"], Nome("pedidos"), ["loja", "id"])],
             },
-            new() { Nome = Nome("pessoa"), Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("apelido", Texto, suportadoTexto)] },
+            new() { Nome = Nome("pessoa"), Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("apelido", Texto, suportadoTexto)], Checks = [new("ck_pessoa_id", new(["id"]))] },
             new()
             {
                 Nome = Nome("funcionario"),
                 Tipo = TipoTabela.Herdeira,
                 Pai = Nome("pessoa"),
                 Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("apelido", Texto, suportadoTexto), Col("matricula", Inteiro, suportadoInteiro)],
+
+                // O CHECK herdado vale na herdeira, que é copiada sozinha.
+                Checks = [new("ck_pessoa_id", new(["id"]))],
             },
-            new() { Nome = Nome("Cliente"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
-            new() { Nome = Nome("cliente"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
+            new() { Nome = Nome("Cliente"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"], IndicesUnicos = [Primario("Cliente_pkey", "id")] },
+            new() { Nome = Nome("cliente"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"], IndicesUnicos = [Primario("cliente_pkey", "id")] },
             new()
             {
                 Nome = Nome("select"),
@@ -320,6 +330,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("chave_invertida"),
                 Colunas = [Col("a", Inteiro, suportadoInteiro, nula: false), Col("b", Inteiro, suportadoInteiro, nula: false)],
                 ChavePrimaria = ["b", "a"],
+                IndicesUnicos = [Primario("chave_invertida_pkey", "b", "a")],
             },
             new() { Nome = Nome("vendas"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["ano"]), Colunas = venda },
             new() { Nome = Nome("vendas_2026"), Tipo = TipoTabela.Particao, Pai = Nome("vendas"), ChaveParticao = new(["mes"]), Colunas = venda },
@@ -333,7 +344,14 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 ChaveParticao = new([], ColunasIncompletas: true),
                 Colunas = [Col("id", Grande, suportadoInteiro), ColTexto("dados", Texto, suportadoTexto)],
             },
-            new() { Nome = Nome("sem_colunas"), Tipo = TipoTabela.Particionada, ChaveParticao = new([], ColunasIncompletas: true), Colunas = [] },
+            new()
+            {
+                Nome = Nome("sem_colunas"),
+                Tipo = TipoTabela.Particionada,
+                ChaveParticao = new([], ColunasIncompletas: true),
+                Colunas = [],
+                Checks = [new("ck_sem_colunas_linha", new([], Incompletas: true))],
+            },
             new() { Nome = Nome("leituras"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["origem"]), Colunas = leitura },
             new() { Nome = Nome("leituras_arquivo"), Tipo = TipoTabela.Particao, Pai = Nome("leituras"), Estrangeira = true, Colunas = leituraArquivo },
             new() { Nome = Nome("contato"), Colunas = [ColTexto("canal", Texto, suportadoTexto)] },
@@ -377,8 +395,17 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 SegurancaDeLinha = true,
                 Colunas = [Col("id", Grande, suportadoInteiro, nula: false), ColTexto("conteudo", Texto, suportadoTexto)],
                 ChavePrimaria = ["id"],
+                IndicesUnicos = [Primario("segredos_pkey", "id")],
+                Triggers = [new("tg_segredos")],
             },
-            new() { Nome = Nome("reservas"), Colunas = [Col("sala", Inteiro, suportadoInteiro), Col("periodo", "int4range", Classe.Ressalva), ColTexto("nota", Texto, suportadoTexto)] },
+            new()
+            {
+                Nome = Nome("reservas"),
+                Colunas = [Col("sala", Inteiro, suportadoInteiro), Col("periodo", "int4range", Classe.Ressalva), ColTexto("nota", Texto, suportadoTexto)],
+
+                // A coluna só incluída fica de fora; a do predicado entra.
+                Exclusoes = [new("ex_reservas", new(["periodo", "nota"])), new("ex_reservas_expressao", new(["nota"])), new("ex_reservas_sala", new(["sala", "periodo"]))],
+            },
             new()
             {
                 Nome = Nome("textos"),
@@ -427,8 +454,15 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     Col("constante", Inteiro, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new([])),
                 ],
             },
-            new() { Nome = Nome("alheia"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
-            new() { Nome = new NomeObjeto("pgdados", "clientes"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"] },
+            .. ObjetosDaTabela(versao),
+            new() { Nome = Nome("alheia"), Colunas = [Col("id", Grande, suportadoInteiro, nula: false)], ChavePrimaria = ["id"], IndicesUnicos = [Primario("alheia_pkey", "id")] },
+            new()
+            {
+                Nome = new NomeObjeto("pgdados", "clientes"),
+                Colunas = [Col("id", Grande, suportadoInteiro, nula: false)],
+                ChavePrimaria = ["id"],
+                IndicesUnicos = [Primario("clientes_pkey", "id")],
+            },
         ];
         SequenceEsperada[] sequences =
         [
@@ -443,12 +477,161 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
         ];
         ResidualInventariado[] residuais =
         [
-            new(Nome("resumo_vendas"), TipoObjetoResidual.VisaoMaterializada),
-            new(Nome("resumo_alheio"), TipoObjetoResidual.VisaoMaterializada),
+            Visao("resumo_vendas"),
+            Visao("resumo_alheio"),
+            Visao("mv_base"),
+            Visao("mv_derivada") with { DependeDe = [Nome("mv_base"), Nome("resumo_vendas")] },
+            Visao("mv_vazia", populada: false),
+            Visao("mv_por_funcao", incompletas: true),
+            Visao("mv_por_operador", incompletas: true),
+            Visao("mv_de_volta", incompletas: true),
+            Visao("mv_ciclo_a", incompletas: true),
+            Visao("mv_ciclo_b", incompletas: true),
             new(new NomeObjeto("pg_catalog", "pg_largeobject"), TipoObjetoResidual.ObjetosGrandes),
         ];
         return new(tabelas, sequences, residuais);
     }
+
+    // As tabelas dos objetos da tabela: índices únicos, CHECKs, exclusões, triggers e o estado das chaves estrangeiras.
+    private static TabelaInventariada[] ObjetosDaTabela(int versao)
+    {
+        var dezessete = versao >= 170000;
+        var dezoito = versao >= 180000;
+        var suportadoInteiro = Classe.Suportado(TipoColuna.Inteiro);
+        var suportadoTexto = Classe.Suportado(TipoColuna.Texto);
+        ColunaInventariada[] lote = [Col("id", Inteiro, suportadoInteiro), Col("parte", Inteiro, suportadoInteiro)];
+        ColunaInventariada[] remessa = [Col("loja", Inteiro, suportadoInteiro), Col("parte", Inteiro, suportadoInteiro, nula: false)];
+        ColunaInventariada[] sala = [Col("sala", Inteiro, suportadoInteiro), Col("periodo", "int4range", Classe.Ressalva)];
+        return
+        [
+            new()
+            {
+                Nome = Nome("indexada"),
+                Colunas =
+                [
+                    Col("id", Grande, suportadoInteiro, nula: false),
+                    Col("a", Inteiro, suportadoInteiro),
+                    Col("b", Inteiro, suportadoInteiro),
+                    ColTexto("g", Texto, suportadoTexto),
+                    ColTexto("apelido", Texto, suportadoTexto),
+                    ColTexto("email", Texto, suportadoTexto),
+                    Col("ini", Inteiro, suportadoInteiro),
+                    Col("fim", Inteiro, suportadoInteiro),
+                    ColTexto("minusculo", Texto, Classe.Exclusao, geracao: GeracaoColuna.Armazenada, referencias: new(["email"])),
+                ],
+                ChavePrimaria = ["id"],
+                IndicesUnicos =
+                [
+                    Primario("indexada_pkey", "id"),
+                    Indice("ix_indexada_apelido", [Elemento("apelido", Medida("ci_nivel2", "Idioma\"X", caixa: true))]),
+                    Indice("ix_indexada_colacoes", [Elemento("g", Medida("Caixa\"Alta.ç;--'", "Idioma\"X", caixa: true)), Elemento("apelido", Medida("colacao_sentinela", "loja", caixa: true))]),
+
+                    // Expressões e predicado: as colunas citadas, na ordem da tabela; a expressão de texto tem a colação padrão.
+                    Indice("ix_indexada_expressoes", [Elemento(null), Elemento(null, colacao: null)], expressoes: new(["email", "ini", "fim"]), predicado: new(["id", "b"])),
+                    Indice("ix_indexada_linha", [Elemento(null)], expressoes: new([], Incompletas: true)),
+                    Indice("ix_indexada_minusculo", [Elemento("minusculo")]),
+                    Indice("ix_indexada_misto", [Elemento("g"), Elemento(null, colacao: null)], expressoes: new(["ini"])),
+                    Indice("uq_indexada_ab", [Elemento("a", colacao: null), Elemento("b", colacao: null)], nulosDistintos: false),
+
+                    // A restrição única sobre texto tem a colação da coluna.
+                    Indice("uq_indexada_email", [Elemento("email")]),
+                ],
+                Checks =
+                [
+                    new("ck_indexada_constante", new([])),
+                    new("ck_indexada_faixa", new(["ini", "fim"])),
+                    .. dezoito ? [new CheckInventariado("ck_indexada_nao_imposto", new(["b"]), Imposta: false)] : Array.Empty<CheckInventariado>(),
+                    new("ck_indexada_nao_validado", new(["a"])),
+                ],
+            },
+            new() { Nome = Nome("checada"), Colunas = [Col("id", Inteiro, suportadoInteiro), ColTexto("nota", Texto, suportadoTexto)], Checks = [new("ck_checada_linha", new([], Incompletas: true))] },
+            new()
+            {
+                Nome = Nome("lotes"),
+                Tipo = TipoTabela.Particionada,
+                ChaveParticao = new(["parte"]),
+                Colunas = lote,
+
+                // O índice só do pai (inválido) é listado como os outros.
+                IndicesUnicos = [Indice("ix_lotes_so_pai", [Elemento("id", colacao: null), Elemento("parte", colacao: null)])],
+                Checks = [new("ck_lotes_parte", new(["parte"]))],
+                Triggers = [new("tg_lotes")],
+            },
+            new()
+            {
+                Nome = Nome("lotes_1"),
+                Tipo = TipoTabela.Particao,
+                Pai = Nome("lotes"),
+                Colunas = lote,
+                IndicesUnicos = [Indice("ix_lotes_1_proprio", [Elemento("id", colacao: null)])],
+                Checks = [new("ck_lotes_1_local", new(["id"]))],
+                Triggers = [new("tg_lotes", Herdada: true), new("tg_lotes_1_proprio")],
+            },
+            .. dezessete
+                ?
+                [
+                    new TabelaInventariada { Nome = Nome("salas"), Tipo = TipoTabela.Particionada, ChaveParticao = new(["sala"]), Colunas = sala, Exclusoes = [new("ex_salas", new(["sala", "periodo"]))] },
+                    new TabelaInventariada { Nome = Nome("salas_1"), Tipo = TipoTabela.Particao, Pai = Nome("salas"), Colunas = sala },
+                ]
+                : Array.Empty<TabelaInventariada>(),
+
+            // A chave primária com WITHOUT OVERLAPS é exclusão, sem índice único.
+            .. dezoito
+                ?
+                [
+                    new TabelaInventariada
+                    {
+                        Nome = Nome("periodos"),
+                        Colunas = [Col("sala", Inteiro, suportadoInteiro, nula: false), Col("periodo", "int4range", Classe.Ressalva, nula: false)],
+                        ChavePrimaria = ["sala", "periodo"],
+                        Exclusoes = [new("periodos_pkey", new(["sala", "periodo"]))],
+                    },
+                ]
+                : Array.Empty<TabelaInventariada>(),
+            new()
+            {
+                Nome = Nome("disparos"),
+                Colunas = [Col("id", Inteiro, suportadoInteiro), ColTexto("valor", Texto, suportadoTexto)],
+                Triggers = [new("tg_desligada", Ligada: false), new("tg_esvaziar"), new("tg_ligada"), new("tg_replica", Ligada: false), new("tg_sempre")],
+            },
+            Vinculo("vinculo_desligado", new("fk_desligado", ["loja"], Nome("lojas"), ["id"], Imposta: false)),
+            Vinculo("vinculo_replica", new("fk_replica", ["loja"], Nome("lojas"), ["id"], Imposta: false)),
+            Vinculo("vinculo_pendente", new("fk_pendente", ["loja"], Nome("lojas"), ["id"], Validada: false)),
+            .. dezoito ? [Vinculo("vinculo_solto", new("fk_solto", ["loja"], Nome("lojas"), ["id"], Imposta: false, Validada: false))] : Array.Empty<TabelaInventariada>(),
+
+            // A integridade desligada só numa partição desliga a chave do pai; as cópias nas partições não são listadas.
+            new()
+            {
+                Nome = Nome("remessas"),
+                Tipo = TipoTabela.Particionada,
+                ChaveParticao = new(["parte"]),
+                Colunas = remessa,
+                ChavesEstrangeiras = [new("fk_remessas", ["loja"], Nome("lojas"), ["id"], Imposta: false)],
+            },
+            Particao("remessas_1", "remessas", remessa),
+            Particao("remessas_2", "remessas", remessa),
+            new() { Nome = Nome("duplicadas"), Colunas = [Col("v", Inteiro, suportadoInteiro)], IndicesUnicos = [Indice("ix_duplicadas_v", [Elemento("v", colacao: null)])] },
+        ];
+    }
+
+    private static TabelaInventariada Vinculo(string nome, ChaveEstrangeiraInventariada chave) =>
+        new() { Nome = Nome(nome), Colunas = [Col("loja", Inteiro, Classe.Suportado(TipoColuna.Inteiro))], ChavesEstrangeiras = [chave] };
+
+    // O índice da chave primária, sobre colunas sem colação.
+    private static IndiceInventariado Primario(string nome, params string[] colunas) =>
+        new(nome, [.. colunas.Select(coluna => Elemento(coluna, colacao: null))], Primario: true);
+
+    private static IndiceInventariado Indice(string nome, ElementoEsperado[] elementos, ReferenciasEsperadas? expressoes = null, ReferenciasEsperadas? predicado = null, bool nulosDistintos = true) =>
+        new(nome, elementos, Expressoes: expressoes, Predicado: predicado, NulosDistintos: nulosDistintos);
+
+    // Um elemento de texto com a colação padrão, salvo declarada (nula num elemento sem colação).
+    private static ElementoEsperado Elemento(string? coluna) => new(coluna, _padrao);
+
+    private static ElementoEsperado Elemento(string? coluna, ColacaoEsperada? colacao) => new(coluna, colacao);
+
+    // Uma materialized view populada, sem dependência de outra nem de função, salvo declaradas.
+    private static ResidualInventariado Visao(string nome, bool populada = true, bool incompletas = false) =>
+        new(Nome(nome), TipoObjetoResidual.VisaoMaterializada, incompletas, populada);
 
     private static TabelaInventariada Particao(string nome, string pai, ColunaInventariada[] colunas, string[]? chavePrimaria = null) =>
         new() { Nome = Nome(nome), Tipo = TipoTabela.Particao, Pai = Nome(pai), Colunas = colunas, ChavePrimaria = chavePrimaria ?? [] };
