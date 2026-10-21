@@ -339,6 +339,15 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)
         """;
 
+    // Os objetos do esquema do diário que guardam ou descrevem dado: tabelas (também a particionada e a estrangeira), views,
+    // materialized views, índices e sequences. Só os nomes; o esquema que não existe não tem nenhum.
+    private const string ConsultaEsquemaReservado = """
+        SELECT n.nspname, c.relname
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'incognito' AND c.relkind IN ('r', 'p', 'f', 'v', 'm', 'i', 'I', 'S')
+        """;
+
     // O que cada materialized view lê, pelas dependências das regras de reescrita dela e das regras de SELECT das views por
     // onde a leitura passa (nunca o texto das regras; as regras de INSERT, UPDATE e DELETE de uma view não são lidas pelo
     // REFRESH): as materialized views lidas e se alguma regra da cadeia depende de uma função ou de um operador, que o banco
@@ -439,8 +448,6 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private const int SqlAscii = 0;
     private const int Utf8 = 6;
 
-    private static readonly DialetoSqlPostgreSql _sql = new();
-
     // Os provedores de locale do banco que o dialeto conhece: libc, ICU e, no 17+, o embutido; as colações têm também o 'd',
     // a padrão do banco.
     private static readonly char[] _provedoresDoBanco = ['c', 'i', 'b'];
@@ -479,6 +486,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             var triggers = await LerTriggersAsync(cancelamento).ConfigureAwait(false);
             var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
+            var reservado = await LerEsquemaReservadoAsync(cancelamento).ConfigureAwait(false);
             var acesso = await LerAcessoAsync(conexao.Conexao, conexao.Versao, cancelamento).ConfigureAwait(false);
             var nomes = tabelas.Values.Select(tabela => tabela.Nome).OrderBy(nome => nome, OrdemDeNomes.Instancia).ToArray();
 
@@ -507,6 +515,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                     .ToArray(),
                 Sequences = sequences,
                 ObjetosResiduais = residuais,
+                ObjetosNoEsquemaReservado = reservado,
                 Propriedades = banco.Propriedades,
 
                 // Um objeto que a leitura das permissões não achou (não deveria: as duas veem o mesmo catálogo) fica com tudo
@@ -660,7 +669,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             {
                 throw new DialetoRecusouException(
                     CodigosPostgreSql.ParticaoPendente,
-                    $"A partição {Visivel(_sql.Citar(nome))} tem um DETACH ... CONCURRENTLY interrompido; termine-o com ALTER TABLE {Visivel(_sql.Citar(pai!))} DETACH PARTITION {Visivel(_sql.Citar(nome))} FINALIZE antes.");
+                    $"A partição {Visivel(CitacaoPostgreSql.Citar(nome))} tem um DETACH ... CONCURRENTLY interrompido; termine-o com ALTER TABLE {Visivel(CitacaoPostgreSql.Citar(pai!))} DETACH PARTITION {Visivel(CitacaoPostgreSql.Citar(nome))} FINALIZE antes.");
             }
 
             // A partição intermediária (particionada que é partição de outra) é partição: o pai é o imediato; a raiz, o
@@ -896,7 +905,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private Task<(bool?, bool?, bool?)> MedirAsync(string esquema, string nome, uint oid, CancellationToken cancelamento) =>
         SemErroDoBancoAsync(esquema, nome, async () =>
         {
-            var citada = _sql.Citar(new NomeObjeto(esquema, nome));
+            var citada = CitacaoPostgreSql.Citar(new NomeObjeto(esquema, nome));
             var medida = $"SELECT 'a' = 'A' COLLATE {citada}, 'a' = 'á' COLLATE {citada}, 'a-b.c' = 'abc' COLLATE {citada}, pg_catalog.to_regcollation($1)::pg_catalog.oid = $2";
             await using var comando = new NpgsqlCommand(medida, conexao.Conexao);
             comando.Parameters.Add(new NpgsqlParameter { Value = citada, NpgsqlDbType = NpgsqlDbType.Text });
@@ -935,7 +944,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     // O nome citado e com os caracteres de controle escapados: um nome com quebra de linha não forja linhas no registro.
     private static IncognitoException ErroDaMedida(string esquema, string nome) => new(
         CodigosPostgreSql.MedidaDeColacao,
-        $"A medida do comportamento da colação {Visivel(_sql.Citar(new NomeObjeto(esquema, nome)))} falhou ou a colação mudou durante a leitura do esquema; leia de novo.");
+        $"A medida do comportamento da colação {Visivel(CitacaoPostgreSql.Citar(new NomeObjeto(esquema, nome)))} falhou ou a colação mudou durante a leitura do esquema; leia de novo.");
 
     private static string Visivel(string texto) =>
         string.Concat(texto.Select(caractere => char.IsControl(caractere) ? "\\u" + ((int)caractere).ToString("X4", CultureInfo.InvariantCulture) : caractere.ToString()));
@@ -1189,6 +1198,19 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             })
             .OrderBy(sequence => sequence.Nome, OrdemDeNomes.Instancia)
             .ToArray();
+    }
+
+    private async Task<NomeObjeto[]> LerEsquemaReservadoAsync(CancellationToken cancelamento)
+    {
+        var nomes = new List<NomeObjeto>();
+        await using var comando = new NpgsqlCommand(ConsultaEsquemaReservado, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            nomes.Add(new NomeObjeto(leitor.GetString(0), leitor.GetString(1)));
+        }
+
+        return [.. nomes.Order(OrdemDeNomes.Instancia)];
     }
 
     private async Task<ObjetoResidual[]> LerResiduaisAsync(CancellationToken cancelamento)

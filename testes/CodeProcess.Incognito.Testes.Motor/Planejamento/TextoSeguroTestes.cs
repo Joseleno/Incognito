@@ -50,6 +50,25 @@ public sealed class TextoSeguroTestes
         textos.Sample(texto => Desescapar(TextoSeguro.Nome(texto)) == texto, iter: 20000);
     }
 
+    [Fact]
+    public void O_arquivo_sai_escapado_nos_tres_ToString_com_a_barra_como_esta()
+    {
+        // Um nome de arquivo com ESC e U+202E mudaria o que o terminal mostra; o separador do Windows fica como está.
+        var arquivo = "C:\\dados\\a" + (char)0x1B + "[2J" + (char)0x202E + "b.yaml";
+        const string Escapado = "C:\\dados\\a\\u001B[2J\\u202Eb.yaml";
+        var posicao = new PosicaoConfiguracao(arquivo, 3, 5, "/tabelas");
+
+        Assert.Equal(Escapado, TextoSeguro.Caminho(arquivo));
+        Assert.Equal(Escapado + "(3,5): INC3071: m", new ErroPlano("INC3071", "m", posicao: posicao).ToString());
+        Assert.Equal(Escapado + "(3,5): INC3572: m", new Aviso("INC3572", "m", posicao: posicao).ToString());
+        Assert.Equal(Escapado + "(3,5): INC2009: m", new ErroConfiguracao("INC2009", arquivo, 3, 5, "/modo", "m").ToString());
+        Assert.Equal(Escapado + ": INC2001: m", new ErroConfiguracao("INC2001", arquivo, null, null, "", "m").ToString());
+        Assert.Equal((arquivo, arquivo), (posicao.Arquivo, new ErroConfiguracao("INC2001", arquivo, null, null, "", "m").Arquivo));
+
+        var caracteres = Gen.Char[(char)0, (char)0xFFFF];
+        caracteres.Array[0, 12].Select(unidades => new string(unidades)).Sample(texto => SemRecusado(TextoSeguro.Caminho(texto)), iter: 20000);
+    }
+
     // Desfaz o escape: a barra dobrada e o \uXXXX.
     private static string Desescapar(string escapado)
     {

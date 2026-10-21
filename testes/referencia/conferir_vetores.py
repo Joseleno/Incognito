@@ -1694,6 +1694,160 @@ def conferir_volume(caminho, documento):
 
 
 # Todo arquivo de testes/vetores/ tem conferidor, e todo conferidor tem arquivo.
+# ---------------------------------------------------------------------------------------------------------------------
+# Hash da configuração: a serialização canônica do modelo resolvido, transcrita da descrição do formato (tamanho em 4
+# bytes big-endian na frente de cada texto UTF-8, FFFFFFFF no nulo, quantidade na frente de cada lista e 1 na frente do
+# registro opcional presente; ordem ordinal por unidades UTF-16). O YAML de cada caso fica para o teste em C#: aqui só o
+# modelo e o hash, que prendem o formato.
+
+PREFIXO_HASH_CONFIGURACAO = "incognito/hash-configuracao/v1"
+_HC_NULO = b"\xff\xff\xff\xff"
+_HC_MODOS = {"reproduzivel", "efemero"}
+_HC_PROVEDORES = {"postgresql", "sqlserver"}
+_HC_REFERENCIAS = {"ambiente", "arquivo"}
+_HC_ENTRADA_INVALIDA = {"preservar", "falhar", "anular"}
+_HC_ENTRADA_MALFORMADA = {"falhar", "anular", "preservar"}
+_HC_CONSISTENCIAS = {"melhorEsforco", "exigir"}
+_HC_ACOES = {"copiar", "esvaziar", "ignorar"}
+_HC_TIPOS_DE_COLUNA = {"manter", "dominio", "transformador"}
+
+
+def _hc_quantidade(n):
+    return n.to_bytes(4, "big")
+
+
+def _hc_texto(valor, onde):
+    dados = texto_de(valor, onde).encode("utf-8")
+    return _hc_quantidade(len(dados)) + dados
+
+
+def _hc_opcional(valor, onde):
+    return _HC_NULO if valor is None else _hc_texto(valor, onde)
+
+
+def _hc_logico(valor, onde):
+    return _hc_texto("true" if logico(valor, onde) else "false", onde)
+
+
+def _hc_enum(valor, permitidos, onde, anulavel=False):
+    if valor is None and anulavel:
+        return _HC_NULO
+    if texto_de(valor, onde) not in permitidos:
+        raise Falha(onde, "valor fora do conjunto")
+    return _hc_texto(valor, onde)
+
+
+def _hc_ordem(texto):
+    # Ordinal por unidades UTF-16, como o StringComparer.Ordinal.
+    return texto.encode("utf-16-be")
+
+
+def _hc_lista(valor, onde):
+    if not isinstance(valor, list):
+        raise Falha(onde, "esperada lista")
+    return valor
+
+
+def _hc_identificador(objeto, onde):
+    exigir(objeto, ["nome", "entreAspas"], [], onde)
+    return _hc_texto(objeto["nome"], onde) + _hc_logico(objeto["entreAspas"], onde)
+
+
+def _hc_parametros(objeto, onde):
+    if not isinstance(objeto, dict):
+        raise Falha(onde, "parâmetros fora do formato")
+    saida = _hc_quantidade(len(objeto))
+    for nome in sorted(objeto, key=_hc_ordem):
+        saida += _hc_texto(nome, onde) + _hc_texto(objeto[nome], onde)
+    return saida
+
+
+def _hc_referencia(objeto, onde):
+    exigir(objeto, ["tipo", "escrito"], [], onde)
+    return _hc_enum(objeto["tipo"], _HC_REFERENCIAS, onde) + _hc_texto(objeto["escrito"], onde)
+
+
+def _hc_conexao(objeto, onde):
+    exigir(objeto, ["provedor", "referencia", "bancoEsperado"], [], onde)
+    return (_hc_enum(objeto["provedor"], _HC_PROVEDORES, onde) + _hc_referencia(objeto["referencia"], onde)
+            + _hc_opcional(objeto["bancoEsperado"], onde))
+
+
+def _hc_coluna(objeto, onde):
+    exigir(objeto, ["coluna", "tipo", "dominio", "transformador", "derivarDe", "parametros", "entradaInvalida",
+                    "entradaMalformada", "sensivel"], [], onde)
+    derivar = objeto["derivarDe"]
+    return (_hc_identificador(objeto["coluna"], onde) + _hc_enum(objeto["tipo"], _HC_TIPOS_DE_COLUNA, onde)
+            + _hc_opcional(objeto["dominio"], onde) + _hc_opcional(objeto["transformador"], onde)
+            + (_HC_NULO if derivar is None else _hc_quantidade(1) + _hc_identificador(derivar, onde))
+            + _hc_parametros(objeto["parametros"], onde)
+            + _hc_enum(objeto["entradaInvalida"], _HC_ENTRADA_INVALIDA, onde, anulavel=True)
+            + _hc_enum(objeto["entradaMalformada"], _HC_ENTRADA_MALFORMADA, onde, anulavel=True)
+            + _hc_logico(objeto["sensivel"], onde))
+
+
+def _hc_chave_do_identificador(objeto):
+    return (_hc_ordem(objeto["nome"]), objeto["entreAspas"])
+
+
+def serializar_configuracao(modelo, onde):
+    exigir(modelo, ["versao", "origem", "destino", "modo", "chave", "ambiente", "politicas", "dominios", "tabelas"], [], onde)
+    saida = PREFIXO_HASH_CONFIGURACAO.encode("ascii") + b"\x00"
+    saida += _hc_texto(str(inteiro(modelo["versao"], onde)), onde)
+    saida += _hc_conexao(modelo["origem"], onde) + _hc_conexao(modelo["destino"], onde)
+    saida += _hc_enum(modelo["modo"], _HC_MODOS, onde)
+    saida += _HC_NULO if modelo["chave"] is None else _hc_quantidade(1) + _hc_referencia(modelo["chave"], onde)
+    saida += _hc_texto(modelo["ambiente"], onde)
+    politicas = modelo["politicas"]
+    # As políticas de entrada da raiz entram pelas efetivas de cada domínio e coluna.
+    exigir(politicas, ["consistencia", "paralelismo"], [], onde)
+    saida += _hc_enum(politicas["consistencia"], _HC_CONSISTENCIAS, onde)
+    paralelismo = politicas["paralelismo"]
+    saida += _HC_NULO if paralelismo is None else _hc_texto(str(inteiro(paralelismo, onde)), onde)
+    dominios = _hc_lista(modelo["dominios"], onde)
+    saida += _hc_quantidade(len(dominios))
+    for dominio in sorted(dominios, key=lambda d: _hc_ordem(texto_de(d.get("nome"), onde))):
+        exigir(dominio, ["nome", "versao", "transformador", "identidade", "parametros", "entradaInvalida", "entradaMalformada"], [], onde)
+        saida += (_hc_texto(dominio["nome"], onde) + _hc_texto(str(inteiro(dominio["versao"], onde)), onde)
+                  + _hc_texto(dominio["transformador"], onde) + _hc_parametros(dominio["identidade"], onde)
+                  + _hc_parametros(dominio["parametros"], onde)
+                  + _hc_enum(dominio["entradaInvalida"], _HC_ENTRADA_INVALIDA, onde)
+                  + _hc_enum(dominio["entradaMalformada"], _HC_ENTRADA_MALFORMADA, onde))
+    tabelas = _hc_lista(modelo["tabelas"], onde)
+    saida += _hc_quantidade(len(tabelas))
+    for tabela in sorted(tabelas, key=lambda t: _hc_chave_do_identificador(t["esquema"]) + _hc_chave_do_identificador(t["tabela"])):
+        exigir(tabela, ["esquema", "tabela", "acao", "acaoEscrita", "colunas"], [], onde)
+        saida += (_hc_identificador(tabela["esquema"], onde) + _hc_identificador(tabela["tabela"], onde)
+                  + _hc_enum(tabela["acao"], _HC_ACOES, onde) + _hc_logico(tabela["acaoEscrita"], onde))
+        colunas = _hc_lista(tabela["colunas"], onde)
+        saida += _hc_quantidade(len(colunas))
+        for coluna in sorted(colunas, key=lambda c: _hc_chave_do_identificador(c["coluna"])):
+            saida += _hc_coluna(coluna, onde)
+    return saida
+
+
+def conferir_hash_configuracao(caminho, documento):
+    arquivo = os.path.basename(caminho)
+    exigir(documento, ["descricao", "prefixo", "casos"], [], arquivo)
+    texto_de(documento["descricao"], arquivo)
+    if texto_de(documento["prefixo"], arquivo) != PREFIXO_HASH_CONFIGURACAO:
+        raise Falha(arquivo, "prefixo diferente")
+    conferidos, nomes = 0, set()
+    for caso in lista(documento["casos"], arquivo):
+        exigir(caso, ["nome", "yaml", "modelo", "hash"], [], arquivo)
+        nome = texto_de(caso["nome"], arquivo)
+        if nome in nomes:
+            raise Falha(arquivo, "caso com nome repetido")
+        nomes.add(nome)
+        onde = f"{arquivo}, caso '{nome}'"
+        texto_de(caso["yaml"], onde)
+        calculado = "sha256:" + hashlib.sha256(serializar_configuracao(caso["modelo"], onde)).hexdigest()
+        if calculado != texto_de(caso["hash"], onde):
+            raise Falha(onde, "o hash diverge do modelo")
+        conferidos += 1
+    return conferidos
+
+
 ARQUIVOS = {
     "derivacao@1.json": conferir_derivacao,
     "feistel@1.json": conferir_feistel,
@@ -1707,6 +1861,7 @@ ARQUIVOS = {
     "br.chave-dfe@1.json": conferir_transformador,
     "texto.substituir@1.json": conferir_transformador,
     "volume@1.json": conferir_volume,
+    "hash-configuracao@1.json": conferir_hash_configuracao,
 }
 
 # Ramos críticos, escritos a partir das regras de cada transformador: cada arquivo tem de ter ao menos estes (os demais
@@ -1897,6 +2052,30 @@ def primeiro_par(documento, condicao):
     raise Falha("autoteste", "nenhum par com a forma pedida")
 
 
+def _caso_com(documento, condicao):
+    for caso in documento["casos"]:
+        if condicao(caso["modelo"]):
+            return caso["modelo"]
+    raise Falha("autoteste", "nenhum caso com a forma pedida")
+
+
+def _primeiro_parametro(documento):
+    for caso in documento["casos"]:
+        for tabela in caso["modelo"]["tabelas"]:
+            for coluna in tabela["colunas"]:
+                if coluna["parametros"]:
+                    return coluna["parametros"]
+    raise Falha("autoteste", "nenhum parâmetro no modelo")
+
+
+def _primeira_coluna(documento):
+    for caso in documento["casos"]:
+        for tabela in caso["modelo"]["tabelas"]:
+            if tabela["colunas"]:
+                return tabela["colunas"][0]
+    raise Falha("autoteste", "nenhuma coluna no modelo")
+
+
 def _com_ocorrencias(documento):
     return primeiro_par(documento, lambda p: len(p.get("ocorrencias", [])) >= 2)
 
@@ -1978,6 +2157,37 @@ def autoteste():
                 documento["casos"] = [caso]
                 alterar(caso)
                 deve_acusar(f"{arquivo}, recusa em {transformador}", lambda: conferir_volume(caminho, documento), motivo)
+        elif conferidor is conferir_hash_configuracao:
+            for rotulo, alterar in (
+                ("ambiente", lambda d: d["casos"][0]["modelo"].update(ambiente=d["casos"][0]["modelo"]["ambiente"] + "x")),
+                ("hash", lambda d: d["casos"][0].update(hash=d["casos"][0]["hash"][:-1] + ("0" if d["casos"][0]["hash"][-1] != "0" else "1"))),
+                ("sensível", lambda d: _primeira_coluna(d).update(sensivel=not _primeira_coluna(d)["sensivel"])),
+                ("aspas", lambda d: _primeira_coluna(d)["coluna"].update(entreAspas=not _primeira_coluna(d)["coluna"]["entreAspas"])),
+            ):
+                documento = ler_arquivo(caminho)
+                alterar(documento)
+                deve_acusar(f"{arquivo}, {rotulo}", lambda: conferir_hash_configuracao(caminho, documento), "diverge")
+            for rotulo, alterar in (
+                ("banco esperado vazio no lugar do nulo", lambda d: _caso_com(d, lambda m: m["origem"]["bancoEsperado"] is None)["origem"].update(bancoEsperado="")),
+                ("valor de parâmetro", lambda d: _primeiro_parametro(d).update({k: v + "x" for k, v in _primeiro_parametro(d).items()})),
+            ):
+                documento = ler_arquivo(caminho)
+                alterar(documento)
+                deve_acusar(f"{arquivo}, {rotulo}", lambda: conferir_hash_configuracao(caminho, documento), "diverge")
+            # A ordem das listas do modelo não importa: o formato ordena.
+            documento = ler_arquivo(caminho)
+            for caso in documento["casos"]:
+                modelo = caso["modelo"]
+                modelo["dominios"].reverse()
+                modelo["tabelas"].reverse()
+                for tabela in modelo["tabelas"]:
+                    tabela["colunas"].reverse()
+                    for coluna in tabela["colunas"]:
+                        coluna["parametros"] = dict(reversed(list(coluna["parametros"].items())))
+            conferir_hash_configuracao(caminho, documento)
+            documento = ler_arquivo(caminho)
+            documento["casos"][0]["modelo"]["modo"] = "anonimizar"
+            deve_acusar(f"{arquivo}, modo fora do conjunto", lambda: conferir_hash_configuracao(caminho, documento), "fora do conjunto")
         elif conferidor is conferir_feistel:
             documento = ler_arquivo(caminho)
             documento["casos"][0]["pares"][0]["saida"] += 1
@@ -1991,6 +2201,8 @@ def autoteste():
         alterado = ler_arquivo(caminho)
         if "casos" not in alterado:
             alterado["sal"] += "x"
+        elif "hash" in alterado["casos"][0]:
+            alterado["casos"][0]["hash"] += "0"
         elif "pares" in alterado["casos"][0]:
             par = alterado["casos"][0]["pares"][0]
             par["saida"] = par.get("saida") is None

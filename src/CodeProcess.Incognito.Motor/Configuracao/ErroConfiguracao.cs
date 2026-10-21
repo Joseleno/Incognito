@@ -1,4 +1,5 @@
 using System.Globalization;
+using CodeProcess.Incognito.Interno;
 
 namespace CodeProcess.Incognito.Configuracao;
 
@@ -43,12 +44,15 @@ public sealed class ErroConfiguracao
     /// <summary>O que está errado e o que se esperava, sem o valor escrito.</summary>
     public string Mensagem { get; }
 
-    /// <summary>No formato <c>arquivo(linha,coluna): INC2xxx: mensagem</c>.</summary>
+    /// <summary>
+    /// No formato <c>arquivo(linha,coluna): INC2xxx: mensagem</c>. O arquivo sai com os caracteres que mudariam o que um
+    /// terminal mostra (controles, quebras, controles bidirecionais) trocados por <c>\uXXXX</c>; a barra invertida fica como está.
+    /// </summary>
     public override string ToString()
     {
         var posicao = Linha is { } linha && Coluna is { } coluna
             ? string.Create(CultureInfo.InvariantCulture, $"({linha},{coluna})")
             : "";
-        return $"{Arquivo ?? "incognito.yaml"}{posicao}: {Codigo}: {Mensagem}";
+        return $"{(Arquivo is null ? "incognito.yaml" : TextoSeguro.Caminho(Arquivo))}{posicao}: {Codigo}: {Mensagem}";
     }
 }

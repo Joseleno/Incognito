@@ -1,4 +1,8 @@
 #nullable enable
+CodeProcess.Incognito.Configuracao.AcaoTabela
+CodeProcess.Incognito.Configuracao.AcaoTabela.Copiar = 0 -> CodeProcess.Incognito.Configuracao.AcaoTabela
+CodeProcess.Incognito.Configuracao.AcaoTabela.Esvaziar = 1 -> CodeProcess.Incognito.Configuracao.AcaoTabela
+CodeProcess.Incognito.Configuracao.AcaoTabela.Ignorar = 2 -> CodeProcess.Incognito.Configuracao.AcaoTabela
 CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito
 CodeProcess.Incognito.Configuracao.ConfiguracaoInvalidaException
 CodeProcess.Incognito.Configuracao.ConfiguracaoInvalidaException.Erros.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Configuracao.ErroConfiguracao!>!
@@ -9,7 +13,89 @@ CodeProcess.Incognito.Configuracao.ErroConfiguracao.Coluna.get -> int?
 CodeProcess.Incognito.Configuracao.ErroConfiguracao.Linha.get -> int?
 CodeProcess.Incognito.Configuracao.ErroConfiguracao.Local.get -> string!
 CodeProcess.Incognito.Configuracao.ErroConfiguracao.Mensagem.get -> string!
+CodeProcess.Incognito.Configuracao.ModoTratamento
+CodeProcess.Incognito.Configuracao.ModoTratamento.Efemero = 1 -> CodeProcess.Incognito.Configuracao.ModoTratamento
+CodeProcess.Incognito.Configuracao.ModoTratamento.Reproduzivel = 0 -> CodeProcess.Incognito.Configuracao.ModoTratamento
+CodeProcess.Incognito.Configuracao.OrigemRegra
+CodeProcess.Incognito.Configuracao.OrigemRegra.Configuracao = 0 -> CodeProcess.Incognito.Configuracao.OrigemRegra
+CodeProcess.Incognito.Execucao.Aviso
+CodeProcess.Incognito.Execucao.Aviso.Codigo.get -> string!
+CodeProcess.Incognito.Execucao.Aviso.Coluna.get -> string?
+CodeProcess.Incognito.Execucao.Aviso.Mensagem.get -> string!
+CodeProcess.Incognito.Execucao.Aviso.Objeto.get -> string?
+CodeProcess.Incognito.Execucao.Aviso.Posicao.get -> CodeProcess.Incognito.Execucao.PosicaoConfiguracao?
+CodeProcess.Incognito.Execucao.Aviso.Tabela.get -> CodeProcess.Incognito.Execucao.NomeTabela?
+CodeProcess.Incognito.Execucao.Classificacao
+CodeProcess.Incognito.Execucao.Classificacao.Identificador.get -> bool
+CodeProcess.Incognito.Execucao.Classificacao.Sensivel.get -> bool
+CodeProcess.Incognito.Execucao.ErroPlano
+CodeProcess.Incognito.Execucao.ErroPlano.Codigo.get -> string!
+CodeProcess.Incognito.Execucao.ErroPlano.Coluna.get -> string?
+CodeProcess.Incognito.Execucao.ErroPlano.Mensagem.get -> string!
+CodeProcess.Incognito.Execucao.ErroPlano.Objeto.get -> string?
+CodeProcess.Incognito.Execucao.ErroPlano.Posicao.get -> CodeProcess.Incognito.Execucao.PosicaoConfiguracao?
+CodeProcess.Incognito.Execucao.ErroPlano.Tabela.get -> CodeProcess.Incognito.Execucao.NomeTabela?
+CodeProcess.Incognito.Execucao.FalhaDialetoException
+CodeProcess.Incognito.Execucao.MapaColuna
+CodeProcess.Incognito.Execucao.MapaColuna.Classificacao.get -> CodeProcess.Incognito.Execucao.Classificacao!
+CodeProcess.Incognito.Execucao.MapaColuna.Nome.get -> string!
+CodeProcess.Incognito.Execucao.MapaColuna.Regra.get -> CodeProcess.Incognito.Execucao.RegraColuna?
+CodeProcess.Incognito.Execucao.MapaColuna.Tipo.get -> CodeProcess.Incognito.Transformadores.TipoColuna?
+CodeProcess.Incognito.Execucao.MapaTabela
+CodeProcess.Incognito.Execucao.MapaTabela.Acao.get -> CodeProcess.Incognito.Configuracao.AcaoTabela
+CodeProcess.Incognito.Execucao.MapaTabela.AcaoEscrita.get -> bool
+CodeProcess.Incognito.Execucao.MapaTabela.Colunas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Execucao.MapaColuna!>!
+CodeProcess.Incognito.Execucao.MapaTabela.Nome.get -> CodeProcess.Incognito.Execucao.NomeTabela!
+CodeProcess.Incognito.Execucao.MapaTabela.Posicao.get -> CodeProcess.Incognito.Execucao.PosicaoConfiguracao?
+CodeProcess.Incognito.Execucao.NomeColuna
+CodeProcess.Incognito.Execucao.NomeColuna.Coluna.get -> string!
+CodeProcess.Incognito.Execucao.NomeColuna.Equals(CodeProcess.Incognito.Execucao.NomeColuna? other) -> bool
+CodeProcess.Incognito.Execucao.NomeColuna.Tabela.get -> CodeProcess.Incognito.Execucao.NomeTabela!
+CodeProcess.Incognito.Execucao.NomeTabela
+CodeProcess.Incognito.Execucao.NomeTabela.Equals(CodeProcess.Incognito.Execucao.NomeTabela? other) -> bool
+CodeProcess.Incognito.Execucao.NomeTabela.Esquema.get -> string!
+CodeProcess.Incognito.Execucao.NomeTabela.Tabela.get -> string!
+CodeProcess.Incognito.Execucao.Plano
+CodeProcess.Incognito.Execucao.Plano.Avisos.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Execucao.Aviso!>!
+CodeProcess.Incognito.Execucao.Plano.HashConfiguracao.get -> string!
+CodeProcess.Incognito.Execucao.Plano.Modo.get -> CodeProcess.Incognito.Configuracao.ModoTratamento
+CodeProcess.Incognito.Execucao.Plano.Tabelas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Execucao.MapaTabela!>!
+CodeProcess.Incognito.Execucao.PlanoRecusadoException
+CodeProcess.Incognito.Execucao.PlanoRecusadoException.Erros.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Execucao.ErroPlano!>!
+CodeProcess.Incognito.Execucao.PosicaoConfiguracao
+CodeProcess.Incognito.Execucao.PosicaoConfiguracao.Arquivo.get -> string?
+CodeProcess.Incognito.Execucao.PosicaoConfiguracao.Coluna.get -> int
+CodeProcess.Incognito.Execucao.PosicaoConfiguracao.Linha.get -> int
+CodeProcess.Incognito.Execucao.PosicaoConfiguracao.Local.get -> string!
+CodeProcess.Incognito.Execucao.PropagacaoRegra
+CodeProcess.Incognito.Execucao.PropagacaoRegra.ChaveEstrangeira = 0 -> CodeProcess.Incognito.Execucao.PropagacaoRegra
+CodeProcess.Incognito.Execucao.PropagacaoRegra.Heranca = 1 -> CodeProcess.Incognito.Execucao.PropagacaoRegra
+CodeProcess.Incognito.Execucao.RegraColuna
+CodeProcess.Incognito.Execucao.RegraColuna.DerivarDe.get -> string?
+CodeProcess.Incognito.Execucao.RegraColuna.Dominio.get -> CodeProcess.Incognito.Transformadores.DominioPseudonimo?
+CodeProcess.Incognito.Execucao.RegraColuna.EntradaInvalida.get -> CodeProcess.Incognito.Transformadores.PoliticaEntradaInvalida?
+CodeProcess.Incognito.Execucao.RegraColuna.EntradaMalformada.get -> CodeProcess.Incognito.Transformadores.PoliticaEntradaMalformada?
+CodeProcess.Incognito.Execucao.RegraColuna.Injetividade.get -> CodeProcess.Incognito.Transformadores.Injetividade?
+CodeProcess.Incognito.Execucao.RegraColuna.Origem.get -> CodeProcess.Incognito.Configuracao.OrigemRegra
+CodeProcess.Incognito.Execucao.RegraColuna.Posicao.get -> CodeProcess.Incognito.Execucao.PosicaoConfiguracao?
+CodeProcess.Incognito.Execucao.RegraColuna.Propagacao.get -> CodeProcess.Incognito.Execucao.PropagacaoRegra?
+CodeProcess.Incognito.Execucao.RegraColuna.PropagadaDe.get -> CodeProcess.Incognito.Execucao.NomeColuna?
+CodeProcess.Incognito.Execucao.RegraColuna.Tipo.get -> CodeProcess.Incognito.Execucao.TipoRegra
+CodeProcess.Incognito.Execucao.RegraColuna.Transformador.get -> string?
+CodeProcess.Incognito.Execucao.RegraColuna.Versao.get -> int?
+CodeProcess.Incognito.Execucao.TipoRegra
+CodeProcess.Incognito.Execucao.TipoRegra.Manter = 0 -> CodeProcess.Incognito.Execucao.TipoRegra
+CodeProcess.Incognito.Execucao.TipoRegra.Transformar = 1 -> CodeProcess.Incognito.Execucao.TipoRegra
 override CodeProcess.Incognito.Configuracao.ErroConfiguracao.ToString() -> string!
+override CodeProcess.Incognito.Execucao.Aviso.ToString() -> string!
+override CodeProcess.Incognito.Execucao.ErroPlano.ToString() -> string!
+override CodeProcess.Incognito.Execucao.NomeColuna.Equals(object? obj) -> bool
+override CodeProcess.Incognito.Execucao.NomeColuna.GetHashCode() -> int
+override CodeProcess.Incognito.Execucao.NomeColuna.ToString() -> string!
+override CodeProcess.Incognito.Execucao.NomeTabela.Equals(object? obj) -> bool
+override CodeProcess.Incognito.Execucao.NomeTabela.GetHashCode() -> int
+override CodeProcess.Incognito.Execucao.NomeTabela.ToString() -> string!
+override CodeProcess.Incognito.Execucao.Plano.ToString() -> string!
 static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.CarregarYaml(string! caminho) -> CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito!
 static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! texto) -> CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito!
 [INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira
@@ -48,6 +134,10 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.TipoBase.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.TipoNativo.get -> string!
 [INCX001]CodeProcess.Incognito.Dialetos.ColunaEsquema.TipoNativo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.CorrespondenciaNome
+[INCX001]CodeProcess.Incognito.Dialetos.CorrespondenciaNome.Corresponde = 1 -> CodeProcess.Incognito.Dialetos.CorrespondenciaNome
+[INCX001]CodeProcess.Incognito.Dialetos.CorrespondenciaNome.Indeterminada = 2 -> CodeProcess.Incognito.Dialetos.CorrespondenciaNome
+[INCX001]CodeProcess.Incognito.Dialetos.CorrespondenciaNome.NaoCorresponde = 0 -> CodeProcess.Incognito.Dialetos.CorrespondenciaNome
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.DialetoBanco() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.DisposeAsync() -> System.Threading.Tasks.ValueTask
@@ -64,6 +154,8 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.EsquemaBanco() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosResiduais.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ObjetoResidual!>!
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosResiduais.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosNoEsquemaReservado.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.NomeObjeto!>?
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosNoEsquemaReservado.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Sequences.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.SequenceEsquema!>!
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Sequences.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Tabelas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.TabelaEsquema!>!
@@ -162,6 +254,7 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Identidade.get -> CodeProcess.Incognito.Dialetos.IdentidadeBanco!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Sql.get -> CodeProcess.Incognito.Dialetos.DialetoSql!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoSql.Citar(string! identificador) -> string!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoSql.CompararNome(string! escrito, bool entreAspas, string! doCatalogo) -> CodeProcess.Incognito.Dialetos.CorrespondenciaNome
 [INCX001]abstract CodeProcess.Incognito.Dialetos.IdentidadeBanco.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.IdentidadeLida!>!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorEsquema.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.EsquemaBanco!>!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.ProvedorDialeto.ConectarDestinoAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoDestino!>!

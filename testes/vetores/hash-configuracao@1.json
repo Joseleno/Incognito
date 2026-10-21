@@ -1,0 +1,493 @@
+{
+  "descricao": "Hash da configuração (sha256, sem chave) sobre a serialização canônica das regras resolvidas. Cada caso traz o YAML, o modelo que ele resolve e o hash; o teste em C# lê o YAML e confere o hash, e a referência em Python confere o hash a partir do modelo. Os nomes de variável e os caminhos são fictícios.",
+  "prefixo": "incognito/hash-configuracao/v1",
+  "casos": [
+    {
+      "nome": "1-minimo",
+      "yaml": "versao: 1\norigem:\n  provedor: postgresql\n  conexao: ambiente:INCOGNITO_ORIGEM\ndestino:\n  provedor: postgresql\n  conexao: ambiente:INCOGNITO_DESTINO\n  bancoEsperado: loja_homolog\nmodo: reproduzivel\nchave: ambiente:INCOGNITO_CHAVE\nambiente: homologacao\n",
+      "modelo": {
+        "versao": 1,
+        "origem": {
+          "provedor": "postgresql",
+          "referencia": {
+            "tipo": "ambiente",
+            "escrito": "INCOGNITO_ORIGEM"
+          },
+          "bancoEsperado": null
+        },
+        "destino": {
+          "provedor": "postgresql",
+          "referencia": {
+            "tipo": "ambiente",
+            "escrito": "INCOGNITO_DESTINO"
+          },
+          "bancoEsperado": "loja_homolog"
+        },
+        "modo": "reproduzivel",
+        "chave": {
+          "tipo": "ambiente",
+          "escrito": "INCOGNITO_CHAVE"
+        },
+        "ambiente": "homologacao",
+        "politicas": {
+          "consistencia": "melhorEsforco",
+          "paralelismo": null
+        },
+        "dominios": [],
+        "tabelas": []
+      },
+      "hash": "sha256:1b1731377f1ac7a18ae706ca1cf1474d30bf7b43299c4bdedb5fe62ac2157b0f"
+    },
+    {
+      "nome": "2-efemero",
+      "yaml": "versao: 1\norigem:\n  provedor: postgresql\n  conexao: arquivo:segredos/origem.txt\ndestino:\n  provedor: postgresql\n  conexao: ambiente:INCOGNITO_DESTINO\n  bancoEsperado: loja_testes\nmodo: efemero\nambiente: testes\npolitica:\n  entradaInvalida: anular\n  consistencia: exigir\n  paralelismo: 4\n",
+      "modelo": {
+        "versao": 1,
+        "origem": {
+          "provedor": "postgresql",
+          "referencia": {
+            "tipo": "arquivo",
+            "escrito": "segredos/origem.txt"
+          },
+          "bancoEsperado": null
+        },
+        "destino": {
+          "provedor": "postgresql",
+          "referencia": {
+            "tipo": "ambiente",
+            "escrito": "INCOGNITO_DESTINO"
+          },
+          "bancoEsperado": "loja_testes"
+        },
+        "modo": "efemero",
+        "chave": null,
+        "ambiente": "testes",
+        "politicas": {
+          "consistencia": "exigir",
+          "paralelismo": 4
+        },
+        "dominios": [],
+        "tabelas": []
+      },
+      "hash": "sha256:e41ef7d6ef427db974c4c416c31ba71c4c9777d4eaed0778b352b78d344dfb73"
+    },
+    {
+      "nome": "3-tabelas",
+      "yaml": "versao: 1\norigem:\n  provedor: postgresql\n  conexao: ambiente:INCOGNITO_ORIGEM\ndestino:\n  provedor: postgresql\n  conexao: ambiente:INCOGNITO_DESTINO\n  bancoEsperado: loja_homolog\nmodo: reproduzivel\nchave: arquivo:segredos/chave.txt\nambiente: homologacao\ndominios:\n  documentos: { transformador: br.cpf@1, entradaMalformada: anular }\n  empresas: { transformador: br.cnpj@1, permutarOrdem: true }\ntabelas:\n  loja.clientes:\n    colunas:\n      cpf: documentos\n      '\"Telefone\"': { transformador: br.telefone }\n      cep: { transformador: br.cep@1, derivarDe: cidade }\n      nome: { acao: manter, classe: sensivel, justificativa: \"o nome do caso\" }\n      cnpj: empresas\n      '\"CNPJ matriz\"': { transformador: br.cnpj@1, entradaInvalida: falhar }\n      cidade: manter\n      endereço: manter\n  '\"Vendas\".\"Itens\"': { acao: esvaziar }\n",
+      "modelo": {
+        "versao": 1,
+        "origem": {
+          "provedor": "postgresql",
+          "referencia": {
+            "tipo": "ambiente",
+            "escrito": "INCOGNITO_ORIGEM"
+          },
+          "bancoEsperado": null
+        },
+        "destino": {
+          "provedor": "postgresql",
+          "referencia": {
+            "tipo": "ambiente",
+            "escrito": "INCOGNITO_DESTINO"
+          },
+          "bancoEsperado": "loja_homolog"
+        },
+        "modo": "reproduzivel",
+        "chave": {
+          "tipo": "arquivo",
+          "escrito": "segredos/chave.txt"
+        },
+        "ambiente": "homologacao",
+        "politicas": {
+          "consistencia": "melhorEsforco",
+          "paralelismo": null
+        },
+        "dominios": [
+          {
+            "nome": "cep",
+            "versao": 1,
+            "transformador": "br.cep",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "preservar",
+            "entradaMalformada": "falhar"
+          },
+          {
+            "nome": "cnpj",
+            "versao": 1,
+            "transformador": "br.cnpj",
+            "identidade": {
+              "permutarOrdem": "false"
+            },
+            "parametros": {},
+            "entradaInvalida": "preservar",
+            "entradaMalformada": "falhar"
+          },
+          {
+            "nome": "documentos",
+            "versao": 1,
+            "transformador": "br.cpf",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "preservar",
+            "entradaMalformada": "anular"
+          },
+          {
+            "nome": "empresas",
+            "versao": 1,
+            "transformador": "br.cnpj",
+            "identidade": {
+              "permutarOrdem": "true"
+            },
+            "parametros": {
+              "permutarOrdem": "true"
+            },
+            "entradaInvalida": "preservar",
+            "entradaMalformada": "falhar"
+          },
+          {
+            "nome": "telefone",
+            "versao": 1,
+            "transformador": "br.telefone",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "preservar",
+            "entradaMalformada": "falhar"
+          }
+        ],
+        "tabelas": [
+          {
+            "esquema": {
+              "nome": "loja",
+              "entreAspas": false
+            },
+            "tabela": {
+              "nome": "clientes",
+              "entreAspas": false
+            },
+            "acao": "copiar",
+            "acaoEscrita": false,
+            "colunas": [
+              {
+                "coluna": {
+                  "nome": "cpf",
+                  "entreAspas": false
+                },
+                "tipo": "dominio",
+                "dominio": "documentos@1",
+                "transformador": "br.cpf@1",
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": "preservar",
+                "entradaMalformada": "anular",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "Telefone",
+                  "entreAspas": true
+                },
+                "tipo": "transformador",
+                "dominio": "telefone@1",
+                "transformador": "br.telefone@1",
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": "preservar",
+                "entradaMalformada": "falhar",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "cep",
+                  "entreAspas": false
+                },
+                "tipo": "transformador",
+                "dominio": "cep@1",
+                "transformador": "br.cep@1",
+                "derivarDe": {
+                  "nome": "cidade",
+                  "entreAspas": false
+                },
+                "parametros": {},
+                "entradaInvalida": "preservar",
+                "entradaMalformada": "falhar",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "nome",
+                  "entreAspas": false
+                },
+                "tipo": "manter",
+                "dominio": null,
+                "transformador": null,
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": null,
+                "entradaMalformada": null,
+                "sensivel": true
+              },
+              {
+                "coluna": {
+                  "nome": "cnpj",
+                  "entreAspas": false
+                },
+                "tipo": "dominio",
+                "dominio": "empresas@1",
+                "transformador": "br.cnpj@1",
+                "derivarDe": null,
+                "parametros": {
+                  "permutarOrdem": "true"
+                },
+                "entradaInvalida": "preservar",
+                "entradaMalformada": "falhar",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "CNPJ matriz",
+                  "entreAspas": true
+                },
+                "tipo": "transformador",
+                "dominio": "cnpj@1",
+                "transformador": "br.cnpj@1",
+                "derivarDe": null,
+                "parametros": {
+                  "permutarOrdem": "false"
+                },
+                "entradaInvalida": "falhar",
+                "entradaMalformada": "falhar",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "cidade",
+                  "entreAspas": false
+                },
+                "tipo": "manter",
+                "dominio": null,
+                "transformador": null,
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": null,
+                "entradaMalformada": null,
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "endereço",
+                  "entreAspas": false
+                },
+                "tipo": "manter",
+                "dominio": null,
+                "transformador": null,
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": null,
+                "entradaMalformada": null,
+                "sensivel": false
+              }
+            ]
+          },
+          {
+            "esquema": {
+              "nome": "Vendas",
+              "entreAspas": true
+            },
+            "tabela": {
+              "nome": "Itens",
+              "entreAspas": true
+            },
+            "acao": "esvaziar",
+            "acaoEscrita": true,
+            "colunas": []
+          }
+        ]
+      },
+      "hash": "sha256:74cf6d7383d00cc6bd35c93ef9fe15de7e0a20e8c16a0ea0142f2d1157d36a13"
+    },
+    {
+      "nome": "4-variado",
+      "yaml": "versao: 1\norigem:\n  provedor: sqlserver\n  conexao: ambiente:INCOGNITO_ORIGEM\ndestino:\n  provedor: sqlserver\n  conexao: arquivo:segredos\\destino.txt\n  bancoEsperado: loja_homolog\nmodo: reproduzivel\nchave: ambiente:INCOGNITO_CHAVE\nambiente: homologacao\npolitica:\n  entradaInvalida: anular\n  entradaMalformada: anular\n  consistencia: melhorEsforco\n  paralelismo: 8\ndominios:\n  telefones: { transformador: br.telefone@1 }\n  pessoas: { transformador: br.cpf@1 }\ntabelas:\n  '\"Vendas\".\"Pagamentos\"':\n    colunas:\n      chave: { transformador: br.chave-pix@1, dominioCpf: pessoas, dominioTelefone: telefones }\n      cpf: pessoas\n      '\"cpf\"': { transformador: br.cep@1, derivarDe: '\"Cidade\"' }\n      '\"ｚcoluna\"': manter\n  loja.Clientes: { acao: ignorar }\n",
+      "modelo": {
+        "versao": 1,
+        "origem": {
+          "provedor": "sqlserver",
+          "referencia": {
+            "tipo": "ambiente",
+            "escrito": "INCOGNITO_ORIGEM"
+          },
+          "bancoEsperado": null
+        },
+        "destino": {
+          "provedor": "sqlserver",
+          "referencia": {
+            "tipo": "arquivo",
+            "escrito": "segredos/destino.txt"
+          },
+          "bancoEsperado": "loja_homolog"
+        },
+        "modo": "reproduzivel",
+        "chave": {
+          "tipo": "ambiente",
+          "escrito": "INCOGNITO_CHAVE"
+        },
+        "ambiente": "homologacao",
+        "politicas": {
+          "consistencia": "melhorEsforco",
+          "paralelismo": 8
+        },
+        "dominios": [
+          {
+            "nome": "telefones",
+            "versao": 1,
+            "transformador": "br.telefone",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "anular",
+            "entradaMalformada": "anular"
+          },
+          {
+            "nome": "pessoas",
+            "versao": 1,
+            "transformador": "br.cpf",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "anular",
+            "entradaMalformada": "anular"
+          },
+          {
+            "nome": "email",
+            "versao": 1,
+            "transformador": "email",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "anular",
+            "entradaMalformada": "anular"
+          },
+          {
+            "nome": "cep",
+            "versao": 1,
+            "transformador": "br.cep",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "anular",
+            "entradaMalformada": "anular"
+          },
+          {
+            "nome": "chave-pix",
+            "versao": 1,
+            "transformador": "br.chave-pix",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "anular",
+            "entradaMalformada": "anular"
+          },
+          {
+            "nome": "cnpj",
+            "versao": 1,
+            "transformador": "br.cnpj",
+            "identidade": {},
+            "parametros": {},
+            "entradaInvalida": "anular",
+            "entradaMalformada": "anular"
+          }
+        ],
+        "tabelas": [
+          {
+            "esquema": {
+              "nome": "loja",
+              "entreAspas": false
+            },
+            "tabela": {
+              "nome": "Clientes",
+              "entreAspas": false
+            },
+            "acao": "ignorar",
+            "acaoEscrita": true,
+            "colunas": []
+          },
+          {
+            "esquema": {
+              "nome": "Vendas",
+              "entreAspas": true
+            },
+            "tabela": {
+              "nome": "Pagamentos",
+              "entreAspas": true
+            },
+            "acao": "copiar",
+            "acaoEscrita": false,
+            "colunas": [
+              {
+                "coluna": {
+                  "nome": "ｚcoluna",
+                  "entreAspas": true
+                },
+                "tipo": "manter",
+                "dominio": null,
+                "transformador": null,
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": null,
+                "entradaMalformada": null,
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "chave",
+                  "entreAspas": false
+                },
+                "tipo": "transformador",
+                "dominio": "chave-pix@1",
+                "transformador": "br.chave-pix@1",
+                "derivarDe": null,
+                "parametros": {
+                  "dominioTelefone": "telefones",
+                  "dominioCpf": "pessoas",
+                  "dominioEmail": "email",
+                  "dominioCnpj": "cnpj"
+                },
+                "entradaInvalida": "anular",
+                "entradaMalformada": "anular",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "cpf",
+                  "entreAspas": true
+                },
+                "tipo": "transformador",
+                "dominio": "cep@1",
+                "transformador": "br.cep@1",
+                "derivarDe": {
+                  "nome": "Cidade",
+                  "entreAspas": true
+                },
+                "parametros": {},
+                "entradaInvalida": "anular",
+                "entradaMalformada": "anular",
+                "sensivel": false
+              },
+              {
+                "coluna": {
+                  "nome": "cpf",
+                  "entreAspas": false
+                },
+                "tipo": "dominio",
+                "dominio": "pessoas@1",
+                "transformador": "br.cpf@1",
+                "derivarDe": null,
+                "parametros": {},
+                "entradaInvalida": "anular",
+                "entradaMalformada": "anular",
+                "sensivel": false
+              }
+            ]
+          }
+        ]
+      },
+      "hash": "sha256:4a9d85c7dcf9735d9f02131e33c58368f5ca0267182e93f127b7979da545e232"
+    }
+  ]
+}

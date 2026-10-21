@@ -14,6 +14,7 @@ public enum Operacao
     LerEsquema,
     LerIdentidade,
     Citar,
+    CompararNome,
     Descartar,
 
     // Os getters das partes do banco conectado.
@@ -46,6 +47,15 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
 
     /// <summary>A operação que devolve nulo no lugar do resultado.</summary>
     internal Operacao? Nulo { get; init; }
+
+    /// <summary>O resultado forçado da comparação de nomes; nulo compara como o PostgreSQL num banco UTF-8.</summary>
+    internal CorrespondenciaNome? Correspondencia { get; init; }
+
+    /// <summary>A comparação de nomes por lado (escrito, entre aspas, do catálogo, destino); nulo segue as outras regras.</summary>
+    internal Func<string, bool, string, bool, CorrespondenciaNome?>? Comparar { get; init; }
+
+    /// <summary>Compara como o PostgreSQL num banco de um byte por caractere: sem aspas, letra fora do ASCII é indeterminada.</summary>
+    internal bool UmBytePorCaractere { get; init; }
 
     public override string Nome
     {
@@ -195,6 +205,14 @@ internal sealed class SqlDoPlanejar(ProvedorDoPlanejar provedor, bool destino) :
 {
     public override string Citar(string identificador) =>
         provedor.Chamar(Operacao.Citar, destino, () => "\"" + identificador.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"");
+
+    public override CorrespondenciaNome CompararNome(string escrito, bool entreAspas, string doCatalogo) =>
+        provedor.Chamar(Operacao.CompararNome, destino, () => provedor.Comparar?.Invoke(escrito, entreAspas, doCatalogo, destino)
+            ?? provedor.Correspondencia
+            ?? (provedor.UmBytePorCaractere && !entreAspas && !System.Text.Ascii.IsValid(escrito) ? (CorrespondenciaNome?)CorrespondenciaNome.Indeterminada : null)
+            ?? (string.Equals(entreAspas ? escrito : string.Concat(escrito.Select(caractere => char.IsAsciiLetterUpper(caractere) ? char.ToLowerInvariant(caractere) : caractere)), doCatalogo, StringComparison.Ordinal)
+                ? CorrespondenciaNome.Corresponde
+                : CorrespondenciaNome.NaoCorresponde));
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

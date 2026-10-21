@@ -109,16 +109,17 @@ public sealed class PlanejadorInternoTestes
     }
 
     [Fact]
-    public async Task As_leituras_sao_devolvidas_com_as_regras()
+    public async Task As_leituras_e_as_regras_chegam_a_carga_do_plano()
     {
         var provedor = new ProvedorDoPlanejar();
         var yaml = Yaml.Minimo + "tabelas:\n  loja.clientes:\n    colunas:\n      cpf: { transformador: br.cpf@1 }\n";
 
-        var leituras = await PlanejarAsync(provedor, yaml: yaml);
+        var montado = await PlanejarAsync(provedor, yaml: yaml);
 
-        Assert.Same(provedor.Origem, leituras.Origem.Esquema);
-        Assert.Same(provedor.Destino, leituras.Destino.Esquema);
-        Assert.Equal(("loja", "loja_homolog"), (leituras.Origem.Identidade.Banco, leituras.Destino.Identidade.Banco));
-        Assert.Equal("br.cpf", Assert.Single(leituras.Regras.Colunas).Fabrica.Nome);
+        Assert.Same(provedor.Origem, montado.Execucao.Origem.Esquema);
+        Assert.Same(provedor.Destino, montado.Execucao.Destino.Esquema);
+        Assert.Equal(("loja", "loja_homolog"), (montado.Execucao.Origem.Identidade.Banco, montado.Execucao.Destino.Identidade.Banco));
+        var tratada = Assert.Single(montado.Execucao.Unidades.SelectMany(unidade => unidade.Tratadas));
+        Assert.Equal(("cpf", "br.cpf"), (tratada.Coluna, tratada.Fabrica.Nome));
     }
 }

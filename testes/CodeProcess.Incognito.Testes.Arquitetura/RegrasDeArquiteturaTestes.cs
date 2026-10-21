@@ -109,6 +109,7 @@ public sealed class RegrasDeArquiteturaTestes
         ["SequenceEsquema.Colunas"] = "nomes de coluna do catálogo",
         ["ObjetoResidual.Nome"] = "nome de catálogo",
         ["ObjetoResidual.DependeDe"] = "nomes de catálogo",
+        ["EsquemaBanco.ObjetosNoEsquemaReservado"] = "nomes de catálogo",
         ["IndiceUnico.Nome"] = "nome de índice do catálogo",
         ["ElementoIndice.Coluna"] = "nome de coluna do catálogo",
         ["RestricaoCheck.Nome"] = "nome de restrição do catálogo",
@@ -338,6 +339,52 @@ public sealed class RegrasDeArquiteturaTestes
             .ToArray();
 
         Assert.True(expostos.Length == 0, $"Tipos estáveis do motor que expõem o contrato de dialeto: {string.Join(", ", expostos)}.");
+    }
+
+    [Fact]
+    public void O_plano_nao_expoe_transformador_sessao_chave_nem_segredo()
+    {
+        // Quem recebe o plano (relatório, CLI, hospedeiro) nunca alcança, por nenhum caminho de membros públicos, o que
+        // transforma ou o que guarda a chave ou a conexão; nem o contrato experimental. A busca desce pelos tipos do
+        // projeto que os membros alcançam, e não para nos de fora (as exceções herdam de Exception).
+        const BindingFlags Todos = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        Type[] proibidos =
+        [
+            .. Tipos(Nucleo).Where(tipo => tipo.FullName is Nucleo + ".Transformadores.Transformador" or Nucleo + ".Transformadores.SessaoTransformacao" or Nucleo + ".ChaveIncognito"),
+            .. Tipos(Motor).Where(tipo => tipo.FullName == Dialetos + ".SegredoConexao"),
+        ];
+        var vistos = new HashSet<Type>();
+        var fila = new Queue<Type>(Tipos(Motor).Where(tipo => tipo.IsVisible && tipo.Namespace == Nucleo + ".Execucao"));
+        var achados = new List<string>();
+        while (fila.TryDequeue(out var tipo))
+        {
+            if (!vistos.Add(tipo))
+            {
+                continue;
+            }
+
+            if (proibidos.Any(proibido => proibido.IsAssignableFrom(tipo)) || NoContrato(tipo) || tipo.GetCustomAttribute<ExperimentalAttribute>() is not null)
+            {
+                achados.Add(tipo.FullName!);
+                continue;
+            }
+
+            if (tipo.Namespace?.StartsWith(Nucleo, StringComparison.Ordinal) != true)
+            {
+                continue;
+            }
+
+            foreach (var usado in tipo.GetMembers(Todos).Where(VisivelFora).SelectMany(TiposDoMembro).Append(tipo.BaseType).OfType<Type>().SelectMany(Desembrulhar))
+            {
+                fila.Enqueue(Nullable.GetUnderlyingType(usado) ?? usado);
+            }
+        }
+
+        // Controle positivo: a busca chegou aos tipos de dentro do plano e aos do núcleo que ele cita.
+        Assert.Equal(4, proibidos.Length);
+        Assert.Contains(vistos, tipo => tipo.FullName == Nucleo + ".Transformadores.TipoColuna");
+        Assert.Contains(vistos, tipo => tipo.FullName == Nucleo + ".Transformadores.DominioPseudonimo");
+        Assert.True(achados.Count == 0, $"O plano alcança: {string.Join(", ", achados)}.");
     }
 
     [Fact]

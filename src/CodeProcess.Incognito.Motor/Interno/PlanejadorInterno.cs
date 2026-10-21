@@ -14,16 +14,12 @@ namespace CodeProcess.Incognito.Interno;
 /// <param name="Identidade">A identidade.</param>
 internal sealed record LeituraDoBanco(EsquemaBanco Esquema, IdentidadeLida Identidade);
 
-/// <summary>As regras resolvidas e as leituras dos dois bancos, que o plano vai conferir.</summary>
-/// <param name="Regras">As regras da configuração resolvidas contra o registro.</param>
-/// <param name="Origem">A leitura da origem.</param>
-/// <param name="Destino">A leitura do destino.</param>
-internal sealed record LeiturasDoPlano(ResolucaoDeRegras Regras, LeituraDoBanco Origem, LeituraDoBanco Destino);
 
 /// <summary>
 /// O <c>planejar</c>: resolve as regras sem o banco, conecta e lê a origem e o destino, em série e sempre pelo envoltório
-/// do dialeto, e confere a coerência das duas leituras. Nunca resolve a referência da chave: o <c>planejar</c> roda sem o
-/// segredo, e o resolvedor só recebe as conexões.
+/// do dialeto, confere a coerência das duas leituras e monta o plano, comparando os nomes pelo dialeto de cada lado com as
+/// conexões abertas. Nunca resolve a referência da chave: o <c>planejar</c> roda sem o segredo, e o resolvedor só recebe
+/// as conexões.
 /// </summary>
 internal static class PlanejadorInterno
 {
@@ -33,12 +29,15 @@ internal static class PlanejadorInterno
     /// <param name="dialetos">O dialeto de cada provedor.</param>
     /// <param name="resolverConexao">Resolve a referência de uma conexão (origem ou destino) na string de conexão.</param>
     /// <param name="cancelamento">Cancela o planejamento.</param>
-    /// <returns>As regras e as leituras conferidas.</returns>
+    /// <returns>O plano.</returns>
     /// <exception cref="ConfiguracaoInvalidaException">Regra recusada pelo registro.</exception>
-    /// <exception cref="PlanoRecusadoException">Sem dialeto para o provedor, ou o dialeto recusou a conexão ou a leitura.</exception>
+    /// <exception cref="PlanoRecusadoException">
+    /// Sem dialeto para o provedor, o dialeto recusou a conexão ou a leitura, ou a configuração e o esquema não permitem
+    /// copiar.
+    /// </exception>
     /// <exception cref="FalhaDialetoException">O dialeto falhou, ou leu um esquema que se contradiz.</exception>
     /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
-    internal static async Task<LeiturasDoPlano> PlanejarAsync(
+    internal static async Task<Plano> PlanejarAsync(
         ConfiguracaoIncognito configuracao,
         RegistroTransformadores registro,
         IReadOnlyDictionary<ProvedorBanco, ProvedorDialeto> dialetos,
@@ -50,8 +49,9 @@ internal static class PlanejadorInterno
         ArgumentNullException.ThrowIfNull(dialetos);
         ArgumentNullException.ThrowIfNull(resolverConexao);
 
-        // P0: as regras, antes do banco.
+        // P0: as regras e o hash da configuração, antes do banco.
         var regras = ResolvedorDeRegras.Resolver(configuracao, registro);
+        var hash = HashConfiguracao.Calcular(configuracao, regras);
 
         // P1: o dialeto de cada lado, e as duas leituras em série.
         var erros = new List<ErroPlano>();
@@ -62,13 +62,55 @@ internal static class PlanejadorInterno
             throw new PlanoRecusadoException(erros);
         }
 
-        var origem = await LerAsync(dialetoDaOrigem!, configuracao.Origem, LadoBanco.Origem, resolverConexao, cancelamento).ConfigureAwait(false);
-        var destino = await LerAsync(dialetoDoDestino!, configuracao.Destino, LadoBanco.Destino, resolverConexao, cancelamento).ConfigureAwait(false);
+        DialetoProtegido? origem = null;
+        DialetoProtegido? destino = null;
+        PlanoMontado montado;
+        try
+        {
+            origem = await ConectarAsync(dialetoDaOrigem!, configuracao.Origem, LadoBanco.Origem, resolverConexao, cancelamento).ConfigureAwait(false);
+            var leituraDaOrigem = await LerAsync(origem, cancelamento).ConfigureAwait(false);
+            destino = await ConectarAsync(dialetoDoDestino!, configuracao.Destino, LadoBanco.Destino, resolverConexao, cancelamento).ConfigureAwait(false);
+            var leituraDoDestino = await LerAsync(destino, cancelamento).ConfigureAwait(false);
 
-        // P2: a coerência das duas leituras.
-        Conferir(origem.Esquema, configuracao.Origem, LadoBanco.Origem);
-        Conferir(destino.Esquema, configuracao.Destino, LadoBanco.Destino);
-        return new LeiturasDoPlano(regras, origem, destino);
+            // P2: a coerência das duas leituras.
+            Conferir(leituraDaOrigem.Esquema, configuracao.Origem, LadoBanco.Origem);
+            Conferir(leituraDoDestino.Esquema, configuracao.Destino, LadoBanco.Destino);
+
+            // P3 a P5: os nomes pelo dialeto de cada lado, com as conexões abertas.
+            montado = MontagemDoPlano.Montar(configuracao, regras, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino);
+        }
+        catch
+        {
+            // O erro do planejar é o que sai: a falha ao fechar nunca toma o lugar dele.
+            await FecharAsync(destino, origem).ConfigureAwait(false);
+            throw;
+        }
+
+        if (await FecharAsync(destino, origem).ConfigureAwait(false) is { } aoFechar)
+        {
+            throw aoFechar;
+        }
+
+        return new Plano(montado.Tabelas, montado.Avisos, hash, montado.Execucao);
+    }
+
+    // P11: fecha em ordem inversa, cada um mesmo que o anterior falhe, e devolve a primeira falha.
+    private static async Task<FalhaDialetoException?> FecharAsync(params DialetoProtegido?[] bancos)
+    {
+        FalhaDialetoException? primeira = null;
+        foreach (var banco in bancos.OfType<DialetoProtegido>())
+        {
+            try
+            {
+                await banco.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (FalhaDialetoException falha)
+            {
+                primeira ??= falha;
+            }
+        }
+
+        return primeira;
     }
 
     private static ProvedorDialeto? Dialeto(IReadOnlyDictionary<ProvedorBanco, ProvedorDialeto> dialetos, ConexaoBanco conexao, LadoBanco lado, List<ErroPlano> erros)
@@ -89,33 +131,18 @@ internal static class PlanejadorInterno
         return dialeto;
     }
 
-    // Conecta, lê o esquema e a identidade e fecha. A falha ao fechar só sai quando não houve erro antes: nunca toma o
-    // lugar do primeiro.
-    private static async Task<LeituraDoBanco> LerAsync(
+    private static Task<DialetoProtegido> ConectarAsync(
         ProvedorDialeto dialeto, ConexaoBanco conexao, LadoBanco lado, Func<ConexaoBanco, SegredoConexao> resolverConexao, CancellationToken cancelamento)
     {
-        var provedor = ValidadorConfiguracao.Nome(conexao.Provedor);
         var segredo = resolverConexao(conexao) ?? throw new InvalidOperationException("O resolvedor de conexões não devolveu a conexão.");
-        var banco = await DialetoProtegido.ConectarAsync(dialeto, provedor, lado, segredo, cancelamento).ConfigureAwait(false);
-        var falhou = true;
-        try
-        {
-            var esquema = await banco.LerEsquemaAsync(cancelamento).ConfigureAwait(false);
-            var identidade = await banco.LerIdentidadeAsync(cancelamento).ConfigureAwait(false);
-            falhou = false;
-            return new LeituraDoBanco(esquema, identidade);
-        }
-        finally
-        {
-            try
-            {
-                await banco.DisposeAsync().ConfigureAwait(false);
-            }
-            catch (FalhaDialetoException) when (falhou)
-            {
-                // O erro da leitura é o que sai.
-            }
-        }
+        return DialetoProtegido.ConectarAsync(dialeto, ValidadorConfiguracao.Nome(conexao.Provedor), lado, segredo, cancelamento);
+    }
+
+    private static async Task<LeituraDoBanco> LerAsync(DialetoProtegido banco, CancellationToken cancelamento)
+    {
+        var esquema = await banco.LerEsquemaAsync(cancelamento).ConfigureAwait(false);
+        var identidade = await banco.LerIdentidadeAsync(cancelamento).ConfigureAwait(false);
+        return new LeituraDoBanco(esquema, identidade);
     }
 
     private static void Conferir(EsquemaBanco esquema, ConexaoBanco conexao, LadoBanco lado)

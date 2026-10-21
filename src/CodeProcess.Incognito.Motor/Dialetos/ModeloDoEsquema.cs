@@ -93,6 +93,7 @@ public sealed class EsquemaBanco
     private readonly IReadOnlyList<TabelaEsquema> _tabelas = [];
     private readonly IReadOnlyList<SequenceEsquema> _sequences = [];
     private readonly IReadOnlyList<ObjetoResidual> _residuais = [];
+    private readonly IReadOnlyList<NomeObjeto>? _reservado;
 
     /// <summary>As tabelas, inclusive partições, herdeiras e históricos de temporais.</summary>
     public required IReadOnlyList<TabelaEsquema> Tabelas { get => _tabelas; init => _tabelas = Lista.Copiar(value, nameof(Tabelas)); }
@@ -105,6 +106,17 @@ public sealed class EsquemaBanco
     /// objects): num destino restaurado de produção, dado real.
     /// </summary>
     public IReadOnlyList<ObjetoResidual> ObjetosResiduais { get => _residuais; init => _residuais = Lista.Copiar(value, nameof(ObjetosResiduais)); }
+
+    /// <summary>
+    /// Os objetos do esquema <c>incognito</c>, reservado ao diário do Incognito (tabelas, views, índices e sequences), em
+    /// ordem ordinal de nome; vazia quando não há nenhum. As tabelas desse esquema nunca entram em <see cref="Tabelas"/>.
+    /// Nulo se o dialeto não informa: o <c>planejar</c> trata como o pior caso, porque o esquema pode esconder tabela ou dado.
+    /// </summary>
+    public IReadOnlyList<NomeObjeto>? ObjetosNoEsquemaReservado
+    {
+        get => _reservado;
+        init => _reservado = value is null ? null : Lista.Copiar(value, nameof(ObjetosNoEsquemaReservado));
+    }
 
     /// <summary>
     /// A versão do servidor, a codificação e a colação padrão do banco; nulo se o dialeto não informa (o <c>planejar</c>

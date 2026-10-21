@@ -38,13 +38,14 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
         _conexao = conexao;
         Esquema = new LeitorEsquemaPostgreSql(conexao, LancarSeDescartado);
         Identidade = new IdentidadePostgreSql(conexao, LancarSeDescartado);
+        Sql = new DialetoSqlPostgreSql(conexao.Nomes);
     }
 
     public override LeitorEsquema Esquema { get; }
 
     public override IdentidadeBanco Identidade { get; }
 
-    public override DialetoSql Sql { get; } = new DialetoSqlPostgreSql();
+    public override DialetoSql Sql { get; }
 
     protected override async ValueTask DisposeAsyncCore()
     {
@@ -69,13 +70,14 @@ internal sealed class DestinoPostgreSql : DialetoDestino
         _conexao = conexao;
         Esquema = new LeitorEsquemaPostgreSql(conexao, LancarSeDescartado);
         Identidade = new IdentidadePostgreSql(conexao, LancarSeDescartado);
+        Sql = new DialetoSqlPostgreSql(conexao.Nomes);
     }
 
     public override LeitorEsquema Esquema { get; }
 
     public override IdentidadeBanco Identidade { get; }
 
-    public override DialetoSql Sql { get; } = new DialetoSqlPostgreSql();
+    public override DialetoSql Sql { get; }
 
     protected override async ValueTask DisposeAsyncCore()
     {
@@ -90,12 +92,27 @@ internal sealed class DestinoPostgreSql : DialetoDestino
     }
 }
 
-/// <summary>A citação de nomes do PostgreSQL: entre aspas duplas, com a aspa dobrada.</summary>
-internal sealed class DialetoSqlPostgreSql : DialetoSql
+/// <summary>
+/// A citação de nomes do PostgreSQL (entre aspas duplas, com a aspa dobrada) e a comparação de nomes pela regra do banco
+/// da conexão.
+/// </summary>
+internal sealed class DialetoSqlPostgreSql(RegraDosNomes nomes) : DialetoSql
 {
-    public override string Citar(string identificador)
+    public override string Citar(string identificador) => CitacaoPostgreSql.Citar(identificador);
+
+    public override CorrespondenciaNome CompararNome(string escrito, bool entreAspas, string doCatalogo) => nomes.Comparar(escrito, entreAspas, doCatalogo);
+}
+
+/// <summary>A citação de nomes do PostgreSQL, para quem não tem a conexão (as mensagens do leitor).</summary>
+internal static class CitacaoPostgreSql
+{
+    /// <summary>O identificador entre aspas duplas, com a aspa dobrada.</summary>
+    internal static string Citar(string identificador)
     {
         ArgumentException.ThrowIfNullOrEmpty(identificador);
         return "\"" + identificador.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
     }
+
+    /// <summary>O esquema e o nome citados, separados por ponto.</summary>
+    internal static string Citar(NomeObjeto nome) => Citar(nome.Esquema) + "." + Citar(nome.Nome);
 }

@@ -67,6 +67,12 @@ public sealed class EsquemaDeConformidade
     /// <summary>Identificadores e a forma citada que o banco espera (na origem e no destino).</summary>
     public required IReadOnlyList<IdentificadorCitado> Citacoes { get; init; }
 
+    /// <summary>
+    /// Nomes escritos (com ou sem aspas), nomes do catálogo e a correspondência que o banco da conexão decide: a dobra de
+    /// caixa e o limite do tamanho dependem do banco.
+    /// </summary>
+    public required IReadOnlyList<NomeComparado> ComparacoesDeNome { get; init; }
+
     /// <summary>Uma tabela que a fixture cria no esquema <c>incognito</c> (como o diário), para a suíte conferir que o leitor a deixa de fora.</summary>
     public required NomeObjeto ObjetoDoIncognito { get; init; }
 
@@ -81,7 +87,9 @@ public sealed class EsquemaDeConformidade
 /// <param name="Tabelas">Todas as tabelas, em qualquer ordem.</param>
 /// <param name="Sequences">Todas as sequences, com as colunas que as usam.</param>
 /// <param name="Residuais">Todos os objetos residuais (vazia se o banco não tem nenhum).</param>
-public sealed record Inventario(IReadOnlyList<TabelaInventariada> Tabelas, IReadOnlyList<SequenceEsperada> Sequences, IReadOnlyList<ResidualInventariado> Residuais);
+/// <param name="ObjetosNoEsquemaReservado">Os objetos do esquema <c>incognito</c>, em ordem ordinal de nome.</param>
+public sealed record Inventario(
+    IReadOnlyList<TabelaInventariada> Tabelas, IReadOnlyList<SequenceEsperada> Sequences, IReadOnlyList<ResidualInventariado> Residuais, IReadOnlyList<NomeObjeto> ObjetosNoEsquemaReservado);
 
 /// <summary>Uma tabela do inventário: tudo o que o modelo diz dela e das colunas.</summary>
 public sealed class TabelaInventariada
@@ -565,3 +573,10 @@ public sealed record TemporalEsperada(NomeObjeto Tabela, NomeObjeto Historico);
 /// <param name="Identificador">O identificador, como o catálogo o guarda.</param>
 /// <param name="Citado">A forma citada esperada.</param>
 public sealed record IdentificadorCitado(string Identificador, string Citado);
+
+/// <summary>Um nome escrito, um nome do catálogo e se o banco os iguala.</summary>
+/// <param name="Escrito">O nome como foi escrito, sem as aspas.</param>
+/// <param name="EntreAspas">Se foi escrito entre aspas.</param>
+/// <param name="DoCatalogo">O nome como o catálogo o guarda.</param>
+/// <param name="Esperada">A correspondência esperada, na origem e no destino.</param>
+public sealed record NomeComparado(string Escrito, bool EntreAspas, string DoCatalogo, CorrespondenciaNome Esperada);

@@ -28,8 +28,15 @@ public enum Defeito
     NomeNaCaixaErrada,
     CitacaoSemEscape,
     CitacaoErradaNoDestino,
+    DobraComToLowerInvariant,
+    IgnoraAspas,
+    SemLimite,
+    LimiteEmCaracteres,
     EsquemaDoIncognitoLido,
     IncognitoForaDoEsquema,
+    EscondeEsquemaReservado,
+    NaoInformaEsquemaReservado,
+    ReservadoComOutroEsquema,
     TabelasForaDeOrdem,
     LeituraInstavel,
     IdentidadeInstavel,
@@ -341,6 +348,14 @@ internal static class BancoFalso
         return tabelas;
     }
 
+    // Os objetos do esquema do diário (a tabela e a sequence dele), em ordem ordinal de nome.
+    internal static NomeObjeto[] Reservado(bool completo) =>
+    [
+        .. Tabelas(completo).Select(tabela => tabela.Nome).Concat(Sequences(completo).Select(sequence => sequence.Nome))
+            .Where(nome => nome.Esquema == "incognito")
+            .OrderBy(nome => nome.Nome, StringComparer.Ordinal),
+    ];
+
     internal static List<SequenceEsquema> Sequences(bool completo)
     {
         var sequences = new List<SequenceEsquema>
@@ -509,6 +524,7 @@ internal static class BancoFalso
         // Um caso sem declaração: o 'required' não impede null!.
         NomesExatos = defeito == Defeito.CasoSemDeclaracao ? null! : [Nome("Cliente"), Nome("cliente"), Nome("select"), Nome("nota fiscal")],
         Citacoes = [new("Cliente", "\"Cliente\""), new("a\"b", "\"a\"\"b\"")],
+        ComparacoesDeNome = ComparacoesDeNome(),
         ObjetoDoIncognito = defeito == Defeito.IncognitoForaDoEsquema ? Nome("execucao") : new NomeObjeto("incognito", "execucao"),
         Acesso = completo
             ? Caso.Presente(new AcessoEsperado(Lado(destino: false, defeito), Lado(destino: true)))
@@ -517,6 +533,22 @@ internal static class BancoFalso
             ? Caso.Presente(TransporteEsperado.De(Transporte())!)
             : Caso.Inexistente<TransporteEsperado>("banco falso sem transporte"),
     };
+
+    // Como num PostgreSQL UTF-8: sem aspas, só A-Z dobra; entre aspas, nada; mais de 63 bytes não corresponde.
+    internal static IReadOnlyList<NomeComparado> ComparacoesDeNome() =>
+    [
+        new("Cliente", false, "cliente", CorrespondenciaNome.Corresponde),
+        new("Cliente", false, "Cliente", CorrespondenciaNome.NaoCorresponde),
+        new("Cliente", true, "Cliente", CorrespondenciaNome.Corresponde),
+        new("Cliente", true, "cliente", CorrespondenciaNome.NaoCorresponde),
+        new("AÇÃO", false, "aÇÃo", CorrespondenciaNome.Corresponde),
+        new("AÇÃO", false, "ação", CorrespondenciaNome.NaoCorresponde),
+        new(new string('a', 63), true, new string('a', 63), CorrespondenciaNome.Corresponde),
+        new(new string('a', 64), true, new string('a', 64), CorrespondenciaNome.NaoCorresponde),
+        new(new string('a', 64), false, new string('a', 64), CorrespondenciaNome.NaoCorresponde),
+        new(new string('ç', 31) + "a", true, new string('ç', 31) + "a", CorrespondenciaNome.Corresponde),
+        new(new string('ç', 32), true, new string('ç', 32), CorrespondenciaNome.NaoCorresponde),
+    ];
 
     // Os valores da matriz que o banco sem recursos não tem; com a matriz descoberta, falta um motivo.
     private static Dictionary<Enum, string> Ausentes(Defeito defeito)
@@ -602,7 +634,8 @@ internal static class BancoFalso
         [
             .. Residuais(completo).Select(residual =>
                 new ResidualInventariado(residual.Nome, residual.Tipo, residual.DependenciasIncompletas, residual.Populada) { DependeDe = residual.DependeDe }),
-        ]);
+        ],
+        Reservado(completo));
 
     private static ColunaInventariada Projetar(ColunaEsquema coluna) => new()
     {
@@ -710,7 +743,7 @@ internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool compl
     public override IdentidadeBanco Identidade { get; } =
         new IdentidadeFalsa(banco, completo, defeito, vaza: defeito == Defeito.SentinelaNaIdentidadeDaOrigem && !privilegiado, origem: true);
 
-    public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape);
+    public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape, defeito);
 }
 
 // O destino da suíte tem o mesmo esquema da origem, lido pelo dono.
@@ -720,7 +753,7 @@ internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, bool comp
 
     public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, completo, defeito, vaza: false, origem: false);
 
-    public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape or Defeito.CitacaoErradaNoDestino);
+    public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape or Defeito.CitacaoErradaNoDestino, defeito);
 
     // Só no par comum: o primeiro sentinela, em hexadecimal minúsculo, no texto do destino.
     public override string ToString() => defeito == Defeito.SentinelaNoTextoDoDestino && !privilegiado
@@ -759,7 +792,21 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
             tabelas.Reverse();
         }
 
-        var esquema = new EsquemaBanco { Tabelas = tabelas, Sequences = sequences, ObjetosResiduais = residuais, Propriedades = propriedades, Acesso = Acesso(comRecursos, tabelas, residuais, sequences) };
+        var esquema = new EsquemaBanco
+        {
+            Tabelas = tabelas,
+            Sequences = sequences,
+            ObjetosResiduais = residuais,
+            ObjetosNoEsquemaReservado = defeito switch
+            {
+                Defeito.EscondeEsquemaReservado => [],
+                Defeito.NaoInformaEsquemaReservado => null,
+                Defeito.ReservadoComOutroEsquema => [.. BancoFalso.Reservado(comRecursos), BancoFalso.Nome("intrusa")],
+                _ => BancoFalso.Reservado(comRecursos),
+            },
+            Propriedades = propriedades,
+            Acesso = Acesso(comRecursos, tabelas, residuais, sequences),
+        };
         return Task.FromResult(perturbar is null ? esquema : perturbar(esquema, destino));
     }
 
@@ -1136,10 +1183,27 @@ internal sealed class IdentidadeFalsa(string banco, bool completo, Defeito defei
     }
 }
 
-internal sealed class SqlFalso(bool semEscape) : DialetoSql
+internal sealed class SqlFalso(bool semEscape, Defeito defeito = Defeito.Nenhum) : DialetoSql
 {
     public override string Citar(string identificador) =>
         "\"" + (semEscape ? identificador : identificador.Replace("\"", "\"\"", StringComparison.Ordinal)) + "\"";
+
+    // Como num PostgreSQL UTF-8, com os defeitos de quem dobra demais ou esquece as aspas.
+    public override CorrespondenciaNome CompararNome(string escrito, bool entreAspas, string doCatalogo)
+    {
+        var tamanho = defeito == Defeito.LimiteEmCaracteres ? escrito.Length : System.Text.Encoding.UTF8.GetByteCount(escrito);
+        if (defeito != Defeito.SemLimite && tamanho > 63)
+        {
+            return CorrespondenciaNome.NaoCorresponde;
+        }
+
+        var nome = entreAspas && defeito != Defeito.IgnoraAspas
+            ? escrito
+            : defeito == Defeito.DobraComToLowerInvariant
+                ? escrito.ToLowerInvariant()
+                : string.Concat(escrito.Select(caractere => char.IsAsciiLetterUpper(caractere) ? char.ToLowerInvariant(caractere) : caractere));
+        return nome == doCatalogo ? CorrespondenciaNome.Corresponde : CorrespondenciaNome.NaoCorresponde;
+    }
 }
 
 /// <summary>A fixture do dialeto falso: um par de bancos em memória por teste, com o mesmo esquema nos dois lados.</summary>

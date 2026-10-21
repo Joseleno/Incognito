@@ -283,9 +283,9 @@ internal sealed partial class ValidadorConfiguracao
         return dominios;
     }
 
-    private List<RegraTabela> Tabelas(MapaYaml raiz)
+    private List<RegraTabelaEscrita> Tabelas(MapaYaml raiz)
     {
-        var tabelas = new List<RegraTabela>();
+        var tabelas = new List<RegraTabelaEscrita>();
         if (Obter(raiz, "tabelas") is not { } no || Mapa(no, "tabelas") is not { } mapa)
         {
             return tabelas;
@@ -299,8 +299,9 @@ internal sealed partial class ValidadorConfiguracao
             }
 
             ConferirChaves(definicao, _chavesDaTabela);
-            var acao = Enumeracao(Obter(definicao, "acao"), definicao, "acao", _acoesDeTabela, obrigatorio: false) ?? AcaoTabela.Copiar;
-            var colunas = new List<RegraColuna>();
+            var acaoEscrita = Enumeracao(Obter(definicao, "acao"), definicao, "acao", _acoesDeTabela, obrigatorio: false);
+            var acao = acaoEscrita ?? AcaoTabela.Copiar;
+            var colunas = new List<RegraColunaEscrita>();
             if (Obter(definicao, "colunas") is { } noColunas)
             {
                 if (acao != AcaoTabela.Copiar)
@@ -313,15 +314,15 @@ internal sealed partial class ValidadorConfiguracao
                 }
             }
 
-            tabelas.Add(new RegraTabela(nome, acao, colunas, chave.Posicao));
+            tabelas.Add(new RegraTabelaEscrita(nome, acao, acaoEscrita.HasValue, colunas, chave.Posicao, valor.Local));
         }
 
         return tabelas;
     }
 
-    private List<RegraColuna> Colunas(MapaYaml mapa)
+    private List<RegraColunaEscrita> Colunas(MapaYaml mapa)
     {
-        var colunas = new List<RegraColuna>();
+        var colunas = new List<RegraColunaEscrita>();
         var locais = new Dictionary<Identificador, string>();
         foreach (var (chave, valor) in mapa.Entradas)
         {
@@ -342,7 +343,7 @@ internal sealed partial class ValidadorConfiguracao
         return colunas;
     }
 
-    private RegraColuna? Coluna(EscalarYaml chave, NoYaml valor)
+    private RegraColunaEscrita? Coluna(EscalarYaml chave, NoYaml valor)
     {
         var vazia = new Identificador("", EntreAspas: false);
         switch (valor)
@@ -350,7 +351,7 @@ internal sealed partial class ValidadorConfiguracao
             case EscalarYaml texto when Texto(texto, "coluna") is { } nome:
                 if (nome == Manter)
                 {
-                    return new RegraColuna(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao, valor.Local);
+                    return new RegraColunaEscrita(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao, valor.Local);
                 }
 
                 if (!NomeValido(nome))
@@ -360,7 +361,7 @@ internal sealed partial class ValidadorConfiguracao
                 }
 
                 _dominiosCitados.Add((nome, texto.Posicao, texto.Local));
-                return new RegraColuna(vazia, TipoRegraColuna.Dominio, nome, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao, valor.Local);
+                return new RegraColunaEscrita(vazia, TipoRegraColuna.Dominio, nome, null, null, [], PoliticasDeEntrada.Nenhuma, Sensivel: false, null, OrigemRegra.Configuracao, chave.Posicao, valor.Local);
             case EscalarYaml { Tipo: TipoEscalar.Nulo } semRegra:
                 _erros.Adicionar(CodigosConfiguracao.Obrigatorio, semRegra.Posicao, semRegra.Local, "Regra de coluna vazia: use 'manter', o nome de um domínio ou um mapa.");
                 return null;
@@ -374,7 +375,7 @@ internal sealed partial class ValidadorConfiguracao
         }
     }
 
-    private RegraColuna? ColunaComMapa(EscalarYaml chave, MapaYaml mapa, Identificador vazia)
+    private RegraColunaEscrita? ColunaComMapa(EscalarYaml chave, MapaYaml mapa, Identificador vazia)
     {
         var sensivel = Enumeracao(Obter(mapa, "classe"), mapa, "classe", _classes, obrigatorio: false) ?? false;
         var justificativa = Justificativa(mapa);
@@ -400,7 +401,7 @@ internal sealed partial class ValidadorConfiguracao
                 _erros.Adicionar(CodigosConfiguracao.Justificativa, mapa.Posicao, mapa.Local, "Coluna 'classe: sensivel' mantida sem 'justificativa': escreva por que o dado sensível pode ir em claro.");
             }
 
-            return new RegraColuna(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
+            return new RegraColunaEscrita(vazia, TipoRegraColuna.Manter, null, null, null, [], PoliticasDeEntrada.Nenhuma, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 
         var noTransformador = Obter(mapa, "transformador");
@@ -440,7 +441,7 @@ internal sealed partial class ValidadorConfiguracao
                 return null;
             }
 
-            return new RegraColuna(vazia, TipoRegraColuna.Transformador, dominio, transformador, derivarDe, Parametros(mapa), politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
+            return new RegraColunaEscrita(vazia, TipoRegraColuna.Transformador, dominio, transformador, derivarDe, Parametros(mapa), politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 
         if (noDominio is not null)
@@ -455,7 +456,7 @@ internal sealed partial class ValidadorConfiguracao
                 _dominiosCitados.Add((dominio, noDominio.Posicao, noDominio.Local));
             }
 
-            return dominio is null ? null : new RegraColuna(vazia, TipoRegraColuna.Dominio, dominio, null, derivarDe, [], politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
+            return dominio is null ? null : new RegraColunaEscrita(vazia, TipoRegraColuna.Dominio, dominio, null, derivarDe, [], politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 
         _erros.Adicionar(CodigosConfiguracao.Obrigatorio, mapa.Posicao, mapa.Local, "A regra da coluna precisa de 'transformador', 'dominio' ou 'acao: manter'.");
@@ -604,7 +605,7 @@ internal sealed partial class ValidadorConfiguracao
                 return null;
             }
 
-            return new ReferenciaSegredo(TipoReferenciaSegredo.Ambiente, nome, no.Posicao);
+            return new ReferenciaSegredo(TipoReferenciaSegredo.Ambiente, nome, nome, no.Posicao);
         }
 
         if (texto.StartsWith("arquivo:", StringComparison.Ordinal))
@@ -674,7 +675,7 @@ internal sealed partial class ValidadorConfiguracao
             return null;
         }
 
-        return new ReferenciaSegredo(TipoReferenciaSegredo.Arquivo, completo!, no.Posicao);
+        return new ReferenciaSegredo(TipoReferenciaSegredo.Arquivo, completo!, caminho.Replace('\\', '/'), no.Posicao);
     }
 
     // Windows: letra de unidade e barra invertida (nunca \\servidor, \\?\ nem \??\). Outros: começa por uma barra só.
@@ -766,9 +767,9 @@ internal sealed partial class ValidadorConfiguracao
 
     // derivarDe entre colunas da mesma tabela: autorreferência ou ciclo é erro. A existência da coluna referida é do
     // planejar (ela pode não ter regra no arquivo).
-    private void ConferirCiclos(List<RegraColuna> colunas, Dictionary<Identificador, string> locais)
+    private void ConferirCiclos(List<RegraColunaEscrita> colunas, Dictionary<Identificador, string> locais)
     {
-        var porNome = new Dictionary<Identificador, RegraColuna>();
+        var porNome = new Dictionary<Identificador, RegraColunaEscrita>();
         foreach (var coluna in colunas)
         {
             porNome.TryAdd(coluna.Coluna, coluna);
@@ -810,7 +811,7 @@ internal sealed partial class ValidadorConfiguracao
         }
     }
 
-    private NomeTabela? NomeDeTabela(EscalarYaml chave)
+    private NomeTabelaEscrito? NomeDeTabela(EscalarYaml chave)
     {
         var partes = Identificadores.Partes(chave.Valor);
         if (partes is not { Count: 2 })
@@ -819,7 +820,7 @@ internal sealed partial class ValidadorConfiguracao
             return null;
         }
 
-        return new NomeTabela(partes[0], partes[1]);
+        return new NomeTabelaEscrito(partes[0], partes[1]);
     }
 
     // Nome de coluna (a chave do mapa, cujo local é o do mapa) ou o valor de derivarDe; o local nunca traz o nome errado.

@@ -155,6 +155,30 @@ internal sealed class DialetoProtegido : IAsyncDisposable
     /// <exception cref="FalhaDialetoException">O dialeto falhou.</exception>
     internal string Citar(NomeObjeto nome) => Citar(sql => sql.Citar(nome));
 
+    /// <summary>Se um nome escrito designa um nome do catálogo, pela regra do banco desta conexão.</summary>
+    /// <param name="escrito">O nome como foi escrito, sem as aspas.</param>
+    /// <param name="entreAspas">Se foi escrito entre aspas.</param>
+    /// <param name="doCatalogo">O nome como o catálogo o guarda.</param>
+    /// <returns>A correspondência; um valor fora do enum vira falha do dialeto, nunca um palpite.</returns>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou ou devolveu um valor desconhecido.</exception>
+    internal CorrespondenciaNome CompararNome(string escrito, bool entreAspas, string doCatalogo)
+    {
+        const string Operacao = "comparar um nome";
+        CorrespondenciaNome correspondencia;
+        try
+        {
+            correspondencia = _banco.Sql.CompararNome(escrito, entreAspas, doCatalogo);
+        }
+        catch (Exception excecao)
+        {
+            throw Traduzir(excecao, _provedor, Operacao, _lado, aceitaRecusa: false, CancellationToken.None);
+        }
+
+        return Enum.IsDefined(correspondencia)
+            ? correspondencia
+            : throw new FalhaDialetoException(CodigosPlanejar.FalhaDoDialeto, $"O dialeto de {_provedor} devolveu um resultado desconhecido ao {Operacao}{NoLado(_lado)}.");
+    }
+
     /// <summary>
     /// Fecha a conexão: só a primeira chamada descarta. Qualquer falha, inclusive uma recusa ou uma
     /// <see cref="IncognitoException"/> do dialeto, sai como falha do dialeto só com o tipo; quem chama decide se ela toma

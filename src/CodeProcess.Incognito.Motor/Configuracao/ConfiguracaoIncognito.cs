@@ -34,7 +34,7 @@ public sealed class ConfiguracaoIncognito
         string ambiente,
         PoliticasGerais politicas,
         IReadOnlyList<RegraDominio> dominios,
-        IReadOnlyList<RegraTabela> tabelas)
+        IReadOnlyList<RegraTabelaEscrita> tabelas)
     {
         Arquivo = arquivo;
         Origem = origem;
@@ -63,7 +63,7 @@ public sealed class ConfiguracaoIncognito
 
     internal IReadOnlyList<RegraDominio> Dominios { get; }
 
-    internal IReadOnlyList<RegraTabela> Tabelas { get; }
+    internal IReadOnlyList<RegraTabelaEscrita> Tabelas { get; }
 
     /// <summary>
     /// Lê e valida o arquivo. Um <c>arquivo:</c> relativo vale a partir da pasta dele. O arquivo precisa estar em UTF-8

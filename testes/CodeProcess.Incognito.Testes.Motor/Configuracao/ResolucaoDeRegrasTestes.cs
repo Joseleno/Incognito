@@ -201,6 +201,22 @@ public sealed class ResolucaoDeRegrasTestes
     }
 
     [Fact]
+    public void Parametro_normalizado_nulo_ou_com_texto_invalido_e_recusado_sem_excecao_crua()
+    {
+        // Vai ao hash e à carga: um valor nulo ou um surrogate sem par viraria exceção fora de qualquer tradução.
+        foreach (var valor in new string?[] { null, "a\uD800b", "a\u001Bb" })
+        {
+            var registro = new RegistroTransformadores();
+            registro.Adicionar(new FabricaQueNormalizaMal(valor));
+
+            var erro = Unico(Colunas("      a: { transformador: exemplo.normaliza-mal@1 }\n"), registro);
+
+            Assert.Equal("INC2022", erro.Codigo);
+            Assert.Contains("parâmetro normalizado nulo ou com caractere inválido", erro.Mensagem, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Fabrica_que_nao_normaliza_ou_falha_na_regra_padrao_e_recusada_sem_a_mensagem()
     {
         var registro = new RegistroTransformadores();
@@ -480,6 +496,21 @@ public sealed class ResolucaoDeRegrasTestes
         public override IReadOnlySet<TipoColuna> TiposSuportados { get; } = new HashSet<TipoColuna> { TipoColuna.Texto };
 
         public override void Validar(RegraTransformacao regra) => throw new FormatException($"The input string '{Sentinela}' was not in a correct format.");
+
+        protected override Transformador CriarCore(ContextoCriacao contexto) => throw new NotSupportedException();
+    }
+
+    private sealed class FabricaQueNormalizaMal(string? valor) : FabricaTransformador
+    {
+        public override string Nome => "exemplo.normaliza-mal";
+
+        public override int Versao => 1;
+
+        public override Injetividade Injetividade => Injetividade.Nenhuma;
+
+        public override IReadOnlySet<TipoColuna> TiposSuportados { get; } = new HashSet<TipoColuna> { TipoColuna.Texto };
+
+        public override IReadOnlyDictionary<string, string> Normalizar(RegraTransformacao regra) => new Dictionary<string, string> { ["estilo"] = valor! };
 
         protected override Transformador CriarCore(ContextoCriacao contexto) => throw new NotSupportedException();
     }

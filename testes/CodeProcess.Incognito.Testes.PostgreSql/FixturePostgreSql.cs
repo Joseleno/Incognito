@@ -134,6 +134,21 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             Mascara = Caso.Inexistente<ReferenciaColuna>("o PostgreSQL não tem máscara dinâmica"),
             NomesExatos = [Nome("Cliente"), Nome("cliente"), Nome("select"), Nome("nota fiscal")],
             Citacoes = [new("Cliente", "\"Cliente\""), new("a\"b", "\"a\"\"b\""), new("nota fiscal", "\"nota fiscal\"")],
+
+            // Banco UTF-8: sem aspas, só A-Z dobra; o limite do name é de 63 bytes (ç ocupa 2).
+            ComparacoesDeNome =
+            [
+                new("Cliente", false, "cliente", CorrespondenciaNome.Corresponde),
+                new("Cliente", false, "Cliente", CorrespondenciaNome.NaoCorresponde),
+                new("Cliente", true, "Cliente", CorrespondenciaNome.Corresponde),
+                new("Cliente", true, "cliente", CorrespondenciaNome.NaoCorresponde),
+                new("Ação", false, "ação", CorrespondenciaNome.Corresponde),
+                new("AÇÃO", false, "aÇÃo", CorrespondenciaNome.Corresponde),
+                new("AÇÃO", false, "ação", CorrespondenciaNome.NaoCorresponde),
+                new(new string('ç', 31) + "a", true, new string('ç', 31) + "a", CorrespondenciaNome.Corresponde),
+                new(new string('ç', 32), true, new string('ç', 32), CorrespondenciaNome.NaoCorresponde),
+                new(new string('a', 64), false, new string('a', 64), CorrespondenciaNome.NaoCorresponde),
+            ],
             ObjetoDoIncognito = new NomeObjeto("incognito", "execucao"),
             Acesso = Caso.Presente(new AcessoEsperado(AcessoDoLeitor(), AcessoDoDono(versao))),
 
@@ -581,7 +596,15 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             Visao("mv_ciclo_b", incompletas: true),
             new(new NomeObjeto("pg_catalog", "pg_largeobject"), TipoObjetoResidual.ObjetosGrandes),
         ];
-        return new(tabelas, sequences, residuais);
+
+        // O esquema do diário: a tabela e o índice da chave dela, a particionada e o índice dela, a foreign table, a
+        // materialized view, a sequence e a view.
+        NomeObjeto[] reservado =
+        [
+            new("incognito", "execucao"), new("incognito", "execucao_pkey"), new("incognito", "lotes"), new("incognito", "lotes_id"),
+            new("incognito", "remota"), new("incognito", "resumo"), new("incognito", "seq_interna"), new("incognito", "vista"),
+        ];
+        return new(tabelas, sequences, residuais, reservado);
     }
 
     // As tabelas dos objetos da tabela: índices únicos, CHECKs, exclusões, triggers e o estado das chaves estrangeiras.
