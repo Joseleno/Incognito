@@ -192,6 +192,41 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_conexao_inaceitavel_e_recusada_pelo_tipo_da_recusa()
+    {
+        // A recusa diz pelo tipo que a configuração é inaceitável (saída 2): uma IncognitoException comum sairia como falha
+        // de execução, e uma exceção do driver, só com o tipo. O código fica na faixa dos dialetos, sem o que estava na string
+        // (a interna nunca vem: o tipo não tem construtor com ela).
+        var sentinela = "Recusa" + Guid.NewGuid().ToString("N")[..12] + "Q";
+        var cancelamento = TestContext.Current.CancellationToken;
+        foreach (var destino in new[] { false, true })
+        {
+            var lado = destino ? "destino" : "origem";
+            Exception? erro = null;
+            try
+            {
+                DialetoBanco banco = destino
+                    ? await fixture.Provedor.ConectarDestinoAsync(fixture.ConexaoRecusada(sentinela), cancelamento)
+                    : await fixture.Provedor.ConectarOrigemAsync(fixture.ConexaoRecusada(sentinela), cancelamento);
+                await banco.DisposeAsync();
+            }
+            catch (Exception excecao)
+            {
+                erro = excecao;
+            }
+
+            var recusa = erro as DialetoRecusouException;
+            Assert.True(recusa is not null, $"Recusa: a {lado} {(erro is null ? "conectou" : $"lançou {erro.GetType().Name}")}, e não DialetoRecusouException.");
+            var codigo = recusa.Codigo;
+            Assert.True(
+                codigo is { Length: 7 } && codigo.StartsWith("INC3", StringComparison.Ordinal) && codigo[4] is >= '1' and <= '4' && char.IsAsciiDigit(codigo[5]) && char.IsAsciiDigit(codigo[6]),
+                $"Recusa: a {lado} recusou com um código fora da faixa dos dialetos (INC31xx a INC34xx).");
+            Assert.False(recusa.ToString().Contains(sentinela, StringComparison.OrdinalIgnoreCase), $"Recusa: a recusa da {lado} traz o que estava na string de conexão.");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_particionada_e_as_particoes_apontam_o_pai() =>
         ConferirHierarquia(await LerOrigemAsync(), Esperado.Particao, [TipoTabela.Particionada], TipoTabela.Particao, "Partição");
 

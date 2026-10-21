@@ -19,20 +19,20 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
 
     [Theory]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
-    [InlineData("Host=a,b;Database=loja;Username=u;Password=" + Senha)]
-    [InlineData("Host=a;Database=loja;Load Balance Hosts=true;Username=u;Password=" + Senha)]
-    [InlineData("Database=loja;Username=u;Password=" + Senha)]
-    [InlineData("Host=a;Username=u;Password=" + Senha)]
-    [InlineData("Host=a;Database=loja;Server Compatibility Mode=NoTypeLoading;Password=" + Senha)]
-    [InlineData("Host=a;Database=loja;Load Table Composites=true;Password=" + Senha)]
-    [InlineData("Host=a;Database=loja;Require Auth=Password;Password=" + Senha)]
-    [InlineData("Host=a;Database=loja;Require Auth=!MD5;Password=" + Senha)]
+    [InlineData("Host=a,b;Database=" + Senha + ";Username=" + Senha + ";Password=" + Senha)]
+    [InlineData("Host=a;Database=" + Senha + ";Load Balance Hosts=true;Username=" + Senha + ";Password=" + Senha)]
+    [InlineData("Database=" + Senha + ";Username=" + Senha + ";Password=" + Senha)]
+    [InlineData("Host=a;Username=" + Senha + ";Password=" + Senha)]
+    [InlineData("Host=a;Database=" + Senha + ";Server Compatibility Mode=NoTypeLoading;Password=" + Senha)]
+    [InlineData("Host=a;Database=" + Senha + ";Load Table Composites=true;Password=" + Senha)]
+    [InlineData("Host=a;Database=" + Senha + ";Require Auth=Password;Password=" + Senha)]
+    [InlineData("Host=a;Database=" + Senha + ";Require Auth=!MD5;Password=" + Senha)]
     public async Task String_com_varios_servidores_sem_servidor_sem_banco_opcao_obsoleta_ou_senha_em_claro_e_recusada(string conexao)
     {
-        var erro = await Assert.ThrowsAsync<IncognitoException>(() => _provedor.ConectarOrigemAsync(ComSentinela(conexao), TestContext.Current.CancellationToken));
+        var erro = await Assert.ThrowsAsync<DialetoRecusouException>(() => _provedor.ConectarOrigemAsync(ComSentinela(conexao), TestContext.Current.CancellationToken));
 
         Assert.Equal("INC3102", erro.Codigo);
-        Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -43,11 +43,11 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
     [InlineData("Host=localhost;Database=loja;SSL Negotiation=Direct;SSL Mode=Prefer;Password=" + Senha)]
     public async Task String_malformada_e_recusada_sem_trazer_nenhum_pedaco_dela(string conexao)
     {
-        var erro = await Assert.ThrowsAsync<IncognitoException>(() => _provedor.ConectarDestinoAsync(ComSentinela(conexao), TestContext.Current.CancellationToken));
+        var erro = await Assert.ThrowsAsync<DialetoRecusouException>(() => _provedor.ConectarDestinoAsync(ComSentinela(conexao), TestContext.Current.CancellationToken));
 
         Assert.Equal("INC3101", erro.Codigo);
         Assert.Null(erro.InnerException);
-        Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
             var erro = await Assert.ThrowsAsync<PostgresException>(() => _provedor.ConectarDestinoAsync(new SegredoConexao(conexao), cancelamento));
 
             Assert.Equal(PostgresErrorCodes.InvalidPassword, erro.SqlState);
-            Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.Ordinal);
+            Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -205,11 +205,11 @@ public sealed class ConexaoPostgreSqlTestes(ServidorPostgreSql servidor)
         await using var antigo = ServidorPostgreSql.Conteiner(14, senha);
         await antigo.StartAsync(cancelamento);
 
-        var erro = await Assert.ThrowsAsync<IncognitoException>(() => _provedor.ConectarOrigemAsync(new SegredoConexao(antigo.GetConnectionString()), cancelamento));
+        var erro = await Assert.ThrowsAsync<DialetoRecusouException>(() => _provedor.ConectarOrigemAsync(new SegredoConexao(antigo.GetConnectionString()), cancelamento));
 
         Assert.Equal("INC3103", erro.Codigo);
         Assert.Contains("versão 14", erro.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static SegredoConexao ComSentinela(string conexao) => new(conexao.Replace(Senha, ServidorPostgreSql.NovaSenha(), StringComparison.Ordinal));

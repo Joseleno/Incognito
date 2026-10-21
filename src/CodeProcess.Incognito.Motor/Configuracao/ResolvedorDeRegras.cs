@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using CodeProcess.Incognito.Configuracao.Leitura;
+using CodeProcess.Incognito.Interno;
 using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Configuracao;
@@ -277,16 +279,17 @@ internal sealed class ResolvedorDeRegras
     }
 
     // A fábrica confere a regra; a recusa aponta o parâmetro, quando há. Erro inesperado de uma fábrica de fora vira
-    // recusa com o tipo da exceção; o de uma embutida é defeito e sobe.
-    private IReadOnlyDictionary<string, string>? Conferir(
+    // recusa com o tipo da exceção (o cancelamento inclusive); o de uma embutida é defeito e sobe.
+    private Dictionary<string, string>? Conferir(
         FabricaRegistrada fabrica, RegraTransformacao regra, IReadOnlyList<ParametroRegra> parametros, Posicao posicao, string local)
     {
         try
         {
             fabrica.Fabrica.Validar(regra);
+            // Copiado aqui dentro: o dicionário de uma fábrica de fora é código dela, e lido depois rodaria fora do try.
             if (fabrica.Fabrica.Normalizar(regra) is { } normalizados)
             {
-                return normalizados;
+                return new Dictionary<string, string>(normalizados, StringComparer.Ordinal);
             }
 
             _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} não devolveu os parâmetros normalizados.");
@@ -295,12 +298,16 @@ internal sealed class ResolvedorDeRegras
         catch (RegraInvalidaException excecao)
         {
             var parametro = parametros.FirstOrDefault(p => p.Nome == excecao.Parametro);
-            _erros.Adicionar(CodigosConfiguracao.RegraRecusada, parametro?.Posicao ?? posicao, parametro?.Local ?? local, excecao.Message);
+            _erros.Adicionar(CodigosConfiguracao.RegraRecusada, parametro?.Posicao ?? posicao, parametro?.Local ?? local, TextoSeguro.Mensagem(excecao.Message));
             return null;
+        }
+        catch (OutOfMemoryException) when (DeFora(fabrica))
+        {
+            throw SemMensagem();
         }
         catch (Exception excecao) when (Inesperado(fabrica, excecao))
         {
-            _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} recusou a regra com um erro inesperado ({excecao.GetType().Name}).");
+            _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} recusou a regra com um erro inesperado ({TextoSeguro.Nome(excecao.GetType().Name)}).");
             return null;
         }
     }
@@ -375,18 +382,27 @@ internal sealed class ResolvedorDeRegras
             padrao = null;
             return true;
         }
+        catch (OutOfMemoryException) when (DeFora(fabrica))
+        {
+            throw SemMensagem();
+        }
         catch (Exception excecao) when (Inesperado(fabrica, excecao))
         {
-            _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} recusou a regra padrão com um erro inesperado ({excecao.GetType().Name}).");
+            _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} recusou a regra padrão com um erro inesperado ({TextoSeguro.Nome(excecao.GetType().Name)}).");
             padrao = null;
             return false;
         }
     }
 
-    // Erro de uma fábrica de fora vira recusa da regra; o de uma embutida é defeito e sobe, e o cancelamento e a falta de
-    // memória nunca viram erro de configuração.
-    private static bool Inesperado(FabricaRegistrada fabrica, Exception excecao) =>
-        !TransformadoresEmbutidos.Fabricas.Contains(fabrica.Fabrica) && excecao is not (OperationCanceledException or OutOfMemoryException);
+    // Erro de uma fábrica de fora vira recusa da regra, só com o tipo; o de uma embutida é defeito e sobe. A resolução roda
+    // sem token, e um cancelamento vindo de fora não é do chamador: vira recusa também, para não sair como cancelado (130).
+    // A falta de memória nunca vira erro de configuração: sobe nova, sem a mensagem nem a interna de fora.
+    private static bool Inesperado(FabricaRegistrada fabrica, Exception excecao) => DeFora(fabrica) && excecao is not OutOfMemoryException;
+
+    private static bool DeFora(FabricaRegistrada fabrica) => !TransformadoresEmbutidos.Fabricas.Contains(fabrica.Fabrica);
+
+    [SuppressMessage("Usage", "CA2201:Do not raise reserved exception types", Justification = "Relança a falta de memória de uma fábrica de fora sem a mensagem nem a interna dela.")]
+    private static OutOfMemoryException SemMensagem() => new();
 
     private static bool MesmaIdentidade(SortedDictionary<string, string> uma, SortedDictionary<string, string>? outra) =>
         outra is null ? uma.Count == 0 : uma.SequenceEqual(outra);

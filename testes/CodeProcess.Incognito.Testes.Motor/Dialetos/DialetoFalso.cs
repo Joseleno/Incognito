@@ -139,6 +139,12 @@ public enum Defeito
     PermissaoDeTabelaRepetida,
     SegurancaDeLinhaVazia,
 
+    // A recusa da conexão inaceitável: com o tipo comum, com o que estava na string, fora da faixa, ou não recusa.
+    RecusaComoExcecaoComum,
+    RecusaComAString,
+    RecusaForaDaFaixa,
+    ConexaoInaceitavelAceita,
+
     // A classe concreta da suíte aninhada em outra, ou aberta.
     SuiteAninhada,
     SuiteAberta,
@@ -665,13 +671,35 @@ internal static class BancoFalso
 // A perturbação recebe o esquema lido e se é o destino.
 internal sealed class ProvedorFalso(bool completo, Defeito defeito, Func<EsquemaBanco, bool, EsquemaBanco>? perturbar, bool privilegiado = false) : ProvedorDialeto
 {
+    /// <summary>O começo da string de conexão que o falso recusa.</summary>
+    internal const string Inaceitavel = "inaceitavel;";
+
     public override string Nome => "falso";
 
     public override Task<DialetoOrigem> ConectarOrigemAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: false, privilegiado), completo, defeito, privilegiado));
+        Recusar<DialetoOrigem>(conexao) ?? Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: false, privilegiado), completo, defeito, privilegiado));
 
     public override Task<DialetoDestino> ConectarDestinoAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: true, privilegiado), completo, defeito, privilegiado));
+        Recusar<DialetoDestino>(conexao) ?? Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: true, privilegiado), completo, defeito, privilegiado));
+
+    // A string inaceitável é recusada pelo tipo do contrato, com os defeitos da recusa.
+    private Task<T>? Recusar<T>(SegredoConexao conexao)
+    {
+        var texto = conexao.Revelar();
+        if (!texto.StartsWith(Inaceitavel, StringComparison.Ordinal) || defeito == Defeito.ConexaoInaceitavelAceita)
+        {
+            return null;
+        }
+
+        Exception recusa = defeito switch
+        {
+            Defeito.RecusaComoExcecaoComum => new IncognitoException("INC3399", "A conexão do falso foi recusada."),
+            Defeito.RecusaComAString => new DialetoRecusouException("INC3399", "A conexão do falso foi recusada: " + texto),
+            Defeito.RecusaForaDaFaixa => new DialetoRecusouException("INC2001", "A conexão do falso foi recusada."),
+            _ => new DialetoRecusouException("INC3399", "A conexão do falso foi recusada."),
+        };
+        return Task.FromException<T>(recusa);
+    }
 }
 
 internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoOrigem
@@ -1125,6 +1153,10 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
     public override ValueTask<ParDeBancos> CriarParAsync(CancellationToken cancelamento) => CriarAsync(_provedor, cancelamento);
 
     public override ValueTask<ParDeBancos> CriarParPrivilegiadoAsync(CancellationToken cancelamento) => CriarAsync(_privilegiado, cancelamento);
+
+    public override ProvedorDialeto Provedor => _provedor;
+
+    public override SegredoConexao ConexaoRecusada(string sentinela) => new(ProvedorFalso.Inaceitavel + "senha=" + sentinela);
 
     private static async ValueTask<ParDeBancos> CriarAsync(ProvedorFalso provedor, CancellationToken cancelamento)
     {

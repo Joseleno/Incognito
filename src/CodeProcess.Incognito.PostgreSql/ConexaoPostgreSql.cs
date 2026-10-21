@@ -60,7 +60,8 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     /// <param name="origem">Se é a origem (sessão só de leitura).</param>
     /// <param name="cancelamento">Cancela a conexão.</param>
     /// <returns>A conexão aberta, que o chamador descarta.</returns>
-    /// <exception cref="IncognitoException">String inválida ou recusada, versão não suportada, sessão divergente.</exception>
+    /// <exception cref="DialetoRecusouException">String inválida ou recusada, versão não suportada.</exception>
+    /// <exception cref="IncognitoException">Sessão divergente.</exception>
     internal static async Task<ConexaoPostgreSql> AbrirAsync(SegredoConexao segredo, bool origem, CancellationToken cancelamento)
     {
         ArgumentNullException.ThrowIfNull(segredo);
@@ -87,12 +88,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         }
         catch
         {
-            if (conexao is not null)
-            {
-                await conexao.DisposeAsync().ConfigureAwait(false);
-            }
-
-            await fonte.DisposeAsync().ConfigureAwait(false);
+            await Descarte.DepoisDaFalhaAsync(conexao, fonte).ConfigureAwait(false);
             throw;
         }
     }
@@ -185,36 +181,36 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         catch (Exception erro) when (erro is ArgumentException or FormatException or InvalidCastException or OverflowException or KeyNotFoundException)
         {
             // Sem a mensagem nem a exceção original: as duas podem trazer pedaços da string.
-            throw new IncognitoException(CodigosPostgreSql.StringInvalida, "A string de conexão do PostgreSQL não pôde ser lida.");
+            throw new DialetoRecusouException(CodigosPostgreSql.StringInvalida, "A string de conexão do PostgreSQL não pôde ser lida.");
         }
     }
 
-    private static IncognitoException OpcaoInutilizavel() => new(
+    private static DialetoRecusouException OpcaoInutilizavel() => new(
         CodigosPostgreSql.StringInvalida,
         "A string de conexão do PostgreSQL tem uma opção que não pôde ser usada (por exemplo, arquivo de senha, certificado, método de autenticação ou negociação de TLS).");
 
     /// <summary>Impõe por cima da string de conexão o que o Incognito exige.</summary>
     /// <param name="construtor">A string de conexão lida.</param>
     /// <param name="origem">Se é a origem (sessão só de leitura).</param>
-    /// <exception cref="IncognitoException">Opção recusada.</exception>
+    /// <exception cref="DialetoRecusouException">Opção recusada.</exception>
     internal static void Impor(NpgsqlConnectionStringBuilder construtor, bool origem)
     {
         if (string.IsNullOrWhiteSpace(construtor.Host) || string.IsNullOrWhiteSpace(construtor.Database))
         {
             // Sem servidor ou banco, o Npgsql cairia nas variáveis PG* do ambiente ou no nome do usuário.
-            throw new IncognitoException(CodigosPostgreSql.OpcaoRecusada, "A string de conexão do PostgreSQL precisa dizer o servidor (Host) e o banco (Database).");
+            throw new DialetoRecusouException(CodigosPostgreSql.OpcaoRecusada, "A string de conexão do PostgreSQL precisa dizer o servidor (Host) e o banco (Database).");
         }
 
         if (construtor.Host.Contains(',', StringComparison.Ordinal) || construtor.LoadBalanceHosts)
         {
             // O bloqueio, o marcador, a identidade e o snapshot precisam do mesmo servidor em todas as conexões.
-            throw new IncognitoException(CodigosPostgreSql.OpcaoRecusada, "A string de conexão do PostgreSQL tem mais de um servidor ou balanceamento entre servidores (Load Balance Hosts), que o Incognito não aceita.");
+            throw new DialetoRecusouException(CodigosPostgreSql.OpcaoRecusada, "A string de conexão do PostgreSQL tem mais de um servidor ou balanceamento entre servidores (Load Balance Hosts), que o Incognito não aceita.");
         }
 
         // Opções obsoletas, lidas pelo nome para não usar as propriedades marcadas como obsoletas.
         if (Preenchida(construtor, "Server Compatibility Mode", "None") || Preenchida(construtor, "Load Table Composites", "False"))
         {
-            throw new IncognitoException(CodigosPostgreSql.OpcaoRecusada, "A string de conexão do PostgreSQL usa Server Compatibility Mode ou Load Table Composites, que o Incognito não aceita.");
+            throw new DialetoRecusouException(CodigosPostgreSql.OpcaoRecusada, "A string de conexão do PostgreSQL usa Server Compatibility Mode ou Load Table Composites, que o Incognito não aceita.");
         }
 
         var comSenha = !string.IsNullOrEmpty(construtor.Password) || !string.IsNullOrEmpty(construtor.Passfile);
@@ -222,7 +218,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         {
             // Sem senha na string, o Npgsql usaria a do ambiente, que pode ser de outro banco (a da produção, numa string
             // de destino descuidada).
-            throw new IncognitoException(
+            throw new DialetoRecusouException(
                 CodigosPostgreSql.OpcaoRecusada,
                 "A string de conexão do PostgreSQL não tem senha, e PGPASSWORD ou PGPASSFILE estão definidas no ambiente: ponha a senha (ou o Passfile) na própria string.");
         }
@@ -281,7 +277,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         var aceitos = metodos.Where(metodo => !metodo.Equals("Password", StringComparison.OrdinalIgnoreCase)).ToArray();
         if (metodos.Any(metodo => metodo.StartsWith('!')) || aceitos.Length == 0)
         {
-            throw new IncognitoException(
+            throw new DialetoRecusouException(
                 CodigosPostgreSql.OpcaoRecusada,
                 "A string de conexão do PostgreSQL pede só a autenticação por senha em claro (Require Auth=Password) ou usa negação em Require Auth; o Incognito não manda a senha em claro.");
         }
@@ -351,12 +347,12 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         // O número, nunca o texto da versão (o servidor controla o texto).
         if (!int.TryParse(versaoLida, NumberStyles.None, CultureInfo.InvariantCulture, out var versao))
         {
-            throw new IncognitoException(CodigosPostgreSql.VersaoNaoSuportada, "O servidor PostgreSQL informou uma versão que não é um número.");
+            throw new DialetoRecusouException(CodigosPostgreSql.VersaoNaoSuportada, "O servidor PostgreSQL informou uma versão que não é um número.");
         }
 
         if (versao < VersaoMinima)
         {
-            throw new IncognitoException(
+            throw new DialetoRecusouException(
                 CodigosPostgreSql.VersaoNaoSuportada,
                 $"O servidor PostgreSQL está na versão {versao / 10000}; o Incognito exige a {VersaoMinima / 10000} ou mais nova.");
         }

@@ -658,9 +658,9 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             // A leitura pelo pai já não enxerga as linhas dela, e ela ainda é partição: copiada pelo pai, as linhas sumiriam.
             if (leitor.GetBoolean(8))
             {
-                throw new IncognitoException(
+                throw new DialetoRecusouException(
                     CodigosPostgreSql.ParticaoPendente,
-                    $"A partição {nome} tem um DETACH ... CONCURRENTLY interrompido; termine-o com ALTER TABLE {_sql.Citar(pai!)} DETACH PARTITION {_sql.Citar(nome)} FINALIZE antes.");
+                    $"A partição {Visivel(_sql.Citar(nome))} tem um DETACH ... CONCURRENTLY interrompido; termine-o com ALTER TABLE {Visivel(_sql.Citar(pai!))} DETACH PARTITION {Visivel(_sql.Citar(nome))} FINALIZE antes.");
             }
 
             // A partição intermediária (particionada que é partição de outra) é partição: o pai é o imediato; a raiz, o

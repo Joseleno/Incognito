@@ -12,8 +12,12 @@ namespace CodeProcess.Incognito.Dialetos;
 /// chamadas em paralelo; as operações sobre dados, quando entrarem no contrato, abrem as próprias conexões.
 /// </para>
 /// <para>
-/// Uma exceção de dialeto que não seja <see cref="IncognitoException"/> é tratada pelo motor como falha sem mensagem
-/// (só o tipo): as do driver podem trazer a string de conexão ou valores.
+/// O motor traduz toda exceção do dialeto: uma <see cref="DialetoRecusouException"/> vira erro do plano (saída 2); uma
+/// <see cref="IncognitoException"/> de tipo exato, falha com o código e a mensagem (o texto do autor do dialeto, nunca
+/// dado lido nem a string de conexão); uma subclasse dela, falha só com o código; e qualquer outra, falha sem mensagem,
+/// só com o tipo, porque as do driver podem trazer a string de conexão ou valores. O código precisa estar na faixa dos
+/// dialetos (<c>INC31xx</c> a <c>INC34xx</c>), e a interna nunca sai. O cancelamento pedido pelo chamador sai como
+/// cancelamento novo, sem a interna; o que o chamador não pediu é falha. Ao fechar, qualquer falha sai só com o tipo.
 /// </para>
 /// </remarks>
 [Experimental(ContratoExperimental.Diagnostico)]

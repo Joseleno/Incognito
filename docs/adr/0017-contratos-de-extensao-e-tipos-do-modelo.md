@@ -104,3 +104,18 @@ carregá-los de um lado para o outro.
   de extensão, não modelo produzido pelo motor: tem construtor público e propriedades `init` validadas, como as do
   item 4, e fica de fora de `Tipos_publicos_do_motor_so_nascem_do_motor`. O item 8 vale também para os dialetos: o
   motor trata uma exceção de dialeto que não seja `IncognitoException` como falha sem mensagem.
+- 2026-10-20: o item 8 nos dialetos passa a ser feito por um envoltório só no motor, o único tipo que chama os pontos
+  de extensão do contrato de dialeto (uma guarda de arquitetura confere pelo IL e pela posse das partes). A
+  `IncognitoException` também é refeita, porque é pública, aberta e tem construtor público: um dialeto pode lançar uma
+  com a mensagem sobrescrita, uma interna crua ou um código hostil. Só a de tipo exato e a `DialetoRecusouException`
+  (selada, sem construtor com interna; vira erro do plano, saída 2) guardam a mensagem, escapada e cortada; uma subclasse
+  fica só com o código; o código precisa estar na faixa dos dialetos (`INC31xx` a `INC34xx`, conferido caractere a
+  caractere), senão vira falha genérica; nunca saem a interna, os dados, o texto nem a pilha. A mensagem de
+  `IncognitoException` de dialeto é texto do autor do dialeto e nunca carrega dado lido do banco nem a string de conexão.
+  O cancelamento pedido pelo chamador sai como cancelamento novo, sem a interna (o driver põe ali o erro do servidor); o
+  que o chamador não pediu é falha do dialeto. Nas fábricas de fora, a resolução das regras (que roda sem token) passa a
+  tratar o cancelamento como recusa da regra, só com o tipo, e relança a falta de memória sem a mensagem nem a interna de
+  fora. Verificado por `DialetoProtegidoTestes` (um caso por membro chamado, com uma exceção que imita a do driver, a
+  `IncognitoException` hostil, códigos fora da faixa e o cancelamento por token vinculado), `FronteiraDoDialetoTestes`
+  (com o controle positivo da leitura do IL), `CanaisDoDriverPostgreSqlTestes` (os canais por onde texto da string e do
+  banco chegam à exceção crua do Npgsql) e `ResolucaoDeRegrasTestes`.

@@ -50,7 +50,7 @@ public sealed class LeitorEsquemaPostgreSqlTestes(ServidorPostgreSql servidor)
 
             await using var origem = await _provedor.ConectarOrigemAsync(
                 new SegredoConexao(servidor.StringDeConexao(banco, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
-            var recusa = await Assert.ThrowsAsync<IncognitoException>(() => origem.Esquema.LerAsync(cancelamento));
+            var recusa = await Assert.ThrowsAsync<DialetoRecusouException>(() => origem.Esquema.LerAsync(cancelamento));
 
             Assert.Equal("INC3105", recusa.Codigo);
             Assert.Contains("""ALTER TABLE "loja"."p" DETACH PARTITION "loja"."P1" FINALIZE""", recusa.Message, StringComparison.Ordinal);
