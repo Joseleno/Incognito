@@ -83,6 +83,133 @@ public sealed class DialetoProtegidoTestes
     }
 
     [Fact]
+    public async Task A_comparacao_de_nomes_sai_so_com_o_tipo_e_nunca_adivinha()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        foreach (var operacao in new[] { Operacao.CompararNome, Operacao.ObterSql })
+        {
+            foreach (var destino in new[] { false, true })
+            {
+                var lado = destino ? LadoBanco.Destino : LadoBanco.Origem;
+                var provedor = new ProvedorDoPlanejar { Lancar = Em(operacao, destino, () => new ExcecaoDoDriver()) };
+                await using var banco = await DialetoProtegido.ConectarAsync(provedor, "postgresql", lado, Conexao(), cancelamento);
+
+                var falha = Assert.IsType<FalhaDialetoException>(Assert.ThrowsAny<Exception>(() => banco.CompararNome("Cliente", false, "cliente")), exactMatch: true);
+                Assert.Equal("INC3001", falha.Codigo);
+                Assert.Contains($"comparar um nome {(destino ? "no destino" : "na origem")}", falha.Message, StringComparison.Ordinal);
+                SemVazamento(falha);
+            }
+        }
+
+        // A recusa ao comparar não é erro do plano: é falha do dialeto, com o código dele.
+        var recusa = new ProvedorDoPlanejar { Lancar = Em(Operacao.CompararNome, false, () => new DialetoRecusouException("INC3150", "recusa na comparação")) };
+        await using (var banco = await DialetoProtegido.ConectarAsync(recusa, "postgresql", LadoBanco.Origem, Conexao(), cancelamento))
+        {
+            Assert.Equal("INC3150", Assert.IsType<FalhaDialetoException>(Assert.ThrowsAny<Exception>(() => banco.CompararNome("x", true, "x")), exactMatch: true).Codigo);
+        }
+
+        // Um valor fora do enum é falha, nunca uma correspondência; os três valores passam como vieram.
+        var desconhecido = new ProvedorDoPlanejar { Correspondencia = (CorrespondenciaNome)7 };
+        await using (var banco = await DialetoProtegido.ConectarAsync(desconhecido, "postgresql", LadoBanco.Destino, Conexao(), cancelamento))
+        {
+            var falha = Assert.Throws<FalhaDialetoException>(() => banco.CompararNome("x", true, "x"));
+            Assert.Equal("INC3001", falha.Codigo);
+            Assert.Contains("resultado desconhecido ao comparar um nome no destino", falha.Message, StringComparison.Ordinal);
+        }
+
+        foreach (var valor in Enum.GetValues<CorrespondenciaNome>())
+        {
+            await using var banco = await DialetoProtegido.ConectarAsync(new ProvedorDoPlanejar { Correspondencia = valor }, "postgresql", LadoBanco.Origem, Conexao(), cancelamento);
+            Assert.Equal(valor, banco.CompararNome("x", false, "x"));
+        }
+    }
+
+    [Fact]
+    public async Task A_recusa_da_montagem_fecha_os_dois_lados_e_o_cancelamento_ao_comparar_e_falha()
+    {
+        // O destino sem a tabela pedidos: a montagem recusa (INC3020) com as duas conexões abertas, e as duas fecham.
+        var provedor = new ProvedorDoPlanejar(destino: EsquemaSintetico.ComTabelas(EsquemaSintetico.Clientes()));
+        var recusa = Assert.IsType<PlanoRecusadoException>(await FalharAsync(provedor), exactMatch: true);
+        Assert.Equal("INC3020", Assert.Single(recusa.Erros).Codigo);
+        Assert.Equal(["Descartar:destino", "Descartar:origem"], provedor.Chamadas.Where(chamada => chamada.StartsWith("Descartar", StringComparison.Ordinal)));
+
+        // O cancelamento que o dialeto lança ao comparar não foi pedido pelo chamador: é falha só com o tipo, nunca 130.
+        var cancelada = new ProvedorDoPlanejar { Lancar = Em(Operacao.CompararNome, false, () => new OperationCanceledException(Sentinela)) };
+        await using var banco = await DialetoProtegido.ConectarAsync(cancelada, "postgresql", LadoBanco.Origem, Conexao(), TestContext.Current.CancellationToken);
+        var falha = Assert.IsType<FalhaDialetoException>(Assert.ThrowsAny<Exception>(() => banco.CompararNome("x", true, "x")), exactMatch: true);
+        Assert.Equal(("INC3001", 1), (falha.Codigo, ClassificadorDeSaida.De(falha)));
+        SemVazamento(falha);
+    }
+
+    [Fact]
+    public async Task As_duas_falhas_ao_fechar_saem_pela_primeira_e_fecham_os_dois()
+    {
+        // Sem erro antes, a falha ao fechar sai: a do destino, que fecha primeiro, e a origem fecha mesmo assim.
+        var provedor = new ProvedorDoPlanejar { Lancar = (operacao, _) => operacao == Operacao.Descartar ? new ExcecaoDoDriver() : null };
+
+        var falha = Assert.IsType<FalhaDialetoException>(await FalharAsync(provedor), exactMatch: true);
+
+        Assert.Contains("fechar a conexão no destino", falha.Message, StringComparison.Ordinal);
+        Assert.Equal(["Descartar:destino", "Descartar:origem"], provedor.Chamadas.Where(chamada => chamada.StartsWith("Descartar", StringComparison.Ordinal)));
+        SemVazamento(falha);
+    }
+
+    [Fact]
+    public async Task O_plano_e_a_carga_nunca_guardam_a_string_de_conexao()
+    {
+        // O resolvedor devolve a string com o sentinela: nada do plano, por reflexão até o fundo, nem o texto dele o traz.
+        var plano = await PlanejarAsync(new ProvedorDoPlanejar(), yaml: Yaml.Minimo + "tabelas:\n  loja.clientes:\n    colunas:\n      cpf: { transformador: br.cpf@1 }\n");
+
+        var textos = new List<string> { plano.ToString() };
+        Coletar(plano, textos, new HashSet<object>(ReferenceEqualityComparer.Instance));
+
+        Assert.Contains(textos, texto => texto == "cpf");
+        Assert.All(textos, texto => Assert.DoesNotContain(Sentinela, texto, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Todo texto alcançável por propriedades e campos, públicos ou não, dos tipos do projeto e das coleções.
+    private static void Coletar(object? valor, List<string> textos, HashSet<object> vistos)
+    {
+        switch (valor)
+        {
+            case null:
+                return;
+            case string texto:
+                textos.Add(texto);
+                return;
+            case Type or Delegate or System.Reflection.MemberInfo:
+                return;
+        }
+
+        var tipo = valor.GetType();
+        if (tipo.IsPrimitive || tipo.IsEnum || !vistos.Add(valor))
+        {
+            return;
+        }
+
+        if (valor is IEnumerable itens)
+        {
+            foreach (var item in itens)
+            {
+                Coletar(item, textos, vistos);
+            }
+
+            return;
+        }
+
+        if (tipo.Namespace?.StartsWith("CodeProcess.Incognito", StringComparison.Ordinal) != true && !tipo.Name.StartsWith("KeyValuePair", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        const System.Reflection.BindingFlags Todos = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        foreach (var campo in tipo.GetFields(Todos))
+        {
+            Coletar(campo.GetValue(valor), textos, vistos);
+        }
+    }
+
+    [Fact]
     public async Task A_agregada_hostil_nunca_tem_a_mensagem_lida()
     {
         // O Flatten leria a Message, que é virtual: com o cancelamento pedido ou não, nada do dialeto roda na tradução.
@@ -344,12 +471,14 @@ public sealed class DialetoProtegidoTestes
         // As partes do falso lançam com o sentinela nessas três chamadas: o planejar inteiro passa sem tocá-las.
         var provedor = new ProvedorDoPlanejar();
 
-        var leituras = await PlanejarAsync(provedor);
+        var montado = await PlanejarAsync(provedor);
 
-        Assert.Equal("loja_homolog", leituras.Destino.Identidade.Banco);
+        // As conexões ficam abertas enquanto os nomes são comparados, e fecham em ordem inversa.
+        Assert.Equal("loja_homolog", montado.Execucao.Destino.Identidade.Banco);
         Assert.Equal(
-            ["Nome:origem", "Nome:origem", "Conectar:origem", "LerEsquema:origem", "LerIdentidade:origem", "Descartar:origem", "Conectar:destino", "LerEsquema:destino", "LerIdentidade:destino", "Descartar:destino"],
-            provedor.Chamadas);
+            ["Nome:origem", "Nome:origem", "Conectar:origem", "LerEsquema:origem", "LerIdentidade:origem", "Conectar:destino", "LerEsquema:destino", "LerIdentidade:destino", "Descartar:destino", "Descartar:origem"],
+            provedor.Chamadas.Where(chamada => chamada != "CompararNome:destino"));
+        Assert.Contains("CompararNome:destino", provedor.Chamadas);
     }
 
     [Fact]
@@ -373,7 +502,7 @@ public sealed class DialetoProtegidoTestes
         await Assert.ThrowsAnyAsync<Exception>(() => PlanejarAsync(provedor, cancelamento: cancelamento));
 
     // O token do teste, salvo quando o caso pede outro.
-    internal static Task<LeiturasDoPlano> PlanejarAsync(
+    internal static Task<Plano> PlanejarAsync(
         ProvedorDoPlanejar? provedor, string yaml = Yaml.Minimo, List<ConexaoBanco>? resolvidas = null, CancellationToken? cancelamento = null) =>
         PlanejadorInterno.PlanejarAsync(
             ConfiguracaoIncognito.LerYaml(yaml),

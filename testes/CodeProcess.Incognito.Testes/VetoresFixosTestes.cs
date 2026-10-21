@@ -13,8 +13,9 @@ namespace CodeProcess.Incognito.Testes;
 /// </summary>
 public sealed class VetoresFixosTestes
 {
-    // Vetores que não vêm das receitas (derivação, Feistel e volume), conferidos nos próprios testes.
-    private static readonly string[] _outrosVetores = ["derivacao@1.json", "feistel@1.json", VolumeDeVetores.Arquivo];
+    // Vetores que não vêm das receitas (derivação, Feistel e volume), conferidos nos próprios testes, e o do hash da
+    // configuração, conferido nos testes do motor.
+    private static readonly string[] _outrosVetores = ["derivacao@1.json", "feistel@1.json", VolumeDeVetores.Arquivo, "hash-configuracao@1.json"];
 
     private static readonly string[] _componentes = ["cpf", "cnpj", "email", "telefone"];
 

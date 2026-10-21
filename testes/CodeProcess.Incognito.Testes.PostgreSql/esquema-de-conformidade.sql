@@ -490,11 +490,16 @@ $$;
 CREATE SCHEMA pgdados;
 CREATE TABLE pgdados.clientes (id bigint PRIMARY KEY);
 
--- O esquema do diário do Incognito, que o leitor nunca devolve.
+-- O esquema do diário do Incognito: o leitor nunca o devolve entre as tabelas, e informa cada objeto dele (tabela,
+-- particionada, foreign table, view, materialized view, índice, índice de particionada e sequence).
 CREATE SCHEMA incognito;
 CREATE TABLE incognito.execucao (id uuid PRIMARY KEY);
 CREATE SEQUENCE incognito.seq_interna;
 CREATE MATERIALIZED VIEW incognito.resumo AS SELECT 1 AS total;
+CREATE VIEW incognito.vista AS SELECT 1 AS um;
+CREATE TABLE incognito.lotes (id integer) PARTITION BY RANGE (id);
+CREATE INDEX lotes_id ON incognito.lotes (id);
+CREATE FOREIGN TABLE incognito.remota (linha text) SERVER arquivos OPTIONS (filename '/dev/null');
 
 -- Lugares que o dialeto nunca lê, fora das tabelas: parâmetro e comentário de papel (do servidor inteiro), regra de
 -- reescrita e filtro de linha de publicação.

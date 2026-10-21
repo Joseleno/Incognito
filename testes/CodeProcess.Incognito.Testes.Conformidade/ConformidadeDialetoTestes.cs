@@ -383,7 +383,27 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
-    public async Task O_esquema_do_Incognito_fica_fora_da_leitura()
+    public void Os_nomes_escritos_sao_comparados_como_o_banco_compara()
+    {
+        // Um dialeto que dobrasse a caixa a mais, ou ignorasse as aspas, faria o plano tratar uma coluna que não é a escrita.
+        var declaradas = Esperado.ComparacoesDeNome;
+        Assert.True(
+            declaradas.Any(nome => nome.Esperada == CorrespondenciaNome.Corresponde) && declaradas.Any(nome => nome.Esperada == CorrespondenciaNome.NaoCorresponde),
+            "Comparação de nomes: a fixture precisa declarar nomes que correspondem e nomes que não correspondem.");
+
+        var divergentes = declaradas
+            .SelectMany(esperada => new (string Banco, DialetoBanco Dialeto)[] { ("na origem", Par.Origem), ("no destino", Par.Destino) }
+                .Select(lado => (lado.Banco, esperada, lida: lado.Dialeto.Sql.CompararNome(esperada.Escrito, esperada.EntreAspas, esperada.DoCatalogo))))
+            .Where(par => par.lida != par.esperada.Esperada)
+            .Select(par => $"{(par.esperada.EntreAspas ? $"\"{par.esperada.Escrito}\"" : par.esperada.Escrito)} contra {par.esperada.DoCatalogo} {par.Banco}: {par.lida}, esperada {par.esperada.Esperada}")
+            .ToArray();
+
+        Assert.True(divergentes.Length == 0, $"Comparação de nomes: {string.Join("; ", divergentes)}.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_esquema_do_Incognito_fica_fora_das_tabelas_e_e_informado_a_parte()
     {
         var esquema = await LerOrigemAsync();
         var doIncognito = esquema.Tabelas.Select(tabela => tabela.Nome)
@@ -395,6 +415,14 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
         Assert.True(Esperado.ObjetoDoIncognito.Esquema == "incognito", $"Esquema incognito: o objeto declarado ({Esperado.ObjetoDoIncognito}) precisa estar no esquema incognito.");
         Assert.True(doIncognito.Length == 0, $"Esquema incognito: objetos lidos, entre eles o declarado ({Esperado.ObjetoDoIncognito}): {string.Join(", ", doIncognito)}.");
+
+        // Fora das tabelas, mas nunca escondido: o planejar precisa saber o que há no esquema reservado.
+        var reservado = esquema.ObjetosNoEsquemaReservado;
+        Assert.True(
+            reservado is not null && reservado.Contains(Esperado.ObjetoDoIncognito),
+            $"Esquema incognito: o objeto declarado ({Esperado.ObjetoDoIncognito}) não está entre os objetos do esquema reservado ({(reservado is null ? "não informados" : string.Join(", ", reservado))}).");
+        var fora = reservado!.Where(nome => nome.Esquema != "incognito").Select(nome => nome.ToString()).ToArray();
+        Assert.True(fora.Length == 0, $"Esquema incognito: objetos de outro esquema entre os do reservado: {string.Join(", ", fora)}.");
     }
 
     [Fact]

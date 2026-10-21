@@ -5,10 +5,10 @@ namespace CodeProcess.Incognito.Testes.Conformidade;
 
 /// <summary>
 /// A comparação de um esquema lido com o inventário, por nome: a primeira diferença de cada tabela, de cada sequence e de
-/// cada objeto residual, em ordem ordinal de esquema e nome (as tabelas, depois as sequences, depois os residuais). Numa
-/// tabela, a ordem dos ramos é fixa (decide a mensagem): estrutura, colunas (tipo base, situação, tipo canônico e a
-/// semântica), chave primária, os objetos da tabela (índices únicos, CHECKs, exclusões e triggers, cada lista também na
-/// ordem do contrato), chaves estrangeiras.
+/// cada objeto residual, em ordem ordinal de esquema e nome (as tabelas, depois as sequences, depois os residuais), e os
+/// objetos do esquema reservado, na ordem do contrato. Numa tabela, a ordem dos ramos é fixa (decide a mensagem):
+/// estrutura, colunas (tipo base, situação, tipo canônico e a semântica), chave primária, os objetos da tabela (índices
+/// únicos, CHECKs, exclusões e triggers, cada lista também na ordem do contrato), chaves estrangeiras.
 /// </summary>
 internal static class ComparacaoDoInventario
 {
@@ -68,6 +68,16 @@ internal static class ComparacaoDoInventario
             {
                 yield return $"residual {nome}: {diferenca}";
             }
+        }
+
+        // Na ordem do contrato; nulo diz que o dialeto não informa, o que esconderia o que há no esquema reservado.
+        if (lido.ObjetosNoEsquemaReservado is not { } reservado)
+        {
+            yield return $"esquema reservado: objetos não informados, esperados [{Lista(esperado.ObjetosNoEsquemaReservado)}]";
+        }
+        else if (!reservado.SequenceEqual(esperado.ObjetosNoEsquemaReservado))
+        {
+            yield return $"esquema reservado: objetos lidos [{Lista(reservado)}], esperados [{Lista(esperado.ObjetosNoEsquemaReservado)}]";
         }
     }
 

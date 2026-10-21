@@ -22,6 +22,75 @@ internal static class CodigosPlanejar
     /// <summary>Não há dialeto para o provedor da configuração, ou o dialeto tem outro nome (saída 2).</summary>
     internal const string DialetoAusente = "INC3003";
 
+    /// <summary>Tabela escrita na configuração que não existe em nenhum dos bancos (saída 2).</summary>
+    internal const string TabelaInexistente = "INC3010";
+
+    /// <summary>Coluna escrita na configuração que não existe na tabela da origem (saída 2).</summary>
+    internal const string ColunaInexistente = "INC3011";
+
+    /// <summary>Nome que designa mais de um objeto, ou que o dialeto não sabe comparar sem adivinhar (saída 2).</summary>
+    internal const string NomeAmbiguo = "INC3012";
+
+    /// <summary>Duas entradas da configuração que designam o mesmo objeto (saída 2).</summary>
+    internal const string EntradaRepetida = "INC3013";
+
+    /// <summary>Entrada que designa uma partição: a regra se escreve na raiz (saída 2).</summary>
+    internal const string EntradaEmParticao = "INC3014";
+
+    /// <summary>Entrada num esquema de sistema ou no reservado ao Incognito (saída 2).</summary>
+    internal const string EsquemaReservado = "INC3015";
+
+    /// <summary>A coluna de <c>derivarDe</c> não existe na tabela da origem (saída 2).</summary>
+    internal const string DerivarDeInexistente = "INC3016";
+
+    /// <summary><c>derivarDe</c> em ciclo depois de resolvidos os nomes (saída 2).</summary>
+    internal const string DerivarDeEmCiclo = "INC3017";
+
+    /// <summary>Unidade de cópia que só existe na origem e não é ignorada (saída 2).</summary>
+    internal const string SoNaOrigem = "INC3020";
+
+    /// <summary>Unidade de cópia que só existe no destino sem <c>esvaziar</c> ou <c>ignorar</c> escrito (saída 2).</summary>
+    internal const string SoNoDestino = "INC3021";
+
+    /// <summary>Coluna da origem que não existe no destino (saída 2).</summary>
+    internal const string ColunaAusenteNoDestino = "INC3022";
+
+    /// <summary>Coluna tratada com tipo ou situação diferentes entre os lados (saída 2).</summary>
+    internal const string TratadaComTipoDiferente = "INC3023";
+
+    /// <summary>
+    /// Tabela estrangeira no lado que a ação escrita toca (<c>copiar</c>: qualquer lado; <c>esvaziar</c>: o destino), ou com
+    /// regra de coluna escrita (saída 2).
+    /// </summary>
+    internal const string EstrangeiraTocada = "INC3071";
+
+    /// <summary>Particionada com partição estrangeira e ação diferente de <c>ignorar</c> (saída 2).</summary>
+    internal const string ParticaoEstrangeira = "INC3072";
+
+    /// <summary>Objeto no esquema reservado ao Incognito, ou o dialeto não informa o que há nele (saída 2).</summary>
+    internal const string ObjetoNoEsquemaReservado = "INC3073";
+
+    /// <summary>Tabela estrangeira num lado e local no outro, sem ação nem regra de coluna escritas (saída 2).</summary>
+    internal const string EstrangeiraNumLado = "INC3075";
+
+    /// <summary>Aviso: outro objeto difere de um nome resolvido só pela caixa.</summary>
+    internal const string NomeQuaseIgual = "INC3510";
+
+    /// <summary>Aviso: coluna só no destino que não aceita nulo e não tem identidade nem geração.</summary>
+    internal const string ObrigatoriaSoNoDestino = "INC3520";
+
+    /// <summary>Aviso: coluna copiada mais estreita no destino, ou com tipo diferente sem ser tratada.</summary>
+    internal const string MaisEstreitaNoDestino = "INC3521";
+
+    /// <summary>Aviso: colação com comportamento diferente entre os lados.</summary>
+    internal const string ColacaoDiferente = "INC3522";
+
+    /// <summary>Aviso: chave primária, chave estrangeira, índice único ou CHECK presente só num lado.</summary>
+    internal const string RestricaoSoNumLado = "INC3523";
+
+    /// <summary>Aviso: tabela estrangeira nos dois lados e fora da configuração, ignorada.</summary>
+    internal const string EstrangeiraIgnorada = "INC3572";
+
     /// <summary>
     /// Se o código é da faixa dos dialetos (<c>INC31xx</c> a <c>INC34xx</c>): exatamente <c>INC3</c>, um dígito de 1 a 4 e
     /// dois dígitos ASCII. Conferido caractere a caractere: um prefixo deixaria passar texto depois dele, e um dígito que

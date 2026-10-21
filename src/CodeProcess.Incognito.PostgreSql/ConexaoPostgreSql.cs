@@ -40,17 +40,21 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     private readonly SslMode _modo;
     private readonly string _servidor;
 
-    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, int versao, SslMode modo, string servidor)
+    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, int versao, RegraDosNomes nomes, SslMode modo, string servidor)
     {
         _fonte = fonte;
         _conexao = conexao;
         Versao = versao;
+        Nomes = nomes;
         _modo = modo;
         _servidor = servidor;
     }
 
     /// <summary>A versão do servidor (<c>server_version_num</c>, como 180006).</summary>
     internal int Versao { get; }
+
+    /// <summary>Como o banco desta conexão decide a igualdade dos nomes: a codificação e o limite do tipo <c>name</c>.</summary>
+    internal RegraDosNomes Nomes { get; }
 
     /// <summary>A conexão aberta.</summary>
     internal NpgsqlConnection Conexao => _conexao;
@@ -83,8 +87,8 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 throw OpcaoInutilizavel();
             }
 
-            var versao = await ConferirAsync(conexao, origem, cancelamento).ConfigureAwait(false);
-            return new ConexaoPostgreSql(fonte, conexao, versao, construtor.SslMode, construtor.Host!);
+            var (versao, nomes) = await ConferirAsync(conexao, origem, cancelamento).ConfigureAwait(false);
+            return new ConexaoPostgreSql(fonte, conexao, versao, nomes, construtor.SslMode, construtor.Host!);
         }
         catch
         {
@@ -329,15 +333,19 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         }
     }
 
-    private static async Task<int> ConferirAsync(NpgsqlConnection conexao, bool origem, CancellationToken cancelamento)
+    private static async Task<(int Versao, RegraDosNomes Nomes)> ConferirAsync(NpgsqlConnection conexao, bool origem, CancellationToken cancelamento)
     {
-        // O papel também: um gatilho de login pode trocar de papel (SET ROLE) e ler com outros privilégios.
+        // O papel também: um gatilho de login pode trocar de papel (SET ROLE) e ler com outros privilégios. A codificação
+        // do banco pelo número (6 é UTF8) e o limite do tipo name decidem a igualdade dos nomes.
         await using var comando = new NpgsqlCommand(
             """
             SELECT pg_catalog.current_setting('server_version_num'), pg_catalog.current_setting('search_path'),
                    pg_catalog.current_setting('default_transaction_read_only'), pg_catalog.current_setting('client_encoding'),
                    pg_catalog.current_setting('standard_conforming_strings'), current_user = session_user,
-                   pg_catalog.current_setting('lc_monetary') = 'C'
+                   pg_catalog.current_setting('lc_monetary') = 'C', d.encoding = 6, pg_catalog.pg_encoding_max_length(d.encoding),
+                   pg_catalog.current_setting('max_identifier_length')::integer
+            FROM pg_catalog.pg_database d
+            WHERE d.datname = pg_catalog.current_database()
             """,
             conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
@@ -365,6 +373,6 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 "A sessão do PostgreSQL não ficou com os parâmetros que o Incognito impõe (search_path, client_encoding, standard_conforming_strings, lc_monetary, o papel do login e, na origem, default_transaction_read_only).");
         }
 
-        return versao;
+        return (versao, new RegraDosNomes(leitor.GetBoolean(7), leitor.GetInt32(8), leitor.GetInt32(9)));
     }
 }

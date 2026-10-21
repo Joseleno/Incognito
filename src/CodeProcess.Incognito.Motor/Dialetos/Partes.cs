@@ -9,8 +9,9 @@ public abstract class LeitorEsquema
     /// <summary>
     /// Lê o esquema: tabelas, colunas, chaves, sequences e objetos residuais, as tabelas, as sequences e os objetos
     /// residuais em ordem ordinal de esquema e nome (o plano e o relatório saem iguais entre leituras), as colunas na
-    /// ordem do catálogo, e as permissões do login que lê. O esquema <c>incognito</c> (diário do Incognito) nunca entra.
-    /// Não escreve no banco.
+    /// ordem do catálogo, e as permissões do login que lê. As tabelas, as sequences e os objetos residuais do esquema
+    /// <c>incognito</c> (diário do Incognito) ficam fora das listas, e os objetos dele vão para
+    /// <see cref="EsquemaBanco.ObjetosNoEsquemaReservado"/>. Não escreve no banco.
     /// </summary>
     /// <param name="cancelamento">Cancela a leitura.</param>
     /// <returns>O esquema lido.</returns>
@@ -31,6 +32,20 @@ public abstract class IdentidadeBanco
     public abstract Task<IdentidadeLida> LerAsync(CancellationToken cancelamento);
 }
 
+/// <summary>Se um nome escrito designa um nome do catálogo (<see cref="DialetoSql.CompararNome"/>).</summary>
+[Experimental(ContratoExperimental.Diagnostico)]
+public enum CorrespondenciaNome
+{
+    /// <summary>Não designa.</summary>
+    NaoCorresponde = 0,
+
+    /// <summary>Designa.</summary>
+    Corresponde = 1,
+
+    /// <summary>O dialeto não sabe decidir sem adivinhar (por exemplo, a dobra de caixa depende do locale do servidor).</summary>
+    Indeterminada = 2,
+}
+
 /// <summary>A sintaxe do banco.</summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class DialetoSql
@@ -42,6 +57,22 @@ public abstract class DialetoSql
     /// <param name="identificador">O identificador, como o catálogo o guarda.</param>
     /// <returns>O identificador citado.</returns>
     public abstract string Citar(string identificador);
+
+    /// <summary>
+    /// Se um nome escrito na configuração designa um nome do catálogo, pela regra do banco desta conexão: a dobra de caixa
+    /// do nome sem aspas e a igualdade dos identificadores dependem do banco (a codificação no PostgreSQL, a colação do
+    /// catálogo no SQL Server). Vale só para o banco da conexão de onde veio este <see cref="DialetoSql"/>. O motor também a
+    /// usa com o nome do catálogo do outro lado, entre aspas, para parear a origem com o destino, e com nomes fixos que podem
+    /// não existir no catálogo (os esquemas reservados): <paramref name="doCatalogo"/> não precisa existir.
+    /// </summary>
+    /// <param name="escrito">O nome como foi escrito, sem as aspas.</param>
+    /// <param name="entreAspas">Se foi escrito entre aspas (delimitado, na sintaxe do banco).</param>
+    /// <param name="doCatalogo">O nome como o catálogo o guarda.</param>
+    /// <returns>
+    /// Se corresponde, se não corresponde, ou <see cref="CorrespondenciaNome.Indeterminada"/> quando o dialeto não sabe
+    /// decidir sem adivinhar (o motor recusa o plano, nunca escolhe).
+    /// </returns>
+    public abstract CorrespondenciaNome CompararNome(string escrito, bool entreAspas, string doCatalogo);
 
     /// <summary>Cita o esquema e o nome, separados por ponto.</summary>
     /// <param name="nome">O nome do objeto.</param>

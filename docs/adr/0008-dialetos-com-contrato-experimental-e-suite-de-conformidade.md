@@ -204,3 +204,16 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   ali. O motor repete a coerência do esquema lido (`INC3002`, falha do dialeto), e um teste
   diferencial classifica cada defeito do falso que a consistência da suíte pega: coerência (o motor também recusa) ou só
   presença e formato (o motor trata o campo nulo como o pior caso).
+- 2026-10-21: o contrato ganha `DialetoSql.CompararNome`, que diz, pela regra do banco daquela conexão, se um nome
+  escrito na configuração designa um nome do catálogo (`CorrespondenciaNome`: corresponde, não corresponde ou
+  indeterminada). É um predicado, e não uma dobra canônica, porque no SQL Server a igualdade segue a colação do catálogo;
+  a resposta indeterminada deixa o dialeto falhar fechado quando a dobra depende do locale do servidor (o motor recusa o
+  nome, nunca escolhe), e o casamento exato nunca vence. O motor também a usa para parear a origem com o destino (o nome
+  de um lado, entre aspas, contra o do outro) e com nomes fixos, como os esquemas reservados, que podem não existir no
+  catálogo. O motor só a chama pelo envoltório, que transforma um valor fora do enum em falha do dialeto. O contrato ganha também `EsquemaBanco.ObjetosNoEsquemaReservado`, os objetos do esquema
+  `incognito`, cujas tabelas continuam fora das tabelas lidas: nulo é o pior caso (o dialeto não informa) e vazio quer
+  dizer que não há nada, ao contrário das listas dos objetos da tabela, porque aqui o vazio otimista esconderia tabela ou
+  dado no esquema reservado. Na suíte, um fato confere as comparações de nome que a fixture declara (com pelo menos um
+  "corresponde" e um "não corresponde"), o inventário passa a conferir os objetos do esquema reservado na ordem e o fato do esquema
+  `incognito` exige a lista; o falso ganha os defeitos `DobraComToLowerInvariant`, `IgnoraAspas` e
+  `EscondeEsquemaReservado`.

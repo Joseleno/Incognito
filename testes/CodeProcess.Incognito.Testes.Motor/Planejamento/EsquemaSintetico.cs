@@ -26,6 +26,7 @@ internal static class EsquemaSintetico
             Tabelas = tabelas,
             Sequences = tabelas.Any(tabela => tabela.Nome.Equals(Nome("clientes"))) ? sequences : [],
             ObjetosResiduais = [],
+            ObjetosNoEsquemaReservado = [],
             Propriedades = new PropriedadesBanco
             {
                 Versao = new Version(18, 0),

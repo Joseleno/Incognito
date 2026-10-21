@@ -16,9 +16,10 @@
     <PackageReference Include="Corvus.Json.Validator" />
   </ItemGroup>
 
-  <!-- O esquema publicado, lido da pasta de saída. -->
+  <!-- O esquema publicado e o vetor fixo do hash da configuração, lidos da pasta de saída. -->
   <ItemGroup>
     <None Include="..\..\esquema\incognito.schema.json" Link="esquema\incognito.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\vetores\hash-configuracao@1.json" Link="vetores\hash-configuracao@1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

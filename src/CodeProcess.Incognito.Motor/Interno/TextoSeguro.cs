@@ -22,7 +22,16 @@ internal static class TextoSeguro
     /// <summary>O texto com o escape, inteiro.</summary>
     /// <param name="texto">O texto do catálogo ou do dialeto.</param>
     /// <returns>O texto escapado.</returns>
-    internal static string Nome(string texto) => Escapar(texto, int.MaxValue);
+    internal static string Nome(string texto) => Escapar(texto, int.MaxValue, dobrarBarra: true);
+
+    /// <summary>
+    /// O caminho de um arquivo com o escape, inteiro, mas com a barra invertida como está: o separador do Windows dobrado
+    /// tiraria o caminho do formato que editores e terminais abrem. Sem a barra dobrada o escape deixa de ser injetivo, o que
+    /// basta para um caminho: o que muda a tela é trocado do mesmo jeito.
+    /// </summary>
+    /// <param name="caminho">O caminho, como foi pedido.</param>
+    /// <returns>O caminho escapado.</returns>
+    internal static string Caminho(string caminho) => Escapar(caminho, int.MaxValue, dobrarBarra: false);
 
     /// <summary>
     /// O texto com o escape, com no máximo <see cref="MaximoDaMensagem"/> unidades mais as reticências: o corte vem depois do
@@ -30,15 +39,15 @@ internal static class TextoSeguro
     /// </summary>
     /// <param name="texto">A mensagem de fora do motor.</param>
     /// <returns>A mensagem escapada e cortada.</returns>
-    internal static string Mensagem(string texto) => Escapar(texto, MaximoDaMensagem);
+    internal static string Mensagem(string texto) => Escapar(texto, MaximoDaMensagem, dobrarBarra: true);
 
-    private static string Escapar(string texto, int maximo)
+    private static string Escapar(string texto, int maximo, bool dobrarBarra)
     {
         ArgumentNullException.ThrowIfNull(texto);
         var saida = new StringBuilder(Math.Min(texto.Length, maximo));
         for (var indice = 0; indice < texto.Length;)
         {
-            var (pedaco, largura) = Pedaco(texto, indice);
+            var (pedaco, largura) = Pedaco(texto, indice, dobrarBarra);
             if (saida.Length + pedaco.Length > maximo)
             {
                 return saida.Append('…').ToString();
@@ -52,12 +61,12 @@ internal static class TextoSeguro
     }
 
     // O que sai no lugar do caractere que começa no índice, e quantas unidades UTF-16 ele ocupa.
-    private static (string Pedaco, int Largura) Pedaco(string texto, int indice)
+    private static (string Pedaco, int Largura) Pedaco(string texto, int indice, bool dobrarBarra)
     {
         var caractere = texto[indice];
         if (caractere == '\\')
         {
-            return ("\\\\", 1);
+            return (dobrarBarra ? "\\\\" : "\\", 1);
         }
 
         if (char.IsHighSurrogate(caractere) && indice + 1 < texto.Length && char.IsLowSurrogate(texto[indice + 1]))

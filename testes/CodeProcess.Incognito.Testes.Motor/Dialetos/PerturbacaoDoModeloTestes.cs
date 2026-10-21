@@ -243,7 +243,8 @@ public sealed class PerturbacaoDoModeloTestes
                     var itens = ((IEnumerable)valor!).Cast<object>().Reverse().ToArray();
                     if (itens.Length > 1)
                     {
-                        citado = dono;
+                        // Na raiz não há dono: cita o primeiro nome da lista (o esquema reservado).
+                        citado = dono.Length > 0 ? dono : Convert.ToString(itens[0], System.Globalization.CultureInfo.InvariantCulture);
                         valor = ElementoDoModelo(propriedade.PropertyType) is { } elemento
                             ? Lista(elemento, itens.Select(item => Reconstruir(item, dono, Caminho(objeto, propriedade))))
                             : Lista(propriedade.PropertyType.GetGenericArguments()[0], itens);
@@ -356,7 +357,7 @@ public sealed class PerturbacaoDoModeloTestes
             string texto => (texto + "x", dono),
             NomeObjeto nome => (new NomeObjeto(nome.Esquema, nome.Nome + "x"), dono),
             IReadOnlyList<string> nomes => (nomes.Count > 0 ? nomes.Take(nomes.Count - 1).ToArray() : new[] { "x" }, dono),
-            IReadOnlyList<NomeObjeto> nomes => (nomes.Count > 0 ? nomes.Take(nomes.Count - 1).ToArray() : new[] { _inexistente }, dono),
+            IReadOnlyList<NomeObjeto> nomes => (nomes.Count > 0 ? nomes.Take(nomes.Count - 1).ToArray() : new[] { _inexistente }, dono.Length > 0 ? dono : (nomes.Count > 0 ? nomes[^1] : _inexistente).ToString()),
             IReadOnlyList<ReferenciaColuna> colunas => (colunas.Count > 0 ? colunas.Take(colunas.Count - 1).ToArray() : new[] { new ReferenciaColuna(_inexistente, "x") }, dono),
             null when tipo == typeof(string) => ("x", dono),
             null when tipo == typeof(NomeObjeto) => (_inexistente, dono),

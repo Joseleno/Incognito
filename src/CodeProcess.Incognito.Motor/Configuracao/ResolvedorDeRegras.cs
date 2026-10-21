@@ -1,4 +1,6 @@
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using CodeProcess.Incognito.Configuracao.Leitura;
 using CodeProcess.Incognito.Interno;
 using CodeProcess.Incognito.Transformadores;
@@ -45,7 +47,7 @@ internal sealed class ResolvedorDeRegras
             throw resolvedor._erros.Excecao();
         }
 
-        return new ResolucaoDeRegras(resolvedor._colunas, resolvedor.Dominios());
+        return new ResolucaoDeRegras(resolvedor._colunas, resolvedor.Dominios(), resolvedor.Identidades());
     }
 
     private void ResolverTudo()
@@ -84,7 +86,7 @@ internal sealed class ResolvedorDeRegras
         }
     }
 
-    private IEnumerable<(NomeTabela Tabela, RegraColuna Coluna)> Colunas() =>
+    private IEnumerable<(NomeTabelaEscrito Tabela, RegraColunaEscrita Coluna)> Colunas() =>
         _configuracao.Tabelas.SelectMany(tabela => tabela.Colunas.Select(coluna => (tabela.Nome, coluna)));
 
     private void Declarar(
@@ -130,7 +132,7 @@ internal sealed class ResolvedorDeRegras
         Citar(fabrica, normalizados, parametros, posicao, local);
     }
 
-    private void UsarDominio(NomeTabela tabela, RegraColuna coluna)
+    private void UsarDominio(NomeTabelaEscrito tabela, RegraColunaEscrita coluna)
     {
         // Domínio que falhou na declaração (ou não declarado, já apontado na leitura): sem erro em cascata.
         if (!_definicoes.TryGetValue(coluna.Dominio!, out var definicao))
@@ -144,13 +146,13 @@ internal sealed class ResolvedorDeRegras
             [coluna.Politicas, definicao.Politicas],
             coluna.DerivarDe is not null,
             coluna.Justificativa is not null);
-        if (Conferir(definicao.Fabrica, regra, coluna.Parametros, coluna.Posicao, coluna.Local) is not null)
+        if (Conferir(definicao.Fabrica, regra, coluna.Parametros, coluna.Posicao, coluna.Local) is { } normalizados)
         {
-            _colunas.Add(new ColunaResolvida(tabela, coluna, definicao.Fabrica, regra));
+            _colunas.Add(new ColunaResolvida(tabela, coluna, definicao.Fabrica, regra, normalizados));
         }
     }
 
-    private void UsarTransformador(NomeTabela tabela, RegraColuna coluna)
+    private void UsarTransformador(NomeTabelaEscrito tabela, RegraColunaEscrita coluna)
     {
         if (Fabrica(coluna.Transformador!) is not { } fabrica)
         {
@@ -200,7 +202,7 @@ internal sealed class ResolvedorDeRegras
             _definicoes[nome] = new Definicao(fabrica, new Dictionary<string, string>(StringComparer.Ordinal), PoliticasDeEntrada.Nenhuma, identidade);
         }
 
-        _colunas.Add(new ColunaResolvida(tabela, coluna, fabrica, regra));
+        _colunas.Add(new ColunaResolvida(tabela, coluna, fabrica, regra, normalizados));
         Citar(fabrica, normalizados, coluna.Parametros, coluna.Posicao, coluna.Local);
     }
 
@@ -247,6 +249,12 @@ internal sealed class ResolvedorDeRegras
         }
     }
 
+    // Os parâmetros de identidade normalizados de cada domínio da sessão (vazios no transformador sem injetividade).
+    private Dictionary<string, IReadOnlyDictionary<string, string>> Identidades() =>
+        _definicoes
+            .Where(par => !_falhos.Contains(par.Key))
+            .ToDictionary(par => par.Key, par => (IReadOnlyDictionary<string, string>)new Dictionary<string, string>(par.Value.Identidade, StringComparer.Ordinal), StringComparer.Ordinal);
+
     // A tabela de domínios da sessão, em ordem de nome: cada um com os parâmetros e as políticas do próprio domínio.
     private List<DefinicaoDominio> Dominios() =>
     [
@@ -289,7 +297,16 @@ internal sealed class ResolvedorDeRegras
             // Copiado aqui dentro: o dicionário de uma fábrica de fora é código dela, e lido depois rodaria fora do try.
             if (fabrica.Fabrica.Normalizar(regra) is { } normalizados)
             {
-                return new Dictionary<string, string>(normalizados, StringComparer.Ordinal);
+                var copia = new SortedDictionary<string, string>(normalizados.ToDictionary(StringComparer.Ordinal), StringComparer.Ordinal).ToDictionary(StringComparer.Ordinal);
+
+                // O que a fábrica devolve vai ao hash e à carga: texto nulo ou com caractere que a leitura recusa vira recusa.
+                if (copia.Any(par => !TextoValido(par.Key) || !TextoValido(par.Value)))
+                {
+                    _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} devolveu um parâmetro normalizado nulo ou com caractere inválido.");
+                    return null;
+                }
+
+                return copia;
             }
 
             _erros.Adicionar(CodigosConfiguracao.RegraRecusada, posicao, local, $"A fábrica {fabrica.Nome}@{fabrica.Versao} não devolveu os parâmetros normalizados.");
@@ -401,6 +418,27 @@ internal sealed class ResolvedorDeRegras
 
     private static bool DeFora(FabricaRegistrada fabrica) => !TransformadoresEmbutidos.Fabricas.Contains(fabrica.Fabrica);
 
+    // Texto que a leitura do YAML aceitaria: sem surrogate sem par nem caractere que a passada recusa.
+    private static bool TextoValido(string? texto)
+    {
+        if (texto is null)
+        {
+            return false;
+        }
+
+        for (var indice = 0; indice < texto.Length;)
+        {
+            if (Rune.DecodeFromUtf16(texto.AsSpan(indice), out var caractere, out var lidos) != OperationStatus.Done || PassadaDeCaracteres.Motivo(caractere) is not null)
+            {
+                return false;
+            }
+
+            indice += lidos;
+        }
+
+        return true;
+    }
+
     [SuppressMessage("Usage", "CA2201:Do not raise reserved exception types", Justification = "Relança a falta de memória de uma fábrica de fora sem a mensagem nem a interna dela.")]
     private static OutOfMemoryException SemMensagem() => new();
 
@@ -443,11 +481,16 @@ internal sealed class ResolvedorDeRegras
         FabricaRegistrada Fabrica, IReadOnlyDictionary<string, string> Normalizados, IReadOnlyList<ParametroRegra> Parametros, Posicao Posicao, string Local);
 }
 
-/// <summary>Uma coluna com transformador: a fábrica e a regra conferida, para o <c>planejar</c> criar o transformador.</summary>
-internal sealed record ColunaResolvida(NomeTabela Tabela, RegraColuna Coluna, FabricaRegistrada Fabrica, RegraTransformacao Regra);
+/// <summary>
+/// Uma coluna com transformador: a fábrica, a regra conferida e os parâmetros que a fábrica normalizou (copiados, por nome,
+/// comparação ordinal), para o <c>planejar</c> comparar as colunas de um domínio e criar o transformador sem pedir de novo.
+/// </summary>
+internal sealed record ColunaResolvida(
+    NomeTabelaEscrito Tabela, RegraColunaEscrita Coluna, FabricaRegistrada Fabrica, RegraTransformacao Regra, IReadOnlyDictionary<string, string> Normalizados);
 
 /// <summary>
 /// As regras resolvidas, na ordem do arquivo, e a tabela de domínios da sessão (os declarados, os implícitos e os
-/// citados, com as políticas de cada domínio).
+/// citados, com as políticas de cada domínio), com os parâmetros de identidade normalizados de cada domínio, por nome.
 /// </summary>
-internal sealed record ResolucaoDeRegras(IReadOnlyList<ColunaResolvida> Colunas, IReadOnlyList<DefinicaoDominio> Dominios);
+internal sealed record ResolucaoDeRegras(
+    IReadOnlyList<ColunaResolvida> Colunas, IReadOnlyList<DefinicaoDominio> Dominios, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Identidades);

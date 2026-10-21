@@ -13,7 +13,7 @@ public sealed class ConfiguracaoTestes
 
         Assert.Equal(ModoTratamento.Reproduzivel, configuracao.Modo);
         Assert.Equal("homologacao", configuracao.Ambiente);
-        Assert.Equal(new ReferenciaSegredo(TipoReferenciaSegredo.Ambiente, "INCOGNITO_CHAVE", new(10, 8)), configuracao.Chave);
+        Assert.Equal(new ReferenciaSegredo(TipoReferenciaSegredo.Ambiente, "INCOGNITO_CHAVE", "INCOGNITO_CHAVE", new(10, 8)), configuracao.Chave);
         Assert.Equal(ProvedorBanco.PostgreSql, configuracao.Origem.Provedor);
         Assert.Equal("INCOGNITO_ORIGEM", configuracao.Origem.Conexao.Alvo);
         Assert.Equal("loja_homolog", configuracao.Destino.BancoEsperado);
@@ -343,9 +343,9 @@ public sealed class ConfiguracaoTestes
 
         Assert.Equal(
             [
-                new NomeTabela(new Identificador("Vendas", true), new Identificador("Cli\"entes", true)),
-                new NomeTabela(new Identificador("dbo", false), new Identificador("Ped.idos", true)),
-                new NomeTabela(new Identificador("public", false), new Identificador("clientes_ção$1", false)),
+                new NomeTabelaEscrito(new Identificador("Vendas", true), new Identificador("Cli\"entes", true)),
+                new NomeTabelaEscrito(new Identificador("dbo", false), new Identificador("Ped.idos", true)),
+                new NomeTabelaEscrito(new Identificador("public", false), new Identificador("clientes_ção$1", false)),
             ],
             tabelas.Select(tabela => tabela.Nome));
     }
