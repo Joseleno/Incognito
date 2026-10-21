@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CodeProcess.Incognito.Configuracao;
 using CodeProcess.Incognito.Transformadores;
 using Xunit.Sdk;
@@ -214,16 +215,40 @@ public sealed class ResolucaoDeRegrasTestes
     }
 
     [Fact]
-    public void O_erro_da_regra_padrao_de_uma_fabrica_sai_uma_vez_e_o_cancelamento_sobe()
+    public void O_erro_da_regra_padrao_de_uma_fabrica_sai_uma_vez()
     {
         var registro = new RegistroTransformadores();
         registro.Adicionar(new FabricaQueFalhaNoPadrao());
-        registro.Adicionar(new FabricaQueCancela());
 
         var erros = Erros(Colunas("      a: { transformador: exemplo.falha-padrao@1, estilo: x }\n      b: { transformador: exemplo.falha-padrao@1, estilo: x }\n"), registro);
 
         Assert.Single(erros);
-        Assert.Throws<OperationCanceledException>(() => Resolver(Colunas("      a: { transformador: exemplo.cancela@1 }\n"), registro));
+    }
+
+    [Fact]
+    public void O_cancelamento_de_uma_fabrica_de_fora_vira_recusa_so_com_o_tipo()
+    {
+        // A resolução roda sem token: um cancelamento vindo de fora não é do chamador, e sairia como cancelado (130).
+        var registro = new RegistroTransformadores();
+        registro.Adicionar(new FabricaQueCancela());
+
+        var erro = Unico(Colunas("      a: { transformador: exemplo.cancela@1 }\n"), registro);
+
+        Assert.Equal("INC2022", erro.Codigo);
+        Assert.Contains(nameof(OperationCanceledException), erro.Mensagem, StringComparison.Ordinal);
+        Assert.DoesNotContain(Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_falta_de_memoria_de_uma_fabrica_de_fora_sobe_nova_sem_a_mensagem()
+    {
+        var registro = new RegistroTransformadores();
+        registro.Adicionar(new FabricaSemMemoria());
+
+        var excecao = Assert.Throws<OutOfMemoryException>(() => Resolver(Colunas("      a: { transformador: exemplo.sem-memoria@1 }\n"), registro));
+
+        Assert.Null(excecao.InnerException);
+        Assert.DoesNotContain(Sentinela, excecao.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -475,7 +500,7 @@ public sealed class ResolucaoDeRegrasTestes
     }
 
     // Com parâmetro de identidade e injetividade, o resolvedor pede a regra padrão, e esta fábrica falha nela.
-    private sealed class FabricaQueFalhaNoPadrao : FabricaTransformador
+    private sealed class FabricaQueFalhaNoPadrao(Exception? falha = null) : FabricaTransformador
     {
         public override string Nome => "exemplo.falha-padrao";
 
@@ -492,7 +517,7 @@ public sealed class ResolucaoDeRegrasTestes
         }
 
         public override IReadOnlyDictionary<string, string> Normalizar(RegraTransformacao regra) =>
-            regra.Parametros.Count > 0 ? regra.Parametros : throw new KeyNotFoundException($"{Sentinela} sem estilo.");
+            regra.Parametros.Count > 0 ? regra.Parametros : throw falha ?? new KeyNotFoundException($"{Sentinela} sem estilo.");
 
         protected override Transformador CriarCore(ContextoCriacao contexto) => throw new NotSupportedException();
     }
@@ -507,7 +532,66 @@ public sealed class ResolucaoDeRegrasTestes
 
         public override IReadOnlySet<TipoColuna> TiposSuportados { get; } = new HashSet<TipoColuna> { TipoColuna.Texto };
 
-        public override void Validar(RegraTransformacao regra) => throw new OperationCanceledException();
+        public override void Validar(RegraTransformacao regra) => throw new OperationCanceledException(Sentinela, new InvalidOperationException(Sentinela));
+
+        protected override Transformador CriarCore(ContextoCriacao contexto) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    [SuppressMessage("Usage", "CA2201:Do not raise reserved exception types", Justification = "Imita a falta de memória de uma fábrica de fora.")]
+    public void A_regra_padrao_de_uma_fabrica_de_fora_que_cancela_ou_fica_sem_memoria()
+    {
+        var cancela = new RegistroTransformadores();
+        cancela.Adicionar(new FabricaQueFalhaNoPadrao(new OperationCanceledException(Sentinela)));
+        var erro = Unico(Colunas("      a: { transformador: exemplo.falha-padrao@1, estilo: x }\n"), cancela);
+        Assert.Equal("INC2022", erro.Codigo);
+        Assert.Contains(nameof(OperationCanceledException), erro.Mensagem, StringComparison.Ordinal);
+        Assert.DoesNotContain(Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var semMemoria = new RegistroTransformadores();
+        semMemoria.Adicionar(new FabricaQueFalhaNoPadrao(new OutOfMemoryException(Sentinela)));
+        var excecao = Assert.Throws<OutOfMemoryException>(() => Resolver(Colunas("      a: { transformador: exemplo.falha-padrao@1, estilo: x }\n"), semMemoria));
+        Assert.DoesNotContain(Sentinela, excecao.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_recusa_de_uma_fabrica_de_fora_sai_escapada()
+    {
+        var registro = new RegistroTransformadores();
+        registro.Adicionar(new FabricaQueRecusaComControle());
+
+        var erro = Unico(Colunas("      a: { transformador: exemplo.controle@1 }\n"), registro);
+
+        Assert.Equal("recusada \\u001B[2J \\u202E fim", erro.Mensagem);
+    }
+
+    private sealed class FabricaQueRecusaComControle : FabricaTransformador
+    {
+        public override string Nome => "exemplo.controle";
+
+        public override int Versao => 1;
+
+        public override Injetividade Injetividade => Injetividade.Nenhuma;
+
+        public override IReadOnlySet<TipoColuna> TiposSuportados { get; } = new HashSet<TipoColuna> { TipoColuna.Texto };
+
+        public override void Validar(RegraTransformacao regra) => throw new RegraInvalidaException("recusada \u001B[2J \u202E fim");
+
+        protected override Transformador CriarCore(ContextoCriacao contexto) => throw new NotSupportedException();
+    }
+
+    private sealed class FabricaSemMemoria : FabricaTransformador
+    {
+        public override string Nome => "exemplo.sem-memoria";
+
+        public override int Versao => 1;
+
+        public override Injetividade Injetividade => Injetividade.Nenhuma;
+
+        public override IReadOnlySet<TipoColuna> TiposSuportados { get; } = new HashSet<TipoColuna> { TipoColuna.Texto };
+
+        [SuppressMessage("Usage", "CA2201:Do not raise reserved exception types", Justification = "Imita a falta de memória de uma fábrica de fora.")]
+        public override void Validar(RegraTransformacao regra) => throw new OutOfMemoryException(Sentinela, new InvalidOperationException(Sentinela));
 
         protected override Transformador CriarCore(ContextoCriacao contexto) => throw new NotSupportedException();
     }

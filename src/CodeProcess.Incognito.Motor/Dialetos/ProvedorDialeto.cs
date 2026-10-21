@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace CodeProcess.Incognito.Dialetos;
 
@@ -30,4 +31,17 @@ public abstract class ProvedorDialeto
     /// <param name="cancelamento">Cancela a conexão.</param>
     /// <returns>O dialeto ligado ao destino, que o chamador descarta. Se a conexão falhar ou for cancelada, o dialeto fecha o que já abriu.</returns>
     public abstract Task<DialetoDestino> ConectarDestinoAsync(SegredoConexao conexao, CancellationToken cancelamento);
+
+    /// <summary>O nome do tipo. Selado: o motor guarda o provedor, e nada dele pode rodar código do dialeto fora do envoltório.</summary>
+    /// <returns>O nome completo do tipo.</returns>
+    public sealed override string ToString() => GetType().FullName ?? GetType().Name;
+
+    /// <summary>Igualdade por referência. Selada, pelo mesmo motivo do <see cref="ToString"/>.</summary>
+    /// <param name="obj">O outro objeto.</param>
+    /// <returns>Se é o mesmo provedor.</returns>
+    public sealed override bool Equals(object? obj) => ReferenceEquals(this, obj);
+
+    /// <summary>O hash da referência. Selado, pelo mesmo motivo do <see cref="ToString"/>.</summary>
+    /// <returns>O hash.</returns>
+    public sealed override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 }

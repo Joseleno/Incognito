@@ -24,6 +24,22 @@ public sealed class ContratoDeDialetoTestes
     }
 
     [Fact]
+    public void O_texto_a_igualdade_e_o_hash_do_provedor_sao_selados()
+    {
+        // O motor guarda o provedor (decisão 87): nenhum dialeto pode pôr código nesses três, que rodariam fora do envoltório.
+        foreach (var nome in new[] { nameof(ToString), nameof(Equals), nameof(GetHashCode) })
+        {
+            var metodo = typeof(ProvedorDialeto).GetMethods().Single(candidato => candidato.Name == nome && candidato.DeclaringType == typeof(ProvedorDialeto));
+            Assert.True(metodo.IsFinal && metodo.IsVirtual, $"{nome} não está selado no ProvedorDialeto.");
+        }
+
+        var provedor = new ProvedorFalso(completo: true, Defeito.Nenhum, perturbar: null);
+        Assert.Equal(typeof(ProvedorFalso).FullName, provedor.ToString());
+        Assert.True(provedor.Equals(provedor));
+        Assert.False(provedor.Equals(new ProvedorFalso(completo: true, Defeito.Nenhum, perturbar: null)));
+    }
+
+    [Fact]
     public void Os_nomes_comparam_sem_ignorar_a_caixa()
     {
         var maiuscula = new NomeObjeto("loja", "Cliente");

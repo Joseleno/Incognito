@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- A guarda da fronteira do dialeto chama o contrato experimental no controle positivo. -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);INCX001</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodeProcess.Incognito\CodeProcess.Incognito.csproj" />
     <ProjectReference Include="..\..\src\CodeProcess.Incognito.Motor\CodeProcess.Incognito.Motor.csproj" />

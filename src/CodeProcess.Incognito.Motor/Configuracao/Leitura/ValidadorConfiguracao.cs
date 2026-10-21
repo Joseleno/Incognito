@@ -104,6 +104,10 @@ internal sealed partial class ValidadorConfiguracao
     internal static ConfiguracaoIncognito? Validar(NoYaml raiz, ColetorDeErros erros, string? pastaBase, string? arquivo) =>
         new ValidadorConfiguracao(erros, pastaBase).Raiz(raiz, arquivo);
 
+    /// <summary>O nome do provedor como se escreve na configuração (<c>postgresql</c>).</summary>
+    /// <param name="provedor">O provedor.</param>
+    internal static string Nome(ProvedorBanco provedor) => _provedores.Single(par => par.Value == provedor).Key;
+
     private ConfiguracaoIncognito? Raiz(NoYaml no, string? arquivo)
     {
         if (no is not MapaYaml raiz)

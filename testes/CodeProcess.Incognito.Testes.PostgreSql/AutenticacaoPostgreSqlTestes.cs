@@ -57,11 +57,11 @@ public sealed class AutenticacaoPostgreSqlTestes
         Environment.SetEnvironmentVariable(variavel, ServidorPostgreSql.NovaSenha());
         try
         {
-            var erro = await Assert.ThrowsAsync<IncognitoException>(() => _provedor.ConectarDestinoAsync(
+            var erro = await Assert.ThrowsAsync<DialetoRecusouException>(() => _provedor.ConectarDestinoAsync(
                 new SegredoConexao("Host=127.0.0.1;Database=loja;Username=u"), TestContext.Current.CancellationToken));
 
             Assert.Equal("INC3102", erro.Codigo);
-            Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.Ordinal);
+            Assert.DoesNotContain(ServidorPostgreSql.Sentinela, erro.ToString(), StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

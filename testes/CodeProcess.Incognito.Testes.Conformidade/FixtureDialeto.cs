@@ -32,6 +32,17 @@ public abstract class FixtureDialeto
     /// <param name="cancelamento">Cancela a criação.</param>
     /// <returns>O par, que o teste descarta.</returns>
     public abstract ValueTask<ParDeBancos> CriarParPrivilegiadoAsync(CancellationToken cancelamento);
+
+    /// <summary>O dialeto, para a suíte conectar com uma string que ele recusa.</summary>
+    public abstract ProvedorDialeto Provedor { get; }
+
+    /// <summary>
+    /// Uma string de conexão que o dialeto recusa ao conectar, nos dois lados, com <see cref="DialetoRecusouException"/>
+    /// (uma opção que o Incognito não aceita, por exemplo), com o sentinela dentro: a suíte confere que a recusa não o traz.
+    /// </summary>
+    /// <param name="sentinela">O texto que a recusa nunca pode trazer.</param>
+    /// <returns>A string de conexão.</returns>
+    public abstract SegredoConexao ConexaoRecusada(string sentinela);
 }
 
 /// <summary>Os dois bancos de um teste, conectados.</summary>

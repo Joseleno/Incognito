@@ -91,8 +91,10 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   `So_os_dialetos_usam_a_suite_de_conformidade` (com a exceção dos testes do motor, para o falso).
 - `ContratoDeDialetoTestes`: o segredo nunca aparece no texto, nomes comparados sem ignorar a caixa, modelo imutável.
 - `PublicAPI.Unshipped.txt` do motor, com o prefixo `[INCX001]` em cada membro do contrato.
-- O compilador acusa `INCX001` em código não experimental que use o contrato, inclusive dentro do motor: um tipo do
-  contrato sem `[Experimental]` ou um tipo estável que exponha o contrato não compila.
+- O compilador acusa `INCX001` em código não experimental que use o contrato, inclusive dentro do motor, fora da pasta
+  interna dele (`Motor/Interno/`, só tipos internos, com o pragma justificado em cada arquivo, conferida por
+  `A_pasta_interna_do_motor_so_tem_tipos_internos_do_namespace_dela`): um tipo do contrato sem `[Experimental]` ou um
+  tipo estável que exponha o contrato não compila.
 - A sanitização das exceções de dialeto (item 4) e a conexão de controle (item 5) são verificadas pelas tarefas
   que as implementam: os testes do motor que chamam os dialetos e os da suíte para bloqueio e diário.
 
@@ -189,3 +191,16 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   conferido na abertura, em vez de lido: o modelo não ganha o único texto livre que o login poderia gravar. Na suíte, um fato confere as
   permissões de cada lado contra um padrão com exceções por objeto, toda tabela, todo objeto residual e toda sequence
   na ordem do esquema, e outro confere o transporte.
+- 2026-10-20: o motor consome o contrato numa pasta interna (`Motor/Interno/`, namespace `CodeProcess.Incognito.Interno`),
+  a única do motor, fora do contrato, em que o `INCX001` é suprimido, só por pragma justificado em cada arquivo; todo tipo dali é
+  interno, e a constante do diagnóstico não é usada fora do contrato (ela marcaria um tipo como experimental e fugiria
+  da busca pelo texto). Ali, um envoltório é o único que chama os pontos de extensão e traduz o que o dialeto lança (ADR
+  0017, item 8). O contrato ganha `DialetoRecusouException`, para o dialeto recusar a configuração ou o ambiente pelo tipo
+  (saída 2), nunca pela faixa do código; a suíte ganha um fato que conecta, nos dois lados, com uma string que o dialeto
+  recusa (dada pela fixture, com um sentinela) e confere o tipo, a faixa do código e que a recusa não traz o que estava na
+  string (a falta da interna é garantia do tipo, que não tem construtor com ela). O `ProvedorDialeto`
+  passa a selar `ToString`, `Equals` e `GetHashCode` (texto do tipo e igualdade por referência): o motor guarda o
+  provedor, e a leitura do IL não vê o receptor de uma chamada herdada de `Object`, então nenhum dialeto pode pôr código
+  ali. O motor repete a coerência do esquema lido (`INC3002`, falha do dialeto), e um teste
+  diferencial classifica cada defeito do falso que a consistência da suíte pega: coerência (o motor também recusa) ou só
+  presença e formato (o motor trata o campo nulo como o pior caso).

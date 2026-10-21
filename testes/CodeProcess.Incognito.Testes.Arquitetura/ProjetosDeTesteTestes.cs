@@ -49,6 +49,8 @@ public sealed class ProjetosDeTesteTestes
     // O atributo que marca um tipo público de dialeto como parte do contrato experimental, aceito só no código dos
     // dialetos: dentro do tipo marcado, o uso do contrato não avisa, então em outro lugar ele valeria como supressão.
     private const string AtributoExperimental = "[Experimental(\"INCX001\")]";
+    private const string ContratoDoMotor = "src/CodeProcess.Incognito.Motor/Dialetos/";
+    private const string InternoDoMotor = "src/CodeProcess.Incognito.Motor/Interno/";
     private static readonly string[] _codigoDosDialetos = ["src/CodeProcess.Incognito.PostgreSql/", "src/CodeProcess.Incognito.SqlServer/"];
 
     // Onde se suprime um diagnóstico do compilador.
@@ -428,8 +430,9 @@ public sealed class ProjetosDeTesteTestes
     public void O_INCX001_so_e_suprimido_nos_projetos_que_consomem_o_contrato_de_dialeto()
     {
         // O contrato experimental de dialeto avisa quem o usa; suprimir em lugar mais largo (Directory.Build.props,
-        // .editorconfig, pragma) esconderia o aviso de quem não sabe que o contrato muda. O próprio contrato o declara e o
-        // documenta.
+        // .editorconfig, pragma fora da pasta interna do motor) esconderia o aviso de quem não sabe que o contrato muda. O
+        // próprio contrato o declara e o documenta; o motor o consome só na pasta interna, com o pragma justificado em cada
+        // arquivo e nenhum tipo público (decisão 86).
         var raiz = Repositorio.Raiz();
 
         // Pode suprimir: o .csproj que referencia o motor ou a suíte de conformidade (dialetos, CLI, testes que
@@ -443,11 +446,80 @@ public sealed class ProjetosDeTesteTestes
             .ToHashSet();
         var achados = _comConfiguracaoDeCompilacao
             .SelectMany(Repositorio.Versionados)
-            .Where(arquivo => !permitidos.Contains(arquivo) && !arquivo.StartsWith("src/CodeProcess.Incognito.Motor/Dialetos/", StringComparison.Ordinal)
-                && SemOAtributoDosDialetos(arquivo, File.ReadAllText(Path.Combine(raiz, arquivo))).Contains("INCX001", StringComparison.OrdinalIgnoreCase))
+            .Where(arquivo => !permitidos.Contains(arquivo) && !arquivo.StartsWith(ContratoDoMotor, StringComparison.Ordinal)
+                && SemOPragmaDoInterno(arquivo, SemOAtributoDosDialetos(arquivo, File.ReadAllText(Path.Combine(raiz, arquivo)))).Contains("INCX001", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        // A constante do diagnóstico também marca um tipo como experimental, e dentro dele o contrato não avisa: fora do
+        // contrato, ela fugiria da busca pelo texto (também por using static ou por alias).
+        var constante = Repositorio.Versionados("src/*.cs")
+            .Where(arquivo => !arquivo.StartsWith(ContratoDoMotor, StringComparison.Ordinal)
+                && File.ReadAllText(Path.Combine(raiz, arquivo)).Contains("ContratoExperimental", StringComparison.Ordinal))
             .ToArray();
 
         Assert.True(achados.Length == 0, $"INCX001 citado fora dos projetos que consomem o contrato de dialeto: {string.Join(", ", achados)}.");
+        Assert.True(constante.Length == 0, $"Constante do INCX001 usada fora do contrato: {string.Join(", ", constante)}.");
+    }
+
+    [Fact]
+    public void O_INCX001_so_marca_o_contrato_e_os_dialetos()
+    {
+        // Pelos metadados, que nenhum truque de texto contorna ("INC" + "X001", alias, atributo de assembly): marcar algo
+        // como experimental fora do contrato e dos tipos dos dialetos tiraria o aviso de quem o usa ali dentro.
+        string[] assemblies = ["CodeProcess.Incognito", "CodeProcess.Incognito.Motor", "CodeProcess.Incognito.PostgreSql", "CodeProcess.Incognito.SqlServer", "CodeProcess.Incognito.EntityFrameworkCore", "CodeProcess.Incognito.Cli"];
+        const BindingFlags Todos = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var achados = new List<string>();
+        foreach (var assembly in assemblies.Select(nome => Assembly.Load(new AssemblyName(nome))))
+        {
+            if (Experimental(assembly.GetCustomAttributesData()) || assembly.Modules.Any(modulo => Experimental(modulo.GetCustomAttributesData())))
+            {
+                achados.Add($"{assembly.GetName().Name} (assembly ou módulo)");
+            }
+
+            foreach (var tipo in assembly.GetTypes().Where(tipo => !NoContrato(tipo)))
+            {
+                var membros = tipo.GetMembers(Todos).Where(membro => Experimental(membro.GetCustomAttributesData())).Select(membro => $"{tipo.FullName}.{membro.Name}");
+                achados.AddRange(Experimental(tipo.GetCustomAttributesData()) ? [tipo.FullName!] : membros);
+            }
+        }
+
+        Assert.True(achados.Count == 0, $"INCX001 marcando algo fora do contrato e dos dialetos: {string.Join(", ", achados)}.");
+
+        static bool Experimental(IEnumerable<CustomAttributeData> atributos) => atributos.Any(atributo =>
+            atributo.AttributeType.FullName == "System.Diagnostics.CodeAnalysis.ExperimentalAttribute"
+            && atributo.ConstructorArguments is [{ Value: "INCX001" }]);
+
+        // O tipo de primeiro nível no namespace do contrato ou de um dialeto (os gerados ficam no tipo que os escreveu).
+        static bool NoContrato(Type tipo)
+        {
+            var externo = tipo;
+            while (externo.DeclaringType is { } dono)
+            {
+                externo = dono;
+            }
+
+            return externo.Namespace is "CodeProcess.Incognito.Dialetos" || externo.Namespace?.StartsWith("CodeProcess.Incognito.Dialetos.", StringComparison.Ordinal) == true;
+        }
+    }
+
+    [Fact]
+    public void A_pasta_interna_do_motor_so_tem_tipos_internos_do_namespace_dela()
+    {
+        // A isenção do INCX001 vale pelo caminho: um arquivo da pasta que declarasse outro namespace, ou um tipo público,
+        // levaria o contrato experimental para a superfície do motor sem aviso.
+        var raiz = Repositorio.Raiz();
+        var arquivos = Repositorio.Versionados(InternoDoMotor + "*.cs").ToArray();
+        var foraDoNamespace = arquivos
+            .Where(arquivo => !Regex.IsMatch(File.ReadAllText(Path.Combine(raiz, arquivo)), @"^namespace CodeProcess\.Incognito\.Interno;\s*$", RegexOptions.Multiline))
+            .ToArray();
+        var publicos = Assembly.Load(new AssemblyName("CodeProcess.Incognito.Motor")).GetTypes()
+            .Where(tipo => tipo.Namespace == "CodeProcess.Incognito.Interno" && (tipo.IsPublic || tipo.IsNestedPublic || tipo.IsNestedFamily || tipo.IsNestedFamORAssem))
+            .Select(tipo => tipo.FullName)
+            .ToArray();
+
+        Assert.NotEmpty(arquivos);
+        Assert.True(foraDoNamespace.Length == 0, $"Arquivo da pasta interna do motor fora do namespace CodeProcess.Incognito.Interno: {string.Join(", ", foraDoNamespace)}.");
+        Assert.True(publicos.Length == 0, $"Tipo visível fora do motor no namespace interno: {string.Join(", ", publicos)}.");
     }
 
     [Fact]
@@ -476,6 +548,61 @@ public sealed class ProjetosDeTesteTestes
         Assert.Contains(codigos, par => par.codigo == "INC3101");
         Assert.True(repetidos.Length == 0, $"Códigos de erro repetidos: {string.Join("; ", repetidos)}.");
         Assert.True(soltos.Length == 0, $"Código de erro escrito fora de uma constante: {string.Join(", ", soltos)}.");
+    }
+
+    [Fact]
+    public void Cada_arquivo_de_codigos_fica_na_sua_faixa_e_todo_codigo_do_planejar_tem_teste()
+    {
+        // As faixas fecham quem pode usar cada código (decisão 86): o núcleo INC1xxx, a configuração INC2xxx, o planejar
+        // INC300x a INC309x nos erros e INC351x a INC359x nos avisos, e cada dialeto a sua; um código fora da faixa do arquivo
+        // seria um dialeto se passando por erro do planejar, ou o contrário.
+        var faixas = new Dictionary<string, Regex>(StringComparer.Ordinal)
+        {
+            ["src/CodeProcess.Incognito/"] = new(@"^INC1[0-9]{3}$", RegexOptions.ECMAScript),
+            ["src/CodeProcess.Incognito.Motor/Configuracao/CodigosConfiguracao.cs"] = new(@"^INC2[0-9]{3}$", RegexOptions.ECMAScript),
+            ["src/CodeProcess.Incognito.Motor/Interno/CodigosPlanejar.cs"] = new(@"^INC30[0-9]{2}$|^INC35[1-9][0-9]$", RegexOptions.ECMAScript),
+            ["src/CodeProcess.Incognito.PostgreSql/CodigosPostgreSql.cs"] = new(@"^INC31[0-9]{2}$", RegexOptions.ECMAScript),
+            ["src/CodeProcess.Incognito.SqlServer/"] = new(@"^INC32[0-9]{2}$", RegexOptions.ECMAScript),
+        };
+        var declaracao = new Regex(@"const\s+string\s+\w+\s*=\s*""(INC[^""X][^""]*)""");
+        var raiz = Repositorio.Raiz();
+        var declarados = Repositorio.Versionados("src/*.cs")
+            .SelectMany(arquivo => declaracao.Matches(File.ReadAllText(Path.Combine(raiz, arquivo))).Select(casamento => (arquivo, codigo: casamento.Groups[1].Value)))
+            .ToArray();
+        var semFaixa = declarados.Where(par => !faixas.Keys.Any(faixa => par.arquivo.StartsWith(faixa, StringComparison.Ordinal)))
+            .Select(par => par.arquivo).Distinct().ToArray();
+        var foraDaFaixa = declarados
+            .Where(par => faixas.Where(faixa => par.arquivo.StartsWith(faixa.Key, StringComparison.Ordinal)).Any(faixa => !faixa.Value.IsMatch(par.codigo)))
+            .Select(par => $"{par.codigo} ({par.arquivo})")
+            .ToArray();
+
+        // O código entra em CodigosPlanejar quando a verificação que o usa é implementada, sempre com teste.
+        var testes = string.Concat(Repositorio.Versionados("testes/*.cs").Select(arquivo => File.ReadAllText(Path.Combine(raiz, arquivo))));
+        var doPlanejar = declarados.Where(par => par.arquivo.EndsWith("/CodigosPlanejar.cs", StringComparison.Ordinal)).Select(par => par.codigo).ToArray();
+        var semTeste = doPlanejar.Where(codigo => !testes.Contains($"\"{codigo}\"", StringComparison.Ordinal)).ToArray();
+
+        // Um código fora do formato (dígito que não é ASCII, falta ou sobra de dígito) fugiria da faixa e da unicidade; o
+        // INCX001 é o diagnóstico do contrato, não um código de erro.
+        var malformados = declarados.Where(par => !Regex.IsMatch(par.codigo, "^INC[0-9]{4}$", RegexOptions.ECMAScript)).Select(par => $"{par.codigo} ({par.arquivo})").ToArray();
+
+        Assert.NotEmpty(doPlanejar);
+        Assert.True(malformados.Length == 0, $"Código fora do formato INC e 4 dígitos: {string.Join(", ", malformados)}.");
+        Assert.True(semFaixa.Length == 0, $"Arquivo que declara códigos sem faixa definida: {string.Join(", ", semFaixa)}.");
+        Assert.True(foraDaFaixa.Length == 0, $"Código fora da faixa do arquivo: {string.Join(", ", foraDaFaixa)}.");
+        Assert.True(semTeste.Length == 0, $"Código do planejar sem teste que o cite: {string.Join(", ", semTeste)}.");
+    }
+
+    [Fact]
+    public void A_copia_do_leitor_de_IL_e_igual_a_do_nucleo()
+    {
+        // A guarda da fronteira do dialeto usa uma cópia consciente (a do núcleo é interna ao projeto dele): as duas não podem
+        // se afastar sem aviso.
+        var raiz = Repositorio.Raiz();
+        static string Corpo(string texto) => texto[texto.IndexOf("internal static class MembrosNoIl", StringComparison.Ordinal)..].ReplaceLineEndings("\n");
+
+        Assert.Equal(
+            Corpo(File.ReadAllText(Path.Combine(raiz, "testes/CodeProcess.Incognito.Testes/MembrosNoIl.cs"))),
+            Corpo(File.ReadAllText(Path.Combine(raiz, "testes/CodeProcess.Incognito.Testes.Arquitetura/MembrosNoIl.cs"))));
     }
 
     [Fact]
@@ -544,6 +671,20 @@ public sealed class ProjetosDeTesteTestes
     }
 
     // O texto do arquivo sem o atributo experimental exato, só no código dos dialetos.
+    // Na pasta interna do motor, só um .cs pode suprimir, e só pela linha exata do pragma logo depois de uma linha de
+    // comentário com a justificativa (decisão 86, D4); qualquer outra citação continua sendo violação.
+    private static string SemOPragmaDoInterno(string arquivo, string texto)
+    {
+        if (!arquivo.StartsWith(InternoDoMotor, StringComparison.Ordinal) || !arquivo.EndsWith(".cs", StringComparison.Ordinal))
+        {
+            return texto;
+        }
+
+        var linhas = texto.Split('\n');
+        return string.Join('\n', linhas.Where((linha, indice) =>
+            !(linha.TrimEnd('\r') == "#pragma warning disable INCX001" && indice > 0 && linhas[indice - 1].TrimStart().StartsWith("//", StringComparison.Ordinal))));
+    }
+
     private static string SemOAtributoDosDialetos(string arquivo, string texto) =>
         _codigoDosDialetos.Any(pasta => arquivo.StartsWith(pasta, StringComparison.Ordinal))
             ? texto.Replace(AtributoExperimental, "", StringComparison.Ordinal)

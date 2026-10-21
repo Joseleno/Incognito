@@ -55,6 +55,8 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoDestino.DialetoDestino() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoOrigem
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoOrigem.DialetoOrigem() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoRecusouException
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoRecusouException.DialetoRecusouException(string! codigo, string! mensagem) -> void
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoSql
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoSql.Citar(CodeProcess.Incognito.Dialetos.NomeObjeto! nome) -> string!
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoSql.DialetoSql() -> void
@@ -172,6 +174,9 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]override CodeProcess.Incognito.Dialetos.ReferenciaColuna.GetHashCode() -> int
 [INCX001]override CodeProcess.Incognito.Dialetos.ReferenciaColuna.ToString() -> string!
 [INCX001]override CodeProcess.Incognito.Dialetos.SegredoConexao.ToString() -> string!
+[INCX001]override sealed CodeProcess.Incognito.Dialetos.ProvedorDialeto.Equals(object? obj) -> bool
+[INCX001]override sealed CodeProcess.Incognito.Dialetos.ProvedorDialeto.GetHashCode() -> int
+[INCX001]override sealed CodeProcess.Incognito.Dialetos.ProvedorDialeto.ToString() -> string!
 [INCX001]virtual CodeProcess.Incognito.Dialetos.DialetoBanco.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
 [INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.LancarSeDescartado() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.ReferenciasDaExpressao

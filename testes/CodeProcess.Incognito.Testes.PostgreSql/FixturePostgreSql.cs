@@ -47,6 +47,14 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     public override ValueTask<ParDeBancos> CriarParPrivilegiadoAsync(CancellationToken cancelamento) =>
         CriarAsync(servidor.StringDeConexaoDoAdministrador, servidor.StringDeConexaoDoAdministrador, cancelamento);
 
+    /// <inheritdoc/>
+    public override ProvedorDialeto Provedor => _provedor;
+
+    /// <inheritdoc/>
+    // Dois servidores: recusado antes de abrir (INC3102), com o sentinela na senha e numa opção.
+    public override SegredoConexao ConexaoRecusada(string sentinela) =>
+        new($"Host=127.0.0.1,127.0.0.2;Database=loja_{sentinela};Username=u;Password={sentinela};Application Name={sentinela}");
+
     private async ValueTask<ParDeBancos> CriarAsync(Func<string, string> conexaoDaOrigem, Func<string, string> conexaoDoDestino, CancellationToken cancelamento)
     {
         var bancoOrigem = await servidor.ClonarModeloAsync(cancelamento);

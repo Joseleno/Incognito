@@ -151,11 +151,22 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.TransporteOtimistaNoDestino] = (true, [Transporte("destino: lido cifrado sim, servidor verificado não, local não, esperado cifrado não")]),
         [Defeito.PermissaoDeTabelaRepetida] = (true, [Acesso("origem: acesso do login com permissões a mais de tabela loja.canonicos")]),
         [Defeito.SegurancaDeLinhaVazia] = (true, [(nameof(SuiteFalsa.A_seguranca_por_linha_e_apontada), "Segurança por linha: a fixture a declara presente sem nenhuma tabela")]),
+        [Defeito.RecusaComoExcecaoComum] = (true, [Recusa("Recusa: a origem lançou IncognitoException, e não DialetoRecusouException.")]),
+        [Defeito.RecusaComAString] = (true, [Recusa("Recusa: a recusa da origem traz o que estava na string de conexão.")]),
+        [Defeito.RecusaForaDaFaixa] = (true, [Recusa("Recusa: a origem recusou com um código fora da faixa dos dialetos (INC31xx a INC34xx).")]),
+        [Defeito.ConexaoInaceitavelAceita] = (true, [Recusa("Recusa: a origem conectou, e não DialetoRecusouException.")]),
         [Defeito.SuiteAninhada] = (true, [(nameof(SuiteFalsa.A_classe_da_suite_e_selada_e_de_primeiro_nivel), "Suíte: a classe CodeProcess.Incognito.Testes.Motor.Dialetos.SuiteDeConformidadeTestes+SuiteAninhada precisa ser selada e de primeiro nível")]),
         [Defeito.SuiteAberta] = (true, [(nameof(SuiteFalsa.A_classe_da_suite_e_selada_e_de_primeiro_nivel), "Suíte: a classe CodeProcess.Incognito.Testes.Motor.Dialetos.SuiteAberta precisa ser selada e de primeiro nível")]),
     };
 
     public static TheoryData<Defeito> Defeitos => [.. _mapa.Keys];
+
+    /// <summary>Os defeitos que derrubam o teste da suíte, para o motor conferir o mesmo veredito.</summary>
+    internal static IEnumerable<Defeito> DefeitosQueCitam(string teste) =>
+        _mapa.Where(par => par.Value.Falhas.Any(falha => falha.Teste == teste)).Select(par => par.Key);
+
+    /// <summary>A variante do banco falso (completo ou sem os recursos opcionais) em que o defeito é provado.</summary>
+    internal static bool Variante(Defeito defeito) => _mapa[defeito].Completo;
 
     [Fact]
     public void A_suite_so_tem_fatos_sem_parametros_nem_pulo_e_todos_na_categoria_de_banco()
@@ -262,6 +273,8 @@ public sealed class SuiteDeConformidadeTestes
     private static (string Teste, string Trecho) Acesso(string trecho) => (nameof(SuiteFalsa.O_acesso_e_lido_em_cada_lado), trecho);
 
     private static (string Teste, string Trecho) Transporte(string trecho) => (nameof(SuiteFalsa.A_identidade_informa_o_transporte), trecho);
+
+    private static (string Teste, string Trecho) Recusa(string trecho) => (nameof(SuiteFalsa.A_conexao_inaceitavel_e_recusada_pelo_tipo_da_recusa), trecho);
 
     // O inventário falha nos dois lados; o trecho confere o da origem.
     private static (string Teste, string Trecho) Inventario(string objeto, string trecho) =>
