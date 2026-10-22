@@ -8,5 +8,8 @@ internal sealed class FabricaTextoSubstituir() : FabricaEmbutida(NomeDoTransform
 {
     internal const string NomeDoTransformador = "texto.substituir";
 
+    // Troca todo texto, qualquer que seja o formato: nunca anula nem copia em claro.
+    protected override bool UsaEntradaMalformada => false;
+
     protected override Transformador CriarCore(ContextoCriacao contexto) => new TransformadorTextoSubstituir(contexto.ComprimentoMaximo);
 }

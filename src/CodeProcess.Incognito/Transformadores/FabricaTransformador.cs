@@ -1,11 +1,12 @@
 using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CodeProcess.Incognito.Transformadores;
 
 /// <summary>
 /// Cria os transformadores de um nome e uma versão (<c>br.cpf@1</c>): confere a regra uma vez, antes do banco
-/// (<see cref="Validar"/>), e cria o transformador de cada coluna conhecendo o tipo, o comprimento e a colação
-/// (<see cref="Criar"/>). Classe abstrata para poder ganhar membros virtuais sem quebrar quem estende.
+/// (<see cref="Validar"/>), e cria o transformador de cada coluna conhecendo o tipo, o comprimento, a faixa, a precisão
+/// e a colação (<see cref="Criar"/>). Classe abstrata para poder ganhar membros virtuais sem quebrar quem estende.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -98,20 +99,38 @@ public abstract class FabricaTransformador
     }
 
     /// <summary>
-    /// Cria o transformador de uma coluna: confere a regra, a versão do domínio e o tipo da coluna, chama
+    /// Cria o transformador de uma coluna: confere o contexto, a regra, a versão do domínio e o tipo da coluna, chama
     /// <see cref="CriarCore"/> e confere que o transformador criado tem o nome e a versão da fábrica.
     /// </summary>
+    /// <remarks>
+    /// O motor cria o transformador de cada coluna mais de uma vez, cada vez com um contexto novo e igual: no
+    /// <c>planejar</c>, para conferir que a fábrica atende a coluna, e o descarta sem usá-lo; na execução, de novo. O
+    /// <see cref="CriarCore"/> não deve ter efeito fora do transformador que devolve.
+    /// </remarks>
     /// <param name="contexto">A regra e a coluna.</param>
     /// <returns>O transformador.</returns>
     /// <exception cref="ArgumentNullException">Contexto nulo.</exception>
+    /// <exception cref="ArgumentException">
+    /// Contexto que se contradiz: o menor inteiro igual ou acima do maior, ou a escala sem a precisão.
+    /// </exception>
     /// <exception cref="RegraInvalidaException">Regra recusada ou coluna que o transformador não atende.</exception>
     /// <exception cref="InvalidOperationException">
     /// O contexto já foi usado por outra fábrica, ou a fábrica criou um transformador de outro nome, versão ou
-    /// injetividade.
+    /// injetividade (o criado é descartado antes, se for <see cref="IDisposable"/>).
     /// </exception>
     public Transformador Criar(ContextoCriacao contexto)
     {
         ArgumentNullException.ThrowIfNull(contexto);
+        if (contexto.MenorInteiro >= contexto.MaiorInteiro)
+        {
+            throw new ArgumentException("O menor inteiro do contexto precisa ficar abaixo do maior.", nameof(contexto));
+        }
+
+        if (contexto.Escala is not null && contexto.Precisao is null)
+        {
+            throw new ArgumentException("A escala do contexto exige a precisão.", nameof(contexto));
+        }
+
         if (!contexto.Reservar(this))
         {
             throw new InvalidOperationException("O contexto de criação já foi usado por outra fábrica: cada fábrica recebe o seu.");
@@ -129,18 +148,44 @@ public abstract class FabricaTransformador
         }
 
         var transformador = CriarCore(contexto) ?? throw new InvalidOperationException($"A fábrica {Nome}@{Versao} não criou o transformador.");
-        if (!string.Equals(transformador.Nome, Nome, StringComparison.Ordinal) || transformador.Versao != Versao
-            || transformador.Injetividade != Injetividade)
+        bool conferido;
+        try
         {
+            conferido = string.Equals(transformador.Nome, Nome, StringComparison.Ordinal) && transformador.Versao == Versao
+                && transformador.Injetividade == Injetividade;
+        }
+        catch
+        {
+            DescartarSemFalha(transformador);
+            throw;
+        }
+
+        if (!conferido)
+        {
+            // O criado não volta a quem chamou: só aqui pode ser descartado.
+            DescartarSemFalha(transformador);
             throw new InvalidOperationException($"A fábrica {Nome}@{Versao} criou um transformador de outro nome, versão ou injetividade.");
         }
 
         return transformador;
     }
 
+    // A falha do descarte de um criado recusado cede à exceção principal, que segue.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A falha do descarte cede à exceção principal, que segue.")]
+    private static void DescartarSemFalha(Transformador transformador)
+    {
+        try
+        {
+            (transformador as IDisposable)?.Dispose();
+        }
+        catch
+        {
+        }
+    }
+
     /// <summary>Cria o transformador, com a regra, a versão e o tipo já conferidos por <see cref="Criar"/>.</summary>
     /// <param name="contexto">A regra e a coluna.</param>
     /// <returns>O transformador.</returns>
-    /// <exception cref="RegraInvalidaException">Coluna que o transformador não atende (comprimento, colação).</exception>
+    /// <exception cref="RegraInvalidaException">Coluna que o transformador não atende (comprimento, faixa, colação).</exception>
     protected abstract Transformador CriarCore(ContextoCriacao contexto);
 }

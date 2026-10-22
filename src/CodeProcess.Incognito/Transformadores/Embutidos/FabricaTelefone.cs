@@ -10,6 +10,7 @@ internal sealed class FabricaTelefone() : FabricaEmbutida("br.telefone", "telefo
 {
     protected override Transformador CriarCore(ContextoCriacao contexto)
     {
+        ExigirFaixa(contexto, 9_999_999_999_999, "o pseudônimo de telefone tem até 13 dígitos, com o código do país");
         var telefone = Instancia(contexto.Sessao, contexto.Regra);
         return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, telefone.Pseudonimizar, telefone.Pseudonimizar);
     }

@@ -165,6 +165,40 @@ public sealed class FabricasEmbutidasTestes : IDisposable
     }
 
     [Theory]
+    [InlineData("br.cpf", 99_999_999_999L, "CPF")]
+    [InlineData("br.cnpj", 99_999_999_999_999L, "CNPJ")]
+    [InlineData("br.cep", 99_999_999L, "CEP")]
+    [InlineData("br.telefone", 9_999_999_999_999L, "telefone")]
+    public void Coluna_inteira_que_nao_comporta_o_pseudonimo_e_recusada(string nome, long maior, string documento)
+    {
+        var fabrica = Fabrica(nome);
+        var regra = Regra(fabrica, temDerivarDe: nome == "br.cep" ? true : null);
+        ContextoCriacao Inteira(long? maiorInteiro) =>
+            new(regra, TipoColuna.Inteiro, _sessao) { MaiorInteiro = maiorInteiro, TipoReferencia = nome == "br.cep" ? TipoColuna.Texto : null };
+
+        // No limite exato passa; um a menos, ou sem a faixa, é recusado pela faixa, e a mensagem diz o documento.
+        fabrica.Criar(Inteira(maior));
+        var abaixo = Assert.Throws<RegraInvalidaException>(() => fabrica.Criar(Inteira(maior - 1)));
+        Assert.Contains($"não comporta {maior.ToString(System.Globalization.CultureInfo.InvariantCulture)}: o pseudônimo de {documento}", abaixo.Message, StringComparison.Ordinal);
+        var semFaixa = Assert.Throws<RegraInvalidaException>(() => fabrica.Criar(Inteira(null)));
+        Assert.Contains($"não informa a faixa: o pseudônimo de {documento}", semFaixa.Message, StringComparison.Ordinal);
+
+        // A coluna de texto não olha a faixa.
+        fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Texto, _sessao) { MaiorInteiro = 1, TipoReferencia = nome == "br.cep" ? TipoColuna.Texto : null });
+    }
+
+    [Fact]
+    public void Toda_embutida_que_aceita_coluna_inteira_recusa_o_contexto_sem_a_faixa()
+    {
+        // A guarda vale para a embutida que vier: aceitar Inteiro sem pedir a faixa deixaria o pseudônimo estourar a coluna.
+        var inteiras = TransformadoresEmbutidos.Fabricas.Where(fabrica => fabrica.TiposSuportados.Contains(TipoColuna.Inteiro)).ToList();
+
+        Assert.Equal(["br.cep", "br.cnpj", "br.cpf", "br.telefone"], inteiras.Select(fabrica => fabrica.Nome).Order(StringComparer.Ordinal));
+        Assert.All(inteiras, fabrica => Assert.Throws<RegraInvalidaException>(
+            () => fabrica.Criar(new ContextoCriacao(Regra(fabrica, temDerivarDe: fabrica.Nome == "br.cep" ? true : null), TipoColuna.Inteiro, _sessao) { TipoReferencia = TipoColuna.Texto })));
+    }
+
+    [Theory]
     [MemberData(nameof(Nomes))]
     public void Tipo_nao_suportado_e_recusado_na_criacao(string nome)
     {
@@ -236,7 +270,7 @@ public sealed class FabricasEmbutidasTestes : IDisposable
         Assert.Equal(1, sessao.Instancias);
 
         // O padrão escrito é o mesmo universo, em texto ou em número.
-        var escrito = cnpj.Criar(new ContextoCriacao(Regra(cnpj, parametros: new() { ["permutarOrdem"] = "false" }), TipoColuna.Inteiro, sessao));
+        var escrito = cnpj.Criar(new ContextoCriacao(Regra(cnpj, parametros: new() { ["permutarOrdem"] = "false" }), TipoColuna.Inteiro, sessao) { MaiorInteiro = long.MaxValue });
         Assert.Equal(1, sessao.Instancias);
 
         var comOrdem = cnpj.Criar(new ContextoCriacao(Regra(cnpj, parametros: new() { ["permutarOrdem"] = "true" }), TipoColuna.Texto, sessao));
@@ -414,8 +448,15 @@ public sealed class FabricasEmbutidasTestes : IDisposable
             EntradaMalformada = malformada,
         };
 
+    // A coluna inteira com a faixa do bigint, como o planejar informa.
     private ContextoCriacao Contexto(RegraTransformacao regra, TipoColuna tipo, int? comprimento) =>
-        new(regra, tipo, _sessao) { ComprimentoMaximo = comprimento, TipoReferencia = regra.TemDerivarDe == true ? TipoColuna.Texto : null };
+        new(regra, tipo, _sessao)
+        {
+            ComprimentoMaximo = comprimento,
+            TipoReferencia = regra.TemDerivarDe == true ? TipoColuna.Texto : null,
+            MenorInteiro = tipo == TipoColuna.Inteiro ? long.MinValue : null,
+            MaiorInteiro = tipo == TipoColuna.Inteiro ? long.MaxValue : null,
+        };
 
     private sealed class Descartavel(Action aoDescartar) : IDisposable
     {

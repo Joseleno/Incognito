@@ -10,6 +10,7 @@ internal sealed class FabricaCpf() : FabricaEmbutida("br.cpf", "cpf", Injetivida
     protected override Transformador CriarCore(ContextoCriacao contexto)
     {
         ExigirComprimento(contexto, 11, "o pseudônimo de CPF tem 11 caracteres (14 com a máscara)");
+        ExigirFaixa(contexto, 99_999_999_999, "o pseudônimo de CPF tem até 11 dígitos");
         var cpf = Instancia(contexto.Sessao, contexto.Regra);
         return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, cpf.Pseudonimizar, cpf.Pseudonimizar);
     }

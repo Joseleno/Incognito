@@ -7,6 +7,7 @@ using CodeProcess.Incognito.Configuracao;
 using CodeProcess.Incognito.Configuracao.Leitura;
 using CodeProcess.Incognito.Dialetos;
 using CodeProcess.Incognito.Execucao;
+using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Interno;
 
@@ -26,7 +27,8 @@ internal delegate CorrespondenciaNome ComparadorDeNomes(string escrito, bool ent
 /// <summary>
 /// Do esquema lido e das regras resolvidas ao plano: as unidades de cópia e o pareamento entre origem e destino (P3), os
 /// nomes da configuração resolvidos contra o catálogo, que barram o resto quando falham (P4), e as unidades, as ações,
-/// as estrangeiras, o esquema reservado e a origem contra o destino (P5). Os nomes casam só pelo dialeto
+/// as estrangeiras, o esquema reservado e a origem contra o destino (P5), com o tipo, os limites e os nulos de cada
+/// coluna tratada e a criação do transformador dela numa sessão descartável (P6). Os nomes casam só pelo dialeto
 /// (<see cref="ComparadorDeNomes"/>), nunca pelo texto: o casamento exato nunca vence, e a caixa diferente só vira dica.
 /// </summary>
 internal sealed class MontagemDoPlano
@@ -34,10 +36,15 @@ internal sealed class MontagemDoPlano
     // O esquema do diário do Incognito, e os de sistema do PostgreSQL (os do SQL Server vêm com o dialeto dele): uma entrada
     // neles nunca é tabela de cópia.
     private const string Reservado = "incognito";
+
+    // A maior precisão que o decimal do .NET representa sem perda.
+    private const int MaiorPrecisao = 28;
     private static readonly string[] _sistema = ["information_schema", "pg_catalog", "pg_toast"];
 
     private readonly ConfiguracaoIncognito _configuracao;
     private readonly ResolucaoDeRegras _regras;
+    private readonly RegistroTransformadores _registro;
+    private readonly CriacaoNoPlano _criacao;
     private readonly ComparadorDeNomes _daOrigem;
     private readonly ComparadorDeNomes _doDestino;
     private readonly LeituraDoBanco _origem;
@@ -51,12 +58,22 @@ internal sealed class MontagemDoPlano
     private readonly Dictionary<RegraColunaEscrita, ColunaEsquema> _derivadas = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<RegraColunaEscrita, ColunaResolvida> _resolvidas = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Unidade, (AcaoTabela Acao, bool Escrita)> _acoes = [];
+    private readonly Dictionary<RegraColunaEscrita, ContextoDaColuna> _contextos = new(ReferenceEqualityComparer.Instance);
 
     private MontagemDoPlano(
-        ConfiguracaoIncognito configuracao, ResolucaoDeRegras regras, ComparadorDeNomes daOrigem, ComparadorDeNomes doDestino, LeituraDoBanco origem, LeituraDoBanco destino)
+        ConfiguracaoIncognito configuracao,
+        ResolucaoDeRegras regras,
+        RegistroTransformadores registro,
+        CriacaoNoPlano criacao,
+        ComparadorDeNomes daOrigem,
+        ComparadorDeNomes doDestino,
+        LeituraDoBanco origem,
+        LeituraDoBanco destino)
     {
         _configuracao = configuracao;
         _regras = regras;
+        _registro = registro;
+        _criacao = criacao;
         _daOrigem = daOrigem;
         _doDestino = doDestino;
         _origem = origem;
@@ -70,16 +87,31 @@ internal sealed class MontagemDoPlano
     /// <summary>Monta o plano.</summary>
     /// <param name="configuracao">A configuração.</param>
     /// <param name="regras">As regras resolvidas.</param>
+    /// <param name="registro">O registro, de onde sai a versão mais nova de cada transformador.</param>
     /// <param name="daOrigem">A comparação de nomes do banco da origem.</param>
     /// <param name="doDestino">A comparação de nomes do banco do destino.</param>
     /// <param name="origem">A leitura da origem, já conferida.</param>
     /// <param name="destino">A leitura do destino, já conferida.</param>
+    /// <param name="gerarChave">O gerador da chave aleatória da sessão descartável.</param>
+    /// <param name="cancelamento">Cancela o planejamento.</param>
     /// <returns>O plano montado.</returns>
     /// <exception cref="PlanoRecusadoException">Algum nome não se resolve, ou a configuração e o esquema não permitem copiar.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador durante a criação dos transformadores.</exception>
     internal static PlanoMontado Montar(
-        ConfiguracaoIncognito configuracao, ResolucaoDeRegras regras, ComparadorDeNomes daOrigem, ComparadorDeNomes doDestino, LeituraDoBanco origem, LeituraDoBanco destino)
+        ConfiguracaoIncognito configuracao,
+        ResolucaoDeRegras regras,
+        RegistroTransformadores registro,
+        ComparadorDeNomes daOrigem,
+        ComparadorDeNomes doDestino,
+        LeituraDoBanco origem,
+        LeituraDoBanco destino,
+        Func<ChaveIncognito> gerarChave,
+        CancellationToken cancelamento)
     {
-        var montagem = new MontagemDoPlano(configuracao, regras, daOrigem, doDestino, origem, destino);
+        // A sessão descartável vive só durante a montagem: os transformadores são criados e descartados nela, e a chave
+        // aleatória é zerada no fim, com erro ou sem.
+        using var criacao = new CriacaoNoPlano(gerarChave, configuracao.Ambiente, regras.Dominios, cancelamento);
+        var montagem = new MontagemDoPlano(configuracao, regras, registro, criacao, daOrigem, doDestino, origem, destino);
         montagem.Indexar();
         montagem.ResolverNomes();
         montagem._coletor.LancarSeHouverErros();
@@ -468,9 +500,12 @@ internal sealed class MontagemDoPlano
     private void CompararColunas(Unidade unidade, RegraTabelaEscrita? entrada, TabelaEsquema origem, TabelaEsquema destino)
     {
         var nome = unidade.NomeTabela;
-        var tratadas = new HashSet<ColunaEsquema>(
-            entrada?.Colunas.Where(regra => regra.Tipo != TipoRegraColuna.Manter && _colunas.ContainsKey(regra)).Select(regra => _colunas[regra]) ?? [],
-            ReferenceEqualityComparer.Instance);
+        var tratadas = new Dictionary<ColunaEsquema, RegraColunaEscrita>(ReferenceEqualityComparer.Instance);
+        foreach (var regra in entrada?.Colunas.Where(regra => regra.Tipo != TipoRegraColuna.Manter && _colunas.ContainsKey(regra)) ?? [])
+        {
+            tratadas[_colunas[regra]] = regra;
+        }
+
         var candidatasPorColuna = origem.Colunas
             .Select(coluna => destino.Colunas
                 .Select(outra => (Coluna: outra, Correspondencia: _doDestino(coluna.Nome, true, outra.Nome)))
@@ -489,7 +524,12 @@ internal sealed class MontagemDoPlano
             var candidatas = candidatasPorColuna[indice];
             if (candidatas is not [{ Correspondencia: CorrespondenciaNome.Corresponde } unica] || paresNoDestino[unica.Coluna] > 1)
             {
-                if (coluna.Geracao == GeracaoColuna.Nenhuma || candidatas.Count > 0)
+                if (candidatas.Count == 0 && coluna.Geracao != GeracaoColuna.Nenhuma && tratadas.TryGetValue(coluna, out var naGerada))
+                {
+                    // A gerada sem par não é lida nem gravada, mas a regra escrita nela continua um engano.
+                    _coletor.Erro(new ErroPlano(CodigosPlanejar.RegraEmGerada, MensagemDaGerada("na origem"), nome, coluna.Nome, posicao: NoYaml(naGerada.Posicao, naGerada.Local)), indice);
+                }
+                else if (coluna.Geracao == GeracaoColuna.Nenhuma || candidatas.Count > 0)
                 {
                     _coletor.Erro(
                         candidatas.Count == 0
@@ -506,7 +546,7 @@ internal sealed class MontagemDoPlano
             }
 
             pareadas.Add(unica.Coluna);
-            if (tratadas.Contains(coluna))
+            if (tratadas.TryGetValue(coluna, out var tratada))
             {
                 if (coluna.Tipo != unica.Coluna.Tipo || coluna.Situacao != unica.Coluna.Situacao)
                 {
@@ -517,6 +557,10 @@ internal sealed class MontagemDoPlano
                             nome,
                             coluna.Nome),
                         indice);
+                }
+                else
+                {
+                    ConferirTratada(unidade, tratada, coluna, unica.Coluna, destino, indice);
                 }
             }
             else if (coluna.Tipo != unica.Coluna.Tipo)
@@ -550,6 +594,199 @@ internal sealed class MontagemDoPlano
                     origem.Colunas.Count + indice);
             }
         }
+    }
+
+    // P6: uma coluna tratada, com o mesmo tipo e situação nos dois lados. Primeiro os avisos da regra; depois a gerada, a
+    // forma canônica e o tipo, que barram o resto; os nulos; e os limites, que dão o contexto com que o transformador é
+    // criado, lido e descartado na sessão descartável.
+    private void ConferirTratada(Unidade unidade, RegraColunaEscrita regra, ColunaEsquema origem, ColunaEsquema destino, TabelaEsquema tabelaDoDestino, int indice)
+    {
+        var resolvida = _resolvidas[regra];
+        var fabrica = resolvida.Fabrica;
+        var nome = unidade.NomeTabela;
+        var posicao = NoYaml(regra.Posicao, regra.Local);
+        void Erro(string codigo, string mensagem, PosicaoConfiguracao? onde) =>
+            _coletor.Erro(new ErroPlano(codigo, mensagem, nome, origem.Nome, posicao: onde ?? posicao), indice);
+
+        AvisarVersaoMaisNova(regra, fabrica, nome, origem.Nome, posicao, indice);
+        if (PoliticasQueAnulam.UsaEntradaMalformada(fabrica) && resolvida.Regra.EntradaMalformada == PoliticaEntradaMalformada.Preservar)
+        {
+            var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, new PoliticaQueAnula("entradaMalformada: preservar", null, null));
+            _coletor.Aviso(
+                new Aviso(CodigosPlanejar.MalformadaPreservada, $"'entradaMalformada: preservar' ({deOnde}) copia em claro a entrada fora do formato.", nome, origem.Nome, posicao: onde ?? posicao),
+                indice);
+        }
+
+        if (origem.Geracao != GeracaoColuna.Nenhuma || destino.Geracao != GeracaoColuna.Nenhuma)
+        {
+            Erro(CodigosPlanejar.RegraEmGerada, MensagemDaGerada(origem.Geracao != GeracaoColuna.Nenhuma ? "na origem" : "no destino"), null);
+            return;
+        }
+
+        // O ponto único do tipo sem forma canônica: hoje recusa sempre, porque nulo e fixo ainda não existem.
+        if (destino.Tipo is not { } tipo || destino.Situacao != SituacaoTipo.Suportado)
+        {
+            var situacao = destino.Situacao switch
+            {
+                SituacaoTipo.ComRessalva => "aceito com ressalva, como json, xml, enum, domínio sem forma canônica ou array",
+                SituacaoTipo.SuportadoPorExclusao => "suportado só para copiar",
+                SituacaoTipo.NaoSuportado => "não suportado",
+                _ => "sem representação para o transformador",
+            };
+            Erro(
+                CodigosPlanejar.SemFormaCanonica,
+                $"O tipo da coluna no destino ({situacao}) não chega a um transformador: o {fabrica.Nome}@{fabrica.Versao} não recebe o valor dela. Use 'acao: manter' (com 'justificativa', se a coluna for sensível) ou esvazie a tabela.",
+                null);
+            return;
+        }
+
+        if (!fabrica.TiposSuportados.Contains(tipo))
+        {
+            Erro(CodigosPlanejar.TipoNaoAceito, $"O transformador {fabrica.Nome}@{fabrica.Versao} não aceita coluna do tipo {tipo} (aceita {string.Join(", ", fabrica.TiposSuportados.Order())}).", null);
+            return;
+        }
+
+        var naChave = tabelaDoDestino.ChavePrimaria.Contains(destino.Nome, StringComparer.Ordinal);
+        if (!destino.Anulavel || naChave)
+        {
+            var porque = naChave ? "é da chave primária no destino" : "não aceita NULL no destino";
+            foreach (var politica in PoliticasQueAnulam.Da(resolvida, _regras.Dominios))
+            {
+                var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, politica);
+                var (citado, saida) = politica.Dominio is null
+                    ? ("", "troque a política onde ela está escrita, ou escreva outra na coluna")
+                    : ($" do domínio {politica.Dominio}, citado em '{politica.Parametro}'", "troque a política do domínio citado, ou cite outro domínio");
+                Erro(
+                    CodigosPlanejar.NuloEmObrigatoria,
+                    $"A regra produz NULL com '{politica.Politica}'{citado} ({deOnde}), e a coluna {porque}: a gravação falharia; {saida}.",
+                    onde);
+            }
+        }
+
+        if (Contexto(regra, destino, tipo, Erro) is not { } contexto)
+        {
+            return;
+        }
+
+        _contextos[regra] = contexto;
+        if (_criacao.Criar(fabrica, resolvida.Regra, contexto) is { } falha)
+        {
+            Erro(falha.Codigo, falha.Mensagem, null);
+        }
+    }
+
+    // O contexto de criação pela coluna do destino; nulo quando o dialeto não mediu o que o contexto precisa. Em texto, o
+    // limite vira unidades UTF-16 que cabem com certeza: em bytes, divide pelo maior caractere da codificação (sem as
+    // propriedades do banco, 4, o pior caso); em binário, vai em bytes.
+    private ContextoDaColuna? Contexto(RegraColunaEscrita regra, ColunaEsquema destino, TipoColuna tipo, Action<string, string, PosicaoConfiguracao?> erro)
+    {
+        int? comprimento = null;
+        if (tipo is TipoColuna.Texto or TipoColuna.Binario)
+        {
+            if (destino.Comprimento is not { } limite)
+            {
+                erro(
+                    CodigosPlanejar.ComprimentoNaoMedido,
+                    "O dialeto não mediu o comprimento da coluna no destino: sem ele, o pseudônimo pode não caber. Atualize o dialeto, ou use 'acao: manter' na coluna.",
+                    null);
+                return null;
+            }
+
+            var bytesPorCaractere = _destino.Esquema.Propriedades?.Codificacao.BytesPorCaractereMaximo ?? 4;
+            comprimento = limite.Valor is not { } valor ? null
+                : tipo == TipoColuna.Binario || limite.Unidade != UnidadeComprimento.Bytes ? valor
+                : valor / bytesPorCaractere;
+            if (comprimento == 0)
+            {
+                erro(
+                    CodigosPlanejar.LimiteSemCaractere,
+                    $"O limite da coluna no destino, {limite.Valor!.Value.ToString(CultureInfo.InvariantCulture)} bytes, não comporta um caractere de até {bytesPorCaractere.ToString(CultureInfo.InvariantCulture)} bytes da codificação dele.",
+                    null);
+                return null;
+            }
+        }
+
+        long? menor = null;
+        long? maior = null;
+        if (tipo == TipoColuna.Inteiro)
+        {
+            if (destino.Faixa is not { } faixa)
+            {
+                erro(
+                    CodigosPlanejar.FaixaOuPrecisaoNaoMedida,
+                    "O dialeto não informou a faixa da coluna inteira no destino: sem ela, o pseudônimo pode não caber. Atualize o dialeto, ou use 'acao: manter' na coluna.",
+                    null);
+                return null;
+            }
+
+            (menor, maior) = (faixa.Minimo, faixa.Maximo);
+        }
+
+        int? precisao = null;
+        int? escala = null;
+        if (tipo == TipoColuna.Decimal)
+        {
+            // O decimal do .NET guarda até 28 dígitos: a precisão, a escala e os dígitos da parte inteira (precisão menos escala;
+            // com escala negativa, mais que a precisão) precisam caber.
+            var escalaMedida = destino.Escala ?? 0;
+            if (destino.Precisao is not { } medida || medida > MaiorPrecisao || escalaMedida > MaiorPrecisao || medida - escalaMedida > MaiorPrecisao)
+            {
+                erro(
+                    CodigosPlanejar.FaixaOuPrecisaoNaoMedida,
+                    destino.Precisao is null
+                        ? "A coluna decimal não declara a precisão no destino (ou o dialeto não a informou): sem ela, o pseudônimo pode não caber. Declare a precisão, ou use 'acao: manter' na coluna."
+                        : $"A coluna decimal passa de {MaiorPrecisao.ToString(CultureInfo.InvariantCulture)} dígitos no destino (na precisão, na escala ou na parte inteira), o limite do decimal do .NET; use 'acao: manter' na coluna.",
+                    null);
+                return null;
+            }
+
+            (precisao, escala) = (medida, destino.Escala);
+        }
+
+        return new ContextoDaColuna(tipo, comprimento, menor, maior, precisao, escala, destino.Colacao?.Nome, _derivadas.GetValueOrDefault(regra)?.Tipo);
+    }
+
+    private static string MensagemDaGerada(string lado) =>
+        $"A coluna é gerada {lado}: o banco recalcula o valor dela, e a regra não se aplica; tire a regra e trate as colunas de que ela é calculada.";
+
+    // A versão mais nova de um transformador: na regra que usa um domínio declarado, um aviso só, na declaração (a correção
+    // é lá); na escrita direto na coluna, um por coluna.
+    private void AvisarVersaoMaisNova(RegraColunaEscrita regra, FabricaRegistrada fabrica, NomeTabela tabela, string coluna, PosicaoConfiguracao posicao, int indice)
+    {
+        if (_registro.VersaoMaisRecente(fabrica.Nome) is not { } recente || recente <= fabrica.Versao)
+        {
+            return;
+        }
+
+        var mensagem = $"Há versão mais nova do transformador {fabrica.Nome} (@{recente.ToString(CultureInfo.InvariantCulture)}); a regra usa a @{fabrica.Versao.ToString(CultureInfo.InvariantCulture)}.";
+        if (regra.Transformador is null && regra.Dominio is { } dominio && _configuracao.Dominios.FirstOrDefault(declarado => declarado.Nome == dominio) is { } declarado)
+        {
+            _coletor.Aviso(new Aviso(CodigosPlanejar.VersaoMaisNova, $"{mensagem} Ela vem do domínio {dominio}.", posicao: NoYaml(declarado.Posicao, declarado.Local)));
+            return;
+        }
+
+        _coletor.Aviso(new Aviso(CodigosPlanejar.VersaoMaisNova, mensagem, tabela, coluna, posicao: posicao), indice);
+    }
+
+    // De onde vem a política: escrita na coluna, na declaração do domínio, ou na raiz (que não guarda posição; aí o erro
+    // aponta a coluna). Um domínio declarado numa coluna (o do id.permutar) ainda não existe.
+    private (PosicaoConfiguracao? Onde, string DeOnde) OndeEstaAPolitica(RegraColunaEscrita regra, ColunaResolvida resolvida, PoliticaQueAnula politica)
+    {
+        var invalida = politica.Politica.StartsWith("entradaInvalida", StringComparison.Ordinal);
+        bool Escrita(PoliticasDeEntrada politicas) => invalida ? politicas.EntradaInvalida is not null : politicas.EntradaMalformada is not null;
+
+        if (politica.Dominio is null && Escrita(regra.Politicas))
+        {
+            return (null, "escrita na coluna");
+        }
+
+        var dominio = politica.Dominio ?? resolvida.Regra.Dominio.Nome;
+        if (_configuracao.Dominios.FirstOrDefault(declarado => declarado.Nome == dominio) is { } declarado && Escrita(declarado.Politicas))
+        {
+            return (NoYaml(declarado.Posicao, declarado.Local), $"escrita no domínio {dominio}");
+        }
+
+        return (null, "da política global, em 'politica'");
     }
 
     // A presença de cada restrição nos dois lados, pelo nome (a chave primária, pela existência).
@@ -622,7 +859,10 @@ internal sealed class MontagemDoPlano
                 .Select(coluna =>
                 {
                     var resolvida = _resolvidas[regras[coluna]];
-                    return new ColunaTratada(coluna.Nome, resolvida.Fabrica, resolvida.Regra, resolvida.Normalizados);
+
+                    // Sem o contexto, o executor não recriaria o transformador como o planejar o conferiu: é defeito.
+                    var contexto = _contextos.TryGetValue(regras[coluna], out var criado) ? criado : throw new InvalidOperationException("Coluna tratada sem o contexto de criação.");
+                    return new ColunaTratada(coluna.Nome, resolvida.Fabrica, resolvida.Regra, resolvida.Normalizados, contexto);
                 })
                 .ToArray() ?? [];
             unidades.Add(new UnidadeDeCopia(unidade.NomeTabela, acao, soAPropria, admiteFreeze, daOrigem?.ColunasLidas ?? [], tratadas));

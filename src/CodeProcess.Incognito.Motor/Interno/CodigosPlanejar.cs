@@ -58,6 +58,38 @@ internal static class CodigosPlanejar
     /// <summary>Coluna tratada com tipo ou situação diferentes entre os lados (saída 2).</summary>
     internal const string TratadaComTipoDiferente = "INC3023";
 
+    /// <summary>O tipo da coluna tratada no destino não está entre os que o transformador aceita (saída 2).</summary>
+    internal const string TipoNaoAceito = "INC3040";
+
+    /// <summary>
+    /// Coluna tratada sem forma canônica (tipo nulo ou situação diferente de suportado), com transformador que não seja
+    /// <c>nulo</c> nem <c>fixo</c> (saída 2).
+    /// </summary>
+    internal const string SemFormaCanonica = "INC3041";
+
+    /// <summary>Regra escrita numa coluna gerada: o banco recalcula o valor (saída 2).</summary>
+    internal const string RegraEmGerada = "INC3042";
+
+    /// <summary>O limite do destino, em bytes, não comporta um caractere da codificação dele (saída 2).</summary>
+    internal const string LimiteSemCaractere = "INC3043";
+
+    /// <summary>Coluna de texto ou binária tratada cujo comprimento o dialeto não mediu (saída 2).</summary>
+    internal const string ComprimentoNaoMedido = "INC3044";
+
+    /// <summary>A fábrica recusou a coluna ao criar o transformador, com a mensagem dela escapada (saída 2).</summary>
+    internal const string CriacaoRecusada = "INC3045";
+
+    /// <summary>A fábrica de fora falhou ao criar, ler ou descartar o transformador: só o tipo da exceção sai (saída 2).</summary>
+    internal const string FalhaDaFabrica = "INC3046";
+
+    /// <summary>
+    /// Coluna inteira tratada sem a faixa, ou decimal tratada sem a precisão ou com mais de 28 dígitos (saída 2).
+    /// </summary>
+    internal const string FaixaOuPrecisaoNaoMedida = "INC3047";
+
+    /// <summary>Política que produz NULL numa coluna do destino que não aceita NULL ou é da chave primária (saída 2).</summary>
+    internal const string NuloEmObrigatoria = "INC3048";
+
     /// <summary>
     /// Tabela estrangeira no lado que a ação escrita toca (<c>copiar</c>: qualquer lado; <c>esvaziar</c>: o destino), ou com
     /// regra de coluna escrita (saída 2).
@@ -90,6 +122,12 @@ internal static class CodigosPlanejar
 
     /// <summary>Aviso: tabela estrangeira nos dois lados e fora da configuração, ignorada.</summary>
     internal const string EstrangeiraIgnorada = "INC3572";
+
+    /// <summary>Aviso: há versão mais nova do transformador registrada.</summary>
+    internal const string VersaoMaisNova = "INC3590";
+
+    /// <summary>Aviso: <c>entradaMalformada: preservar</c> copia em claro a entrada fora do formato.</summary>
+    internal const string MalformadaPreservada = "INC3591";
 
     /// <summary>
     /// Se o código é da faixa dos dialetos (<c>INC31xx</c> a <c>INC34xx</c>): exatamente <c>INC3</c>, um dígito de 1 a 4 e

@@ -119,3 +119,20 @@ carregá-los de um lado para o outro.
   `IncognitoException` hostil, códigos fora da faixa e o cancelamento por token vinculado), `FronteiraDoDialetoTestes`
   (com o controle positivo da leitura do IL), `CanaisDoDriverPostgreSqlTestes` (os canais por onde texto da string e do
   banco chegam à exceção crua do Npgsql) e `ResolucaoDeRegrasTestes`.
+- 2026-10-21: o transformador de cada coluna é criado duas vezes. No `planejar`, numa sessão descartável, com uma chave
+  aleatória e a tabela de domínios, para conferir que a fábrica atende a coluna do destino; o transformador é lido e
+  descartado ali, e a chave é zerada no fim. A carga do plano guarda o contexto de cada coluna para a execução, quando
+  ela existir, recriar o transformador com a chave real e conferi-lo contra o plano; essa metade entra numa atualização
+  com os testes dela. O `ContextoCriacao` ganha `MenorInteiro`, `MaiorInteiro`, `Precisao` e
+  `Escala` (propriedades `init`, item 4); o `Criar` recusa com `ArgumentException` o contexto que se contradiz (menor
+  inteiro igual ou acima do maior, escala sem precisão), antes de reservá-lo. As embutidas que aceitam coluna inteira
+  passam a exigir o `MaiorInteiro` acima do maior pseudônimo, e um contexto inteiro sem ele é recusado. Quando o
+  transformador criado não confere com a fábrica (outro nome, versão ou injetividade, ou um getter que lança), o `Criar`
+  e o registro do motor o descartam antes de lançar, porque ele nunca chega a quem chamou. O item 8 vale para o
+  `Criar`: a recusa (`RegraInvalidaException`, também lançada por um getter do criado) sai com a mensagem escapada e
+  cortada, porque nada ali vê dado de coluna; qualquer outra exceção de uma
+  fábrica de fora, inclusive a `IncognitoException`, no `Criar`, nos getters ou no descarte do criado, vira erro do
+  plano só com o tipo; o cancelamento pedido e a falta de memória sobem novos, sem a mensagem nem a interna de fora; a
+  exceção de uma embutida é defeito e sobe. O motor decide se a fábrica é embutida pela referência, nunca pelo `Equals`,
+  que uma fábrica de fora pode sobrescrever. A metade do `planejar` é verificada por `CriacaoNoPlanoTestes` e, no núcleo,
+  por `ContratoDeTransformacaoTestes` e `FabricasEmbutidasTestes` (o limite exato da faixa de cada documento).

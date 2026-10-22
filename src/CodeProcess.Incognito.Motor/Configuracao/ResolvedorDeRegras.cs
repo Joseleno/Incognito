@@ -416,7 +416,7 @@ internal sealed class ResolvedorDeRegras
     // A falta de memória nunca vira erro de configuração: sobe nova, sem a mensagem nem a interna de fora.
     private static bool Inesperado(FabricaRegistrada fabrica, Exception excecao) => DeFora(fabrica) && excecao is not OutOfMemoryException;
 
-    private static bool DeFora(FabricaRegistrada fabrica) => !TransformadoresEmbutidos.Fabricas.Contains(fabrica.Fabrica);
+    private static bool DeFora(FabricaRegistrada fabrica) => !fabrica.Embutida;
 
     // Texto que a leitura do YAML aceitaria: sem surrogate sem par nem caractere que a passada recusa.
     private static bool TextoValido(string? texto)
