@@ -503,17 +503,23 @@ public sealed class DialetoProtegidoTestes
 
     // O token do teste, salvo quando o caso pede outro.
     internal static Task<Plano> PlanejarAsync(
-        ProvedorDoPlanejar? provedor, string yaml = Yaml.Minimo, List<ConexaoBanco>? resolvidas = null, CancellationToken? cancelamento = null) =>
+        ProvedorDoPlanejar? provedor,
+        string yaml = Yaml.Minimo,
+        List<ConexaoBanco>? resolvidas = null,
+        CancellationToken? cancelamento = null,
+        RegistroTransformadores? registro = null,
+        Func<ChaveIncognito>? gerarChave = null) =>
         PlanejadorInterno.PlanejarAsync(
             ConfiguracaoIncognito.LerYaml(yaml),
-            new RegistroTransformadores(),
+            registro ?? new RegistroTransformadores(),
             provedor is null ? new Dictionary<ProvedorBanco, ProvedorDialeto>() : new Dictionary<ProvedorBanco, ProvedorDialeto> { [ProvedorBanco.PostgreSql] = provedor },
             conexao =>
             {
                 resolvidas?.Add(conexao);
                 return Conexao();
             },
-            cancelamento ?? TestContext.Current.CancellationToken);
+            cancelamento ?? TestContext.Current.CancellationToken,
+            gerarChave);
 
     // A busca do sentinela ignora a caixa: o Npgsql ecoa a palavra-chave desconhecida em minúsculas.
     internal static void SemVazamento(Exception excecao)

@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Configuracao;
@@ -73,8 +74,10 @@ internal sealed class RegistroTransformadores
     {
         // Lidos uma vez: a fábrica não troca de nome, versão ou domínio depois do registro. O domínio padrão de uma
         // fábrica de fora é o nome (o da embutida vem dela).
+        // Embutida pela referência, nunca pelo Equals, que uma fábrica de fora pode sobrescrever.
+        var embutida = TransformadoresEmbutidos.Fabricas.Contains(fabrica, ReferenceEqualityComparer.Instance);
         var versao = fabrica.Versao;
-        var dominioPadrao = TransformadoresEmbutidos.Fabricas.Contains(fabrica) ? fabrica.DominioPadrao : nome;
+        var dominioPadrao = embutida ? fabrica.DominioPadrao : nome;
         var injetividade = fabrica.Injetividade;
         var tipos = (fabrica.TiposSuportados ?? throw new ArgumentException($"A fábrica {nome}@{versao} não declara os tipos suportados.", nameof(fabrica))).ToFrozenSet();
         var identidade = (fabrica.ParametrosDeIdentidade ?? throw new ArgumentException($"A fábrica {nome}@{versao} não declara os parâmetros de identidade.", nameof(fabrica))).ToFrozenSet(StringComparer.Ordinal);
@@ -101,11 +104,14 @@ internal sealed class RegistroTransformadores
             throw new ArgumentException($"O domínio padrão {dominioPadrao} já é de outra fábrica.", nameof(fabrica));
         }
 
-        _fabricas.Add((nome, versao), new FabricaRegistrada(fabrica, nome, versao, injetividade, tipos, dominioPadrao, identidade, citados));
+        _fabricas.Add((nome, versao), new FabricaRegistrada(fabrica, nome, versao, injetividade, tipos, dominioPadrao, identidade, citados, embutida));
     }
 }
 
-/// <summary>Uma fábrica registrada, com os metadados lidos uma vez no registro.</summary>
+/// <summary>
+/// Uma fábrica registrada, com os metadados lidos uma vez no registro e a marca de embutida, decidida pela referência:
+/// o que uma fábrica de fora lança vira erro só com o tipo, e uma de fora nunca passa por embutida.
+/// </summary>
 internal sealed record FabricaRegistrada(
     FabricaTransformador Fabrica,
     string Nome,
@@ -114,14 +120,15 @@ internal sealed record FabricaRegistrada(
     FrozenSet<TipoColuna> TiposSuportados,
     string DominioPadrao,
     FrozenSet<string> ParametrosDeIdentidade,
-    FrozenDictionary<string, string> ParametrosDeDominio)
+    FrozenDictionary<string, string> ParametrosDeDominio,
+    bool Embutida)
 {
     /// <summary>
     /// Cria o transformador de uma coluna conferindo os metadados registrados, não os que a fábrica devolve agora: o tipo
     /// da coluna, e o nome, a versão e a injetividade do transformador criado.
     /// </summary>
     /// <exception cref="RegraInvalidaException">Regra recusada ou coluna que o transformador não atende.</exception>
-    /// <exception cref="InvalidOperationException">A fábrica mudou depois do registro.</exception>
+    /// <exception cref="InvalidOperationException">A fábrica mudou depois do registro (o criado é descartado antes).</exception>
     internal Transformador Criar(ContextoCriacao contexto)
     {
         ArgumentNullException.ThrowIfNull(contexto);
@@ -131,11 +138,37 @@ internal sealed record FabricaRegistrada(
         }
 
         var transformador = Fabrica.Criar(contexto);
-        if (!string.Equals(transformador.Nome, Nome, StringComparison.Ordinal) || transformador.Versao != Versao || transformador.Injetividade != Injetividade)
+        bool registrado;
+        try
         {
+            registrado = string.Equals(transformador.Nome, Nome, StringComparison.Ordinal) && transformador.Versao == Versao && transformador.Injetividade == Injetividade;
+        }
+        catch
+        {
+            // Um getter que lança: o criado não volta a quem chamou, e só aqui pode ser descartado.
+            DescartarSemFalha(transformador);
+            throw;
+        }
+
+        if (!registrado)
+        {
+            DescartarSemFalha(transformador);
             throw new InvalidOperationException($"A fábrica {Nome}@{Versao} criou um transformador diferente do que registrou.");
         }
 
         return transformador;
+    }
+
+    // O descarte do criado que não volta a quem chamou: a falha dele nunca toma o lugar da exceção principal.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A falha do descarte cede à exceção principal, que segue.")]
+    private static void DescartarSemFalha(Transformador transformador)
+    {
+        try
+        {
+            (transformador as IDisposable)?.Dispose();
+        }
+        catch
+        {
+        }
     }
 }

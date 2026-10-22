@@ -89,6 +89,8 @@ public sealed class FabricasContraOsVetoresTestes
                 var contexto = new ContextoCriacao(regra, tipo, sessao)
                 {
                     TipoReferencia = nome == "br.cep" ? TipoColuna.Texto : null,
+                    MenorInteiro = tipo == TipoColuna.Inteiro ? long.MinValue : null,
+                    MaiorInteiro = tipo == TipoColuna.Inteiro ? long.MaxValue : null,
                     ComprimentoMaximo = caso.TryGetProperty("comprimentoMaximo", out var comprimento) && comprimento.ValueKind == JsonValueKind.Number ? comprimento.GetInt32() : null,
                 };
                 transformador = fabrica.Criar(contexto);

@@ -26,6 +26,7 @@ internal sealed class FabricaCnpj() : FabricaEmbutida("br.cnpj", "cnpj", Injetiv
     protected override Transformador CriarCore(ContextoCriacao contexto)
     {
         ExigirComprimento(contexto, 14, "o pseudônimo de CNPJ tem 14 caracteres (18 com a máscara)");
+        ExigirFaixa(contexto, 99_999_999_999_999, "o pseudônimo de CNPJ tem até 14 dígitos");
         var cnpj = Instancia(contexto.Sessao, contexto.Regra);
         return new TransformadorDeDocumento(Nome, Injetividade, contexto.Tipo, cnpj.Pseudonimizar, cnpj.Pseudonimizar);
     }

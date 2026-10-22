@@ -29,6 +29,10 @@ internal static class PlanejadorInterno
     /// <param name="dialetos">O dialeto de cada provedor.</param>
     /// <param name="resolverConexao">Resolve a referência de uma conexão (origem ou destino) na string de conexão.</param>
     /// <param name="cancelamento">Cancela o planejamento.</param>
+    /// <param name="gerarChave">
+    /// O gerador da chave aleatória da sessão descartável em que os transformadores são criados; nulo usa
+    /// <see cref="ChaveIncognito.Gerar"/> (os testes passam uma chave canário).
+    /// </param>
     /// <returns>O plano.</returns>
     /// <exception cref="ConfiguracaoInvalidaException">Regra recusada pelo registro.</exception>
     /// <exception cref="PlanoRecusadoException">
@@ -42,7 +46,8 @@ internal static class PlanejadorInterno
         RegistroTransformadores registro,
         IReadOnlyDictionary<ProvedorBanco, ProvedorDialeto> dialetos,
         Func<ConexaoBanco, SegredoConexao> resolverConexao,
-        CancellationToken cancelamento)
+        CancellationToken cancelamento,
+        Func<ChaveIncognito>? gerarChave = null)
     {
         ArgumentNullException.ThrowIfNull(configuracao);
         ArgumentNullException.ThrowIfNull(registro);
@@ -76,8 +81,9 @@ internal static class PlanejadorInterno
             Conferir(leituraDaOrigem.Esquema, configuracao.Origem, LadoBanco.Origem);
             Conferir(leituraDoDestino.Esquema, configuracao.Destino, LadoBanco.Destino);
 
-            // P3 a P5: os nomes pelo dialeto de cada lado, com as conexões abertas.
-            montado = MontagemDoPlano.Montar(configuracao, regras, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino);
+            // P3 a P6: os nomes pelo dialeto de cada lado, com as conexões abertas, e a criação dos transformadores.
+            montado = MontagemDoPlano.Montar(
+                configuracao, regras, registro, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino, gerarChave ?? ChaveIncognito.Gerar, cancelamento);
         }
         catch
         {

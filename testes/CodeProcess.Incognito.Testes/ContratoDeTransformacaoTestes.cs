@@ -111,6 +111,32 @@ public sealed class ContratoDeTransformacaoTestes : IDisposable
         Assert.Throws<ArgumentNullException>(() => new ContextoCriacao(null!, TipoColuna.Texto, sessao));
         Assert.Throws<ArgumentNullException>(() => new ContextoCriacao(regra, TipoColuna.Texto, null!));
         Assert.Equal("homologacao", new ContextoCriacao(regra, TipoColuna.Texto, sessao).Ambiente);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ContextoCriacao(regra, TipoColuna.Decimal, sessao) { Precisao = 0 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ContextoCriacao(regra, TipoColuna.Decimal, sessao) { Precisao = -1 });
+
+        // A escala pode ser negativa ou passar da precisão: a fábrica decide.
+        var decimalEstranho = new ContextoCriacao(regra, TipoColuna.Decimal, sessao) { Precisao = 1, Escala = -2 };
+        Assert.Equal((1, -2), (decimalEstranho.Precisao, decimalEstranho.Escala));
+        Assert.Equal((long.MinValue, long.MaxValue), (new ContextoCriacao(regra, TipoColuna.Inteiro, sessao) { MenorInteiro = long.MinValue, MaiorInteiro = long.MaxValue }.MenorInteiro, new ContextoCriacao(regra, TipoColuna.Inteiro, sessao) { MaiorInteiro = long.MaxValue }.MaiorInteiro));
+    }
+
+    [Fact]
+    public void Criar_recusa_o_contexto_que_se_contradiz_antes_de_reservar()
+    {
+        using var sessao = new SessaoTransformacao(_chave, "homologacao");
+        var fabrica = new FabricaMaiusculas();
+        var regra = new RegraTransformacao(new DominioPseudonimo(fabrica.DominioPadrao, 1));
+
+        var igual = new ContextoCriacao(regra, TipoColuna.Texto, sessao) { MenorInteiro = 5, MaiorInteiro = 5 };
+        Assert.Equal("contexto", Assert.Throws<ArgumentException>(() => fabrica.Criar(igual)).ParamName);
+        Assert.Throws<ArgumentException>(() => fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Texto, sessao) { MenorInteiro = 6, MaiorInteiro = 5 }));
+        Assert.Throws<ArgumentException>(() => fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Texto, sessao) { Escala = 0 }));
+
+        // A recusa vem antes da reserva: outra fábrica recebe a mesma recusa, e não a do contexto já usado.
+        Assert.Throws<ArgumentException>(() => new FabricaMaiusculas().Criar(igual));
+        fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Texto, sessao) { MenorInteiro = 4, MaiorInteiro = 5, Precisao = 1, Escala = 0 });
+        fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Texto, sessao) { MenorInteiro = 4 });
+        fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Texto, sessao) { MaiorInteiro = 5 });
     }
 
     [Fact]
@@ -152,7 +178,9 @@ public sealed class ContratoDeTransformacaoTestes : IDisposable
         Assert.Empty(fabrica.ParametrosDeIdentidade);
         Assert.Equal(("ABC", Desfecho.Substituido), (resultado.Valor, resultado.Desfecho));
         Assert.False(transformador.TransformaNulo);
-        Assert.Throws<RegraInvalidaException>(() => fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Inteiro, sessao)));
+        // A coluna inteira é recusada pelo tipo, mesmo com a faixa: a fábrica só aceita texto.
+        var inteira = Assert.Throws<RegraInvalidaException>(() => fabrica.Criar(new ContextoCriacao(regra, TipoColuna.Inteiro, sessao) { MaiorInteiro = long.MaxValue }));
+        Assert.Contains("não aceita coluna do tipo Inteiro", inteira.Message, StringComparison.Ordinal);
         Assert.Throws<RegraInvalidaException>(() => fabrica.Criar(new ContextoCriacao(new RegraTransformacao(new DominioPseudonimo("exemplo.maiusculas", 2)), TipoColuna.Texto, sessao)));
         Assert.Equal("x", Assert.Throws<RegraInvalidaException>(() => fabrica.Validar(new RegraTransformacao(regra.Dominio) { Parametros = new Dictionary<string, string> { ["x"] = "1" } })).Parametro);
         Assert.Throws<RegraInvalidaException>(() => fabrica.Validar(new RegraTransformacao(regra.Dominio) { TemDerivarDe = true }));
@@ -258,6 +286,65 @@ public sealed class ContratoDeTransformacaoTestes : IDisposable
 
         protected override Transformador CriarCore(ContextoCriacao contexto) =>
             TransformadoresEmbutidos.Fabricas.Single(fabrica => fabrica.Nome == "br.cpf").Criar(contexto);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void O_criado_que_nao_confere_e_descartado_uma_vez_e_a_falha_do_descarte_nao_toma_o_lugar_do_erro(bool getterLanca, bool descarteLanca)
+    {
+        // O criado nunca volta a quem chamou: só o Criar pode descartá-lo, e a exceção que sobe é a do erro.
+        using var sessao = new SessaoTransformacao(_chave, "homologacao");
+        var fabrica = new FabricaDeCriadoDescartavel(getterLanca, descarteLanca);
+        var contexto = new ContextoCriacao(new RegraTransformacao(new DominioPseudonimo("exemplo.descartavel", 1)), TipoColuna.Texto, sessao);
+
+        var excecao = Assert.ThrowsAny<Exception>(() => fabrica.Criar(contexto));
+
+        Assert.IsType(getterLanca ? typeof(FormatException) : typeof(InvalidOperationException), excecao, exactMatch: true);
+        Assert.Equal(1, fabrica.Descartes);
+    }
+
+    private sealed class FabricaDeCriadoDescartavel(bool getterLanca, bool descarteLanca) : FabricaTransformador
+    {
+        private int _descartes;
+
+        public override string Nome => "exemplo.descartavel";
+
+        public override int Versao => 1;
+
+        public override Injetividade Injetividade => Injetividade.Nenhuma;
+
+        public override IReadOnlySet<TipoColuna> TiposSuportados { get; } = new HashSet<TipoColuna> { TipoColuna.Texto };
+
+        internal int Descartes => _descartes;
+
+        private bool GetterLanca => getterLanca;
+
+        private bool DescarteLanca => descarteLanca;
+
+        protected override Transformador CriarCore(ContextoCriacao contexto) => new Descartavel(this);
+
+        private sealed class Descartavel(FabricaDeCriadoDescartavel fabrica) : Transformador, IDisposable
+        {
+            // Outro nome que o da fábrica, ou um getter que lança.
+            public override string Nome => fabrica.GetterLanca ? throw new FormatException("getter") : "exemplo.outro";
+
+            public override int Versao => 1;
+
+            public override Injetividade Injetividade => Injetividade.Nenhuma;
+
+            public override ResultadoTransformacao Transformar(object? valor, in ContextoTransformacao contexto) => new(valor, Desfecho.Substituido);
+
+            public void Dispose()
+            {
+                fabrica._descartes++;
+                if (fabrica.DescarteLanca)
+                {
+                    throw new NotSupportedException("descarte");
+                }
+            }
+        }
     }
 
     private sealed class FabricaErrada(bool devolverNulo) : FabricaTransformador

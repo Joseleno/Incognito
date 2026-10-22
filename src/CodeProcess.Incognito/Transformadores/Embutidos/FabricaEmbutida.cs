@@ -52,6 +52,12 @@ internal abstract class FabricaEmbutida : FabricaTransformador
     /// <summary>Se o transformador tem DV e usa a política <c>entradaInvalida</c> (CPF e CNPJ); os outros a ignoram.</summary>
     protected virtual bool UsaEntradaInvalida => false;
 
+    /// <summary>
+    /// Se o transformador lê o formato da entrada e usa a política <c>entradaMalformada</c>; o que troca o texto inteiro
+    /// (<c>texto.substituir</c>) a ignora.
+    /// </summary>
+    protected virtual bool UsaEntradaMalformada => true;
+
     public sealed override void Validar(RegraTransformacao regra)
     {
         ArgumentNullException.ThrowIfNull(regra);
@@ -123,6 +129,28 @@ internal abstract class FabricaEmbutida : FabricaTransformador
         if (contexto.Tipo == TipoColuna.Texto && contexto.ComprimentoMaximo < minimo)
         {
             throw new RegraInvalidaException($"A coluna comporta menos de {minimo} caracteres: {motivo}.");
+        }
+    }
+
+    /// <summary>
+    /// Recusa a coluna inteira sem a faixa, ou cujo maior valor fica abaixo do maior pseudônimo: o pseudônimo não caberia
+    /// (um CPF num <c>integer</c>).
+    /// </summary>
+    protected static void ExigirFaixa(ContextoCriacao contexto, long maiorPseudonimo, string motivo)
+    {
+        if (contexto.Tipo != TipoColuna.Inteiro)
+        {
+            return;
+        }
+
+        if (contexto.MaiorInteiro is not { } maior)
+        {
+            throw new RegraInvalidaException($"A coluna inteira não informa a faixa: {motivo}.");
+        }
+
+        if (maior < maiorPseudonimo)
+        {
+            throw new RegraInvalidaException($"A coluna inteira não comporta {maiorPseudonimo.ToString(CultureInfo.InvariantCulture)}: {motivo}.");
         }
     }
 

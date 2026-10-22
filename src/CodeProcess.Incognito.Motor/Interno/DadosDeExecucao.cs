@@ -136,12 +136,16 @@ internal sealed record UnidadeDeCopia(
     public override string ToString() => $"{nameof(UnidadeDeCopia)} ({ColunasLidas.Count} colunas, {Tratadas.Count} tratadas)";
 }
 
-/// <summary>Uma coluna com transformador: o que o executor precisa para recriá-lo com a chave real, nunca a instância.</summary>
+/// <summary>
+/// Uma coluna com transformador: o que o executor precisa para recriá-lo com a chave real e conferi-lo contra o plano,
+/// nunca a instância. A fábrica registrada guarda o nome, a versão e a injetividade conferidos na criação do planejar.
+/// </summary>
 /// <param name="Coluna">O nome da coluna no catálogo.</param>
 /// <param name="Fabrica">A fábrica registrada.</param>
 /// <param name="Regra">A regra conferida pela fábrica.</param>
 /// <param name="Normalizados">Os parâmetros normalizados pela fábrica, por nome (comparação ordinal).</param>
-internal sealed record ColunaTratada(string Coluna, FabricaRegistrada Fabrica, RegraTransformacao Regra, IReadOnlyDictionary<string, string> Normalizados)
+/// <param name="Contexto">O contexto de criação, montado pela coluna do destino, com que o planejar criou o transformador.</param>
+internal sealed record ColunaTratada(string Coluna, FabricaRegistrada Fabrica, RegraTransformacao Regra, IReadOnlyDictionary<string, string> Normalizados, ContextoDaColuna Contexto)
 {
     /// <summary>Os parâmetros normalizados, copiados.</summary>
     public IReadOnlyDictionary<string, string> Normalizados { get; } = new Dictionary<string, string>(Normalizados, StringComparer.Ordinal);

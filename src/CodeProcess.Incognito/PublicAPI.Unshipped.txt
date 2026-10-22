@@ -49,6 +49,14 @@ CodeProcess.Incognito.Transformadores.ContextoCriacao.Colacao.init -> void
 CodeProcess.Incognito.Transformadores.ContextoCriacao.ComprimentoMaximo.get -> int?
 CodeProcess.Incognito.Transformadores.ContextoCriacao.ComprimentoMaximo.init -> void
 CodeProcess.Incognito.Transformadores.ContextoCriacao.ContextoCriacao(CodeProcess.Incognito.Transformadores.RegraTransformacao! regra, CodeProcess.Incognito.Transformadores.TipoColuna tipo, CodeProcess.Incognito.Transformadores.SessaoTransformacao! sessao) -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Escala.get -> int?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Escala.init -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.MaiorInteiro.get -> long?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.MaiorInteiro.init -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.MenorInteiro.get -> long?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.MenorInteiro.init -> void
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Precisao.get -> int?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.Precisao.init -> void
 CodeProcess.Incognito.Transformadores.ContextoCriacao.Regra.get -> CodeProcess.Incognito.Transformadores.RegraTransformacao!
 CodeProcess.Incognito.Transformadores.ContextoCriacao.Tipo.get -> CodeProcess.Incognito.Transformadores.TipoColuna
 CodeProcess.Incognito.Transformadores.ContextoCriacao.TipoReferencia.get -> CodeProcess.Incognito.Transformadores.TipoColuna?
