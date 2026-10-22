@@ -234,6 +234,25 @@ public sealed class TabelaEsquema
     /// </summary>
     public bool SegurancaDeLinha { get; init; }
 
+    /// <summary>
+    /// Se a própria tabela está numa publicação de replicação que replica a inserção ou o esvaziamento dela: o que o
+    /// Incognito grava nela chega aos assinantes, fora do destino. No PostgreSQL, uma publicação com <c>insert</c> ou
+    /// <c>truncate</c> que a inclui pela própria tabela, por uma tabela acima dela na árvore, pelo esquema dela ou de uma
+    /// tabela acima, ou por todas as tabelas; no SQL Server, um artigo de publicação transacional ou de mesclagem. Numa
+    /// particionada, vale só para ela: cada partição informa a sua, uma partição pode ser publicada sozinha, e o
+    /// <c>planejar</c> confere a árvore inteira pela raiz. Nulo: não informado, o pior caso.
+    /// </summary>
+    public bool? Publicada { get; init; }
+
+    /// <summary>
+    /// Se a própria tabela está numa assinatura de replicação deste banco, ligada ou não: o que chega da publicação assinada
+    /// grava nela ao lado do que o Incognito gravou, e uma assinatura desligada aplica, ao ser ligada, o que se acumulou no
+    /// publicador. No PostgreSQL, uma tabela listada numa assinatura do banco (a de outro banco do mesmo servidor não grava
+    /// nele); no SQL Server, o destino de um artigo assinado. Numa particionada, vale só para ela: cada partição informa a
+    /// sua, e o <c>planejar</c> confere a árvore inteira pela raiz. Nulo: não informado, o pior caso.
+    /// </summary>
+    public bool? Assinada { get; init; }
+
     // Os objetos da tabela, cada lista em ordem ordinal de nome. Vazia diz "não há": um dialeto que não as preenche fica
     // com o caso otimista (a suíte de conformidade confere os do repositório pelo inventário).
 
@@ -422,7 +441,11 @@ public sealed class ColunaEsquema
         init => _precisao = value is null or > 0 ? value : throw new ArgumentOutOfRangeException(nameof(Precisao), "A precisão precisa ser positiva.");
     }
 
-    /// <summary>A escala de um <c>numeric</c>/<c>decimal</c> (dígitos depois da vírgula; negativa no PostgreSQL 15+).</summary>
+    /// <summary>
+    /// A escala de um <c>numeric</c>/<c>decimal</c> (dígitos depois da vírgula; negativa no PostgreSQL 15+): só com a
+    /// <see cref="Precisao"/>, e nula quando ela é nula. Numa coluna decimal com a precisão, a escala nula (não informada) é
+    /// o pior caso.
+    /// </summary>
     public int? Escala { get; init; }
 
     /// <summary>A faixa do tipo inteiro; nula fora de inteiro. Numa coluna inteira, nula é o pior caso.</summary>

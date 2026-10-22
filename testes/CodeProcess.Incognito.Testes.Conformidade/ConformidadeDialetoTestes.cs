@@ -342,6 +342,45 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_publicacao_e_apontada()
+    {
+        // Pelas duas pontas: o destino é o lado em que a publicação faz dano (o que se grava chega aos assinantes). Quem não
+        // tem publicação a declara inexistente, com o motivo.
+        Assert.True(
+            !Esperado.Publicacao.Existe || Esperado.Publicacao.Valor.Count > 0,
+            "Publicação: a fixture a declara presente sem nenhuma tabela; declare inexistente, com o motivo.");
+        var esperadas = Esperado.Publicacao.Existe ? Esperado.Publicacao.Valor : [];
+        foreach (var (lado, esquema) in new[] { ("origem", await LerOrigemAsync()), ("destino", await LerDestinoAsync()) })
+        {
+            var publicadas = esquema.Tabelas.Where(tabela => tabela.Publicada == true).Select(tabela => tabela.Nome).ToArray();
+
+            Assert.True(
+                MesmoConjunto(publicadas, esperadas),
+                $"Publicação: lida na {lado} em [{string.Join(", ", publicadas.Select(n => n.ToString()))}], esperada em [{string.Join(", ", esperadas.Select(n => n.ToString()))}].");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_assinatura_e_apontada()
+    {
+        // Pelas duas pontas, como a publicação: no destino, o que chega da publicação assinada grava ao lado dos pseudônimos.
+        Assert.True(
+            !Esperado.Assinatura.Existe || Esperado.Assinatura.Valor.Count > 0,
+            "Assinatura: a fixture a declara presente sem nenhuma tabela; declare inexistente, com o motivo.");
+        var esperadas = Esperado.Assinatura.Existe ? Esperado.Assinatura.Valor : [];
+        foreach (var (lado, esquema) in new[] { ("origem", await LerOrigemAsync()), ("destino", await LerDestinoAsync()) })
+        {
+            var assinadas = esquema.Tabelas.Where(tabela => tabela.Assinada == true).Select(tabela => tabela.Nome).ToArray();
+
+            Assert.True(
+                MesmoConjunto(assinadas, esperadas),
+                $"Assinatura: lida na {lado} em [{string.Join(", ", assinadas.Select(n => n.ToString()))}], esperada em [{string.Join(", ", esperadas.Select(n => n.ToString()))}].");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_mascara_e_apontada()
     {
         var mascaradas = (await LerOrigemAsync()).Tabelas
@@ -512,6 +551,8 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
     }
 
     private Task<EsquemaBanco> LerOrigemAsync() => Par.Origem.Esquema.LerAsync(TestContext.Current.CancellationToken);
+
+    private Task<EsquemaBanco> LerDestinoAsync() => Par.Destino.Esquema.LerAsync(TestContext.Current.CancellationToken);
 
     // As permissões de um lado: presentes se declaradas, uma por objeto do esquema e na ordem dele, com o valor da exceção
     // do objeto ou do padrão, e as colunas sem leitura coerentes com a tabela.

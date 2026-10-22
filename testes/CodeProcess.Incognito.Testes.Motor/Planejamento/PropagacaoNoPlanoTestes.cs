@@ -310,7 +310,7 @@ public sealed class PropagacaoNoPlanoTestes
 
         var plano = await PlanejarAsync("", naoValidada);
         var nula = await PlanejarAsync("", semResposta);
-        var esvaziada = await PlanejarAsync("tabelas:\n  loja.pedidos:\n    acao: esvaziar\n", naoValidada);
+        var esvaziada = await PlanejarAsync("tabelas:\n  loja.pedidos:\n    acao: esvaziar\n  loja.itens:\n    acao: esvaziar\n", naoValidada);
         var validada = await PlanejarAsync("", Cadeia());
 
         var aviso = Assert.Single(plano.Avisos);

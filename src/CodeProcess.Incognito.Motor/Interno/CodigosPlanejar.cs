@@ -73,6 +73,12 @@ internal static class CodigosPlanejar
     /// <summary>A coluna de <c>derivarDe</c> não tem forma canônica na origem (saída 2).</summary>
     internal const string DerivarDeSemFormaCanonica = "INC3034";
 
+    /// <summary>Chave estrangeira do destino de uma tabela copiada para uma esvaziada: as linhas ficariam órfãs (saída 2).</summary>
+    internal const string CopiadaParaEsvaziada = "INC3035";
+
+    /// <summary>Chave estrangeira do destino entre uma tabela copiada e uma ignorada, com coluna tratada do lado copiado (saída 2).</summary>
+    internal const string TratadaNaFronteira = "INC3036";
+
     /// <summary>Coluna gerada ligada por chave estrangeira a uma coluna tratada (saída 2).</summary>
     internal const string GeradaNoComponente = "INC3037";
 
@@ -126,6 +132,33 @@ internal static class CodigosPlanejar
     /// <summary>Exclusão que cita coluna tratada com transformador sem injetividade (saída 2).</summary>
     internal const string SemInjetividadeNaExclusao = "INC3053";
 
+    /// <summary>A segurança por linha vale para o login na leitura da origem copiada, ou o dialeto não informa (saída 2).</summary>
+    internal const string LeituraFiltradaPorLinha = "INC3060";
+
+    /// <summary>A segurança por linha vale para o login na gravação do destino copiado, ou o dialeto não informa (saída 2).</summary>
+    internal const string EscritaRestritaPorLinha = "INC3061";
+
+    /// <summary>O dialeto não informa as permissões do login de um lado (saída 2).</summary>
+    internal const string AcessoNaoInformado = "INC3062";
+
+    /// <summary>O login da origem não lê todas as colunas de uma tabela copiada (saída 2).</summary>
+    internal const string SemLeitura = "INC3063";
+
+    /// <summary>O login do destino não esvazia, não insere ou não grava a identidade numa tabela tocada (saída 2).</summary>
+    internal const string SemGravacao = "INC3064";
+
+    /// <summary>O login do destino não desliga as triggers ligadas da tabela tocada ou de uma partição dela (saída 2).</summary>
+    internal const string SemDesligarTriggers = "INC3065";
+
+    /// <summary>O login do destino não remove e recria uma chave estrangeira que o diário remove (saída 2).</summary>
+    internal const string SemRecriarChave = "INC3066";
+
+    /// <summary>O login do destino não ajusta uma sequence usada por tabela copiada (saída 2).</summary>
+    internal const string SemAjustarSequence = "INC3067";
+
+    /// <summary>O login do destino não limpa um objeto residual que guarda dado (saída 2).</summary>
+    internal const string ResidualSemLimpeza = "INC3070";
+
     /// <summary>
     /// Tabela estrangeira no lado que a ação escrita toca (<c>copiar</c>: qualquer lado; <c>esvaziar</c>: o destino), ou com
     /// regra de coluna escrita (saída 2).
@@ -138,8 +171,23 @@ internal static class CodigosPlanejar
     /// <summary>Objeto no esquema reservado ao Incognito, ou o dialeto não informa o que há nele (saída 2).</summary>
     internal const string ObjetoNoEsquemaReservado = "INC3073";
 
+    /// <summary>Tabela tocada do destino, ou uma partição dela, numa publicação de replicação lógica, ou o dialeto não informa (saída 2).</summary>
+    internal const string TabelaPublicada = "INC3074";
+
     /// <summary>Tabela estrangeira num lado e local no outro, sem ação nem regra de coluna escritas (saída 2).</summary>
     internal const string EstrangeiraNumLado = "INC3075";
+
+    /// <summary>Tabela tocada do destino, ou uma partição dela, numa assinatura de replicação, ou o dialeto não informa (saída 2).</summary>
+    internal const string TabelaAssinada = "INC3076";
+
+    /// <summary>A origem guarda bytes sem codificação declarada, e o destino tem codificação (saída 2).</summary>
+    internal const string OrigemSemCodificacao = "INC3080";
+
+    /// <summary>O destino não representa todos os caracteres da codificação da origem (saída 2).</summary>
+    internal const string CodificacaoSemRepertorio = "INC3081";
+
+    /// <summary>O dialeto não informa a codificação e a versão do banco de um lado (saída 2).</summary>
+    internal const string PropriedadesNaoInformadas = "INC3082";
 
     /// <summary>Aviso: outro objeto difere de um nome resolvido só pela caixa.</summary>
     internal const string NomeQuaseIgual = "INC3510";
@@ -158,6 +206,9 @@ internal static class CodigosPlanejar
 
     /// <summary>Aviso: chave estrangeira da origem que o banco não impõe ou não validou.</summary>
     internal const string ChaveNaoValidada = "INC3530";
+
+    /// <summary>Aviso: chave estrangeira do destino entre uma tabela ignorada e uma tocada, sem coluna tratada.</summary>
+    internal const string FronteiraComIgnorada = "INC3531";
 
     /// <summary>Aviso: transformador de fora numa coluna ligada por chave com igualdade que não é exata.</summary>
     internal const string TerceiroLigadoSemIgualdadeExata = "INC3532";
@@ -192,8 +243,26 @@ internal static class CodigosPlanejar
     /// <summary>Aviso: entrada preservada em claro no mesmo índice único que os pseudônimos.</summary>
     internal const string PreservadaComPseudonimos = "INC3555";
 
+    /// <summary>Aviso: conexão fora da própria máquina sem cifra com o servidor verificado, ou o dialeto não informa.</summary>
+    internal const string TransporteEmClaro = "INC3560";
+
+    /// <summary>Aviso: sequence do destino não usada por tabela copiada que o login não ajusta.</summary>
+    internal const string SequenceSemAjuste = "INC3561";
+
+    /// <summary>Aviso: o dialeto não sabe dizer tudo o que uma materialized view do destino lê.</summary>
+    internal const string DependenciasIncompletas = "INC3570";
+
+    /// <summary>Aviso: coluna de tipo não suportado copiada como veio.</summary>
+    internal const string NaoSuportadaCopiada = "INC3571";
+
     /// <summary>Aviso: tabela estrangeira nos dois lados e fora da configuração, ignorada.</summary>
     internal const string EstrangeiraIgnorada = "INC3572";
+
+    /// <summary>Aviso: a versão principal do servidor difere entre a origem e o destino.</summary>
+    internal const string VersaoDiferente = "INC3580";
+
+    /// <summary>Aviso: o destino guarda bytes sem codificação declarada, e a origem tem codificação.</summary>
+    internal const string DestinoSemCodificacao = "INC3581";
 
     /// <summary>Aviso: há versão mais nova do transformador registrada.</summary>
     internal const string VersaoMaisNova = "INC3590";

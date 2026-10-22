@@ -169,6 +169,12 @@ public sealed class MontagemDoPlanoTestes
         // O decimal sem precisão não tem limite: com limite no destino, é mais estreito; o contrário, não.
         Assert.Equal([("INC3521", "valor")], await AvisosAsync(livre, origem));
         Assert.Empty(await AvisosAsync(origem, livre));
+
+        // A escala que o dialeto não informou, num lado ou no outro, é o pior caso.
+        // Com a escala nula contada como 0, os dois pares abaixo não seriam mais estreitos.
+        var semEscala = TrocarColuna(origem, "precos", "valor", (nameof(ColunaEsquema.Precisao), 10), (nameof(ColunaEsquema.Escala), null));
+        Assert.Equal([("INC3521", "valor")], await AvisosAsync(Precos(10, 0), semEscala));
+        Assert.Equal([("INC3521", "valor")], await AvisosAsync(semEscala, Precos(12, 2)));
     }
 
     [Fact]
@@ -334,9 +340,9 @@ public sealed class MontagemDoPlanoTestes
         Assert.Contains("A tabela loja.Clientes difere desta só na caixa", aviso.Mensagem, StringComparison.Ordinal);
 
         // O casamento exato nunca vence: Clientes sem aspas é clientes, mesmo existindo "Clientes".
-        var semAspas = await PlanejarAsync("tabelas:\n  loja.Clientes: { acao: esvaziar }\n", esquema, esquema);
+        var semAspas = await PlanejarAsync("tabelas:\n  loja.Clientes: { acao: ignorar }\n", esquema, esquema);
         Assert.Equal(
-            [("loja.Clientes", AcaoTabela.Copiar), ("loja.clientes", AcaoTabela.Esvaziar), ("loja.pedidos", AcaoTabela.Copiar)],
+            [("loja.Clientes", AcaoTabela.Copiar), ("loja.clientes", AcaoTabela.Ignorar), ("loja.pedidos", AcaoTabela.Copiar)],
             semAspas.Tabelas.Select(tabela => (tabela.Nome.ToString(), tabela.Acao)));
     }
 

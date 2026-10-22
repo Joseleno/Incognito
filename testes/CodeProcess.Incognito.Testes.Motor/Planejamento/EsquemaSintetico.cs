@@ -20,6 +20,9 @@ internal static class EsquemaSintetico
 
     internal static EsquemaBanco ComTabelas(params TabelaEsquema[] tabelas)
     {
+        // A publicação e a assinatura nascem no valor otimista (fora de qualquer uma) quando o teste não as escreve.
+        tabelas = [.. tabelas.Select(tabela => tabela.Publicada is null ? BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Publicada), false)) : tabela)];
+        tabelas = [.. tabelas.Select(tabela => tabela.Assinada is null ? BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Assinada), false)) : tabela)];
         var sequences = new SequenceEsquema[] { new() { Nome = Nome("clientes_id_seq"), Colunas = [new ReferenciaColuna(Nome("clientes"), "id")] } };
         return new EsquemaBanco
         {

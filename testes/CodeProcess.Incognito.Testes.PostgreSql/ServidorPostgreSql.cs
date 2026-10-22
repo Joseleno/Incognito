@@ -122,10 +122,43 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     /// <remarks>O clone não herda o dono do modelo: o dono vem no CREATE DATABASE.</remarks>
     public Task<string> CriarDestinoAsync(CancellationToken cancelamento) => ClonarAsync("destino", _modeloDestino, $" OWNER {Dono}", cancelamento);
 
-    /// <summary>Apaga o banco, derrubando as conexões que sobrarem.</summary>
+    /// <summary>Apaga o banco, derrubando as conexões que sobrarem, e antes as assinaturas dele.</summary>
     /// <param name="banco">O banco.</param>
     /// <returns>A tarefa.</returns>
-    public Task ApagarAsync(string banco) => ExecutarAsync(Administrador, $"DROP DATABASE IF EXISTS {banco} WITH (FORCE)", CancellationToken.None);
+    /// <remarks>O PostgreSQL recusa apagar o banco que tem assinatura; sem slot, ela sai sem conectar ao publicador.</remarks>
+    public async Task ApagarAsync(string banco)
+    {
+        var assinaturas = await ConsultarAsync(
+            Administrador,
+            $"SELECT count(*) FROM pg_catalog.pg_subscription s JOIN pg_catalog.pg_database d ON d.oid = s.subdbid WHERE d.datname = '{banco}'",
+            CancellationToken.None);
+        if (assinaturas is > 0L)
+        {
+            await ExecutarAsync(
+                banco,
+                "DO $$DECLARE a record; BEGIN FOR a IN SELECT subname FROM pg_catalog.pg_subscription WHERE subdbid = (SELECT oid FROM pg_catalog.pg_database WHERE datname = current_database()) LOOP "
+                + "EXECUTE format('ALTER SUBSCRIPTION %I DISABLE', a.subname); EXECUTE format('ALTER SUBSCRIPTION %I SET (slot_name = NONE)', a.subname); EXECUTE format('DROP SUBSCRIPTION %I', a.subname); END LOOP; END$$",
+                CancellationToken.None);
+        }
+
+        await ExecutarAsync(Administrador, $"DROP DATABASE IF EXISTS {banco} WITH (FORCE)", CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Cria no banco uma assinatura da publicação de outro banco do servidor: desligada, sem slot e sem copiar, ela só lista
+    /// as tabelas assinadas (o clone de um modelo não leva a assinatura, que é do banco original).
+    /// </summary>
+    /// <param name="assinante">O banco que assina.</param>
+    /// <param name="publicador">O banco da publicação.</param>
+    /// <param name="publicacao">A publicação.</param>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>A tarefa.</returns>
+    public Task AssinarAsync(string assinante, string publicador, string publicacao, CancellationToken cancelamento) =>
+        ExecutarAsync(
+            assinante,
+            $"CREATE SUBSCRIPTION assinatura_{publicacao} CONNECTION 'host=/var/run/postgresql dbname={publicador} user={Administrador}' PUBLICATION {publicacao} "
+            + "WITH (slot_name = NONE, create_slot = false, enabled = false, copy_data = false)",
+            cancelamento);
 
     /// <summary>A string de conexão de um login a um banco.</summary>
     /// <param name="banco">O banco.</param>

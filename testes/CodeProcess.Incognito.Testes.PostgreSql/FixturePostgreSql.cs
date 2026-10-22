@@ -63,6 +63,10 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
         try
         {
             bancoDestino = await servidor.CriarDestinoAsync(cancelamento);
+
+            // Cada lado assina a publicação do outro que lista a partição eventos_1 (a assinatura não passa ao clone).
+            await servidor.AssinarAsync(bancoOrigem, bancoDestino, "publicacao_sem_carga", cancelamento);
+            await servidor.AssinarAsync(bancoDestino, bancoOrigem, "publicacao_sem_carga", cancelamento);
             origem = await _provedor.ConectarOrigemAsync(new SegredoConexao(conexaoDaOrigem(bancoOrigem)), cancelamento);
             var destino = await _provedor.ConectarDestinoAsync(new SegredoConexao(conexaoDoDestino(bancoDestino)), cancelamento);
             var apagar = bancoDestino;
@@ -131,6 +135,8 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             ChaveEstrangeiraComposta = new(Nome("itens"), "fk_itens_pedidos", ["loja", "pedido"], Nome("pedidos"), ["loja", "id"]),
             Temporal = Caso.Inexistente<TemporalEsperada>("o PostgreSQL não tem tabela temporal"),
             SegurancaDeLinha = Caso.Presente<IReadOnlyList<NomeObjeto>>([Nome("forcada"), Nome("repartida_1"), Nome("segredos")]),
+            Publicacao = Caso.Presente<IReadOnlyList<NomeObjeto>>([Nome("pedidos_2"), Nome("tipos")]),
+            Assinatura = Caso.Presente<IReadOnlyList<NomeObjeto>>([Nome("eventos_1")]),
             Mascara = Caso.Inexistente<ReferenciaColuna>("o PostgreSQL não tem máscara dinâmica"),
             NomesExatos = [Nome("Cliente"), Nome("cliente"), Nome("select"), Nome("nota fiscal")],
             Citacoes = [new("Cliente", "\"Cliente\""), new("a\"b", "\"a\"\"b\""), new("nota fiscal", "\"nota fiscal\"")],
@@ -243,6 +249,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             new()
             {
                 Nome = Nome("tipos"),
+                Publicada = true,
                 Colunas =
                 [
                     Col("id", Grande, suportadoInteiro, nula: false),
@@ -350,6 +357,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Nome = Nome("eventos_1"),
                 Tipo = TipoTabela.Particao,
                 Pai = Nome("eventos"),
+                Assinada = true,
                 Colunas =
                 [
                     Col("id", Grande, suportadoInteiro, nula: false, identidade: dezessete ? IdentidadeColuna.Sempre : IdentidadeColuna.Nenhuma),
@@ -368,7 +376,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 IndicesUnicos = [Primario("pedidos_pkey", "loja", "id")],
             },
             Particao("pedidos_1", "pedidos", pedido, ["loja", "id"]),
-            Particao("pedidos_2", "pedidos", pedido, ["loja", "id"]),
+            Particao("pedidos_2", "pedidos", pedido, ["loja", "id"], publicada: true),
             Particao(
                 "pedidos_9",
                 "pedidos",
@@ -748,8 +756,8 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     private static ResidualInventariado Visao(string nome, bool populada = true, bool incompletas = false) =>
         new(Nome(nome), TipoObjetoResidual.VisaoMaterializada, incompletas, populada);
 
-    private static TabelaInventariada Particao(string nome, string pai, ColunaInventariada[] colunas, string[]? chavePrimaria = null) =>
-        new() { Nome = Nome(nome), Tipo = TipoTabela.Particao, Pai = Nome(pai), Colunas = colunas, ChavePrimaria = chavePrimaria ?? [] };
+    private static TabelaInventariada Particao(string nome, string pai, ColunaInventariada[] colunas, string[]? chavePrimaria = null, bool publicada = false) =>
+        new() { Nome = Nome(nome), Tipo = TipoTabela.Particao, Pai = Nome(pai), Colunas = colunas, ChavePrimaria = chavePrimaria ?? [], Publicada = publicada };
 
     // Uma coluna fora de texto: a faixa pelo tipo nativo, se for inteiro; nenhuma restrição do tipo, salvo declarada.
     private static ColunaInventariada Col(

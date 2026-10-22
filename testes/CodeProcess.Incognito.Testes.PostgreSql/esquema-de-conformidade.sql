@@ -508,6 +508,11 @@ COMMENT ON ROLE incognito_outro IS 'zqSENTINELAqz-papel';
 CREATE RULE regra_sentinela AS ON INSERT TO loja.tipos WHERE NEW.texto = 'zqSENTINELAqz-regra' DO INSTEAD NOTHING;
 CREATE PUBLICATION publicacao_sentinela FOR TABLE loja.tipos WHERE (texto <> 'zqSENTINELAqz-publicacao') WITH (publish = 'insert');
 
+-- Uma partição publicada sozinha, com a raiz fora de qualquer publicação (o que se grava pela raiz chega ao assinante dela),
+-- e uma publicação que não replica a inserção nem o esvaziamento (a fixture faz cada lado do par assiná-la no outro).
+CREATE PUBLICATION publicacao_particao FOR TABLE loja.pedidos_2 WITH (publish = 'truncate');
+CREATE PUBLICATION publicacao_sem_carga FOR TABLE loja.eventos_1 WITH (publish = 'update, delete');
+
 -- As permissões de cada login sobre o mesmo esquema: as do leitor valem na origem; as do dono, no destino, onde a posse passa
 -- a ele o que é do administrador. Para o leitor: SELECT numa tabela de um esquema sem USAGE (não lê), SELECT numa coluna só
 -- e nenhum numa tabela sem colunas (logo abaixo), segurança por linha forçada e sem política (vale também para o dono) e só

@@ -213,6 +213,8 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo.Suportado = 0 -> CodeProcess.Incognito.Dialetos.SituacaoTipo
 [INCX001]CodeProcess.Incognito.Dialetos.SituacaoTipo.SuportadoPorExclusao = 2 -> CodeProcess.Incognito.Dialetos.SituacaoTipo
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Assinada.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Assinada.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChaveParticao.get -> CodeProcess.Incognito.Dialetos.ChaveParticao?
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChaveParticao.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.ChavePrimaria.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -233,6 +235,8 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.OutrosPais.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Pai.get -> CodeProcess.Incognito.Dialetos.NomeObjeto?
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Pai.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Publicada.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.Publicada.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.SegurancaDeLinha.get -> bool
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.SegurancaDeLinha.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.TabelaEsquema.TabelaEsquema() -> void

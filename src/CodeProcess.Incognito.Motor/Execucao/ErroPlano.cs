@@ -38,8 +38,9 @@ public sealed class ErroPlano
     public string? Coluna { get; }
 
     /// <summary>
-    /// O nome do índice, da restrição, do objeto no esquema reservado ou da outra coluna a que o erro se refere; nulo quando
-    /// não há. Só o nome, texto do catálogo sem escape: a <see cref="Mensagem"/> o traz escapado, com o tipo do objeto.
+    /// O nome do índice, da restrição, da partição, da sequence, do objeto residual, do objeto no esquema reservado ou da
+    /// outra coluna a que o erro se refere; nulo quando não há. Só o nome, sem o esquema, texto do catálogo
+    /// sem escape: a <see cref="Mensagem"/> o traz escapado e qualificado, com o tipo do objeto.
     /// </summary>
     public string? Objeto { get; }
 
