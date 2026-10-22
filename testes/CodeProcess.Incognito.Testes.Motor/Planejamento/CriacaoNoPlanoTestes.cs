@@ -477,12 +477,15 @@ public sealed class CriacaoNoPlanoTestes
         var daOrigem = Assert.Single(await RecusaAsync(Tabela("      cpf: { transformador: br.cpf@1 }\n"), naOrigem, Coerente()));
         var doDestino = Assert.Single(await RecusaAsync(Tabela("      cpf: { transformador: br.cpf@1 }\n"), Coerente(), naOrigem));
         var identidade = TrocarColuna(Coerente(), "clientes", "id", (nameof(ColunaEsquema.Identidade), IdentidadeColuna.Sempre));
-        await PlanejarAsync(Tabela("      id: { transformador: exemplo.gravador@1 }\n"), identidade, identidade, Registro(fabrica));
+        var plano = await PlanejarAsync(Tabela("      id: { transformador: exemplo.gravador@1 }\n"), identidade, identidade, Registro(fabrica));
 
         Assert.Equal(("INC3042", "INC3042"), (daOrigem.Codigo, doDestino.Codigo));
         Assert.Contains("gerada na origem", daOrigem.Mensagem, StringComparison.Ordinal);
         Assert.Contains("gerada no destino", doDestino.Mensagem, StringComparison.Ordinal);
-        Assert.Single(fabrica.Contextos);
+
+        // A identity é tratada, e a regra chega pela chave estrangeira a pedidos.cliente, criada com o contexto dela.
+        Assert.Equal(2, fabrica.Contextos.Count);
+        Assert.Equal(PropagacaoRegra.ChaveEstrangeira, plano.Tabelas[1].Colunas.Single(coluna => coluna.Nome == "cliente").Regra!.Propagacao);
     }
 
     [Fact]
@@ -580,7 +583,7 @@ public sealed class CriacaoNoPlanoTestes
         var naChave = Trocar(Coerente(), "clientes", tabela => BancoFalso.Clonar(
             tabela,
             (nameof(TabelaEsquema.ChavePrimaria), (string[])["id", "cpf"]),
-            (nameof(TabelaEsquema.IndicesUnicos), new[] { new IndiceUnico { Nome = "pk_clientes", Primario = true, Elementos = [new ElementoIndice { Coluna = "id" }, new ElementoIndice { Coluna = "cpf" }], NulosDistintos = true } })));
+            (nameof(TabelaEsquema.IndicesUnicos), new[] { new IndiceUnico { Nome = "pk_clientes", Primario = true, Elementos = [new ElementoIndice { Coluna = "id" }, new ElementoIndice { Coluna = "cpf", Colacao = Padrao }], NulosDistintos = true } })));
         var fabrica = new FabricaDeTeste();
 
         var erro = Assert.Single(await RecusaAsync(Tabela("      cpf: { transformador: exemplo.gravador@1, entradaInvalida: anular }\n"), naChave, naChave, Registro(fabrica)));

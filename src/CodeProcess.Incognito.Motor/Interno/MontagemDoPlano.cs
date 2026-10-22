@@ -27,11 +27,13 @@ internal delegate CorrespondenciaNome ComparadorDeNomes(string escrito, bool ent
 /// <summary>
 /// Do esquema lido e das regras resolvidas ao plano: as unidades de cópia e o pareamento entre origem e destino (P3), os
 /// nomes da configuração resolvidos contra o catálogo, que barram o resto quando falham (P4), e as unidades, as ações,
-/// as estrangeiras, o esquema reservado e a origem contra o destino (P5), com o tipo, os limites e os nulos de cada
-/// coluna tratada e a criação do transformador dela numa sessão descartável (P6). Os nomes casam só pelo dialeto
+/// as estrangeiras, o esquema reservado e o pareamento das colunas (P5), a propagação das regras pelas chaves estrangeiras
+/// e pela herança (P6, em <c>MontagemDoPlano.Propagacao.cs</c>), a origem contra o destino, com o tipo, os limites e os
+/// nulos de cada coluna com regra efetiva e a criação do transformador dela numa sessão descartável (P7), e as restrições e
+/// a unicidade do destino (P8, em <c>MontagemDoPlano.Restricoes.cs</c> e <c>MontagemDoPlano.Unicidade.cs</c>). Os nomes casam só pelo dialeto
 /// (<see cref="ComparadorDeNomes"/>), nunca pelo texto: o casamento exato nunca vence, e a caixa diferente só vira dica.
 /// </summary>
-internal sealed class MontagemDoPlano
+internal sealed partial class MontagemDoPlano
 {
     // O esquema do diário do Incognito, e os de sistema do PostgreSQL (os do SQL Server vêm com o dialeto dele): uma entrada
     // neles nunca é tabela de cópia.
@@ -58,7 +60,9 @@ internal sealed class MontagemDoPlano
     private readonly Dictionary<RegraColunaEscrita, ColunaEsquema> _derivadas = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<RegraColunaEscrita, ColunaResolvida> _resolvidas = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Unidade, (AcaoTabela Acao, bool Escrita)> _acoes = [];
-    private readonly Dictionary<RegraColunaEscrita, ContextoDaColuna> _contextos = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<No, ContextoDaColuna> _contextos = [];
+    private readonly Dictionary<Unidade, List<Par>> _pares = [];
+    private readonly Dictionary<No, Efetiva> _efetivas = [];
 
     private MontagemDoPlano(
         ConfiguracaoIncognito configuracao,
@@ -116,6 +120,10 @@ internal sealed class MontagemDoPlano
         montagem.ResolverNomes();
         montagem._coletor.LancarSeHouverErros();
         montagem.ConferirUnidades();
+        montagem.Propagar();
+        montagem.ConferirPareadas();
+        montagem.AvisarRestricoes();
+        montagem.ConferirUnicidade();
         montagem._coletor.LancarSeHouverErros();
         return montagem.Publicar();
     }
@@ -458,7 +466,7 @@ internal sealed class MontagemDoPlano
 
             if (acao == AcaoTabela.Copiar && unidade.Origem is { } daOrigem && unidade.Destino is { } doDestino)
             {
-                CompararColunas(unidade, entrada, daOrigem, doDestino);
+                Parear(unidade, entrada, daOrigem, doDestino);
                 CompararRestricoes(nome, daOrigem, doDestino);
             }
         }
@@ -496,8 +504,9 @@ internal sealed class MontagemDoPlano
         }
     }
 
-    // As colunas da origem contra as do destino, numa unidade copiada.
-    private void CompararColunas(Unidade unidade, RegraTabelaEscrita? entrada, TabelaEsquema origem, TabelaEsquema destino)
+    // P5: o par de cada coluna da origem no destino, numa unidade copiada; a comparação vem depois da propagação, quando a
+    // regra efetiva de cada coluna é conhecida.
+    private void Parear(Unidade unidade, RegraTabelaEscrita? entrada, TabelaEsquema origem, TabelaEsquema destino)
     {
         var nome = unidade.NomeTabela;
         var tratadas = new Dictionary<ColunaEsquema, RegraColunaEscrita>(ReferenceEqualityComparer.Instance);
@@ -518,6 +527,7 @@ internal sealed class MontagemDoPlano
             paresNoDestino[candidatas[0].Coluna] = paresNoDestino.GetValueOrDefault(candidatas[0].Coluna) + 1;
         }
         var pareadas = new HashSet<ColunaEsquema>(ReferenceEqualityComparer.Instance);
+        var pares = _pares[unidade] = [];
         for (var indice = 0; indice < origem.Colunas.Count; indice++)
         {
             var coluna = origem.Colunas[indice];
@@ -546,42 +556,7 @@ internal sealed class MontagemDoPlano
             }
 
             pareadas.Add(unica.Coluna);
-            if (tratadas.TryGetValue(coluna, out var tratada))
-            {
-                if (coluna.Tipo != unica.Coluna.Tipo || coluna.Situacao != unica.Coluna.Situacao)
-                {
-                    _coletor.Erro(
-                        new ErroPlano(
-                            CodigosPlanejar.TratadaComTipoDiferente,
-                            $"A coluna tratada tem tipo {Tipo(coluna)} na origem e {Tipo(unica.Coluna)} no destino: o transformador é criado para um tipo só.",
-                            nome,
-                            coluna.Nome),
-                        indice);
-                }
-                else
-                {
-                    ConferirTratada(unidade, tratada, coluna, unica.Coluna, destino, indice);
-                }
-            }
-            else if (coluna.Tipo != unica.Coluna.Tipo)
-            {
-                _coletor.Aviso(
-                    new Aviso(CodigosPlanejar.MaisEstreitaNoDestino, $"A coluna tem tipo {Tipo(coluna)} na origem e {Tipo(unica.Coluna)} no destino: a cópia depende dos dados.", nome, coluna.Nome),
-                    indice);
-            }
-            else if (MaisEstreita(coluna, unica.Coluna))
-            {
-                _coletor.Aviso(
-                    new Aviso(CodigosPlanejar.MaisEstreitaNoDestino, "A coluna é mais estreita no destino (comprimento, faixa ou precisão): a cópia depende dos dados.", nome, coluna.Nome),
-                    indice);
-            }
-
-            if (!MesmaColacao(coluna, unica.Coluna))
-            {
-                _coletor.Aviso(
-                    new Aviso(CodigosPlanejar.ColacaoDiferente, "A colação da coluna se comporta diferente na origem e no destino: ordem e igualdade dos textos podem mudar.", nome, coluna.Nome),
-                    indice);
-            }
+            pares.Add(new Par(indice, coluna, unica.Coluna));
         }
 
         for (var indice = 0; indice < destino.Colunas.Count; indice++)
@@ -596,25 +571,87 @@ internal sealed class MontagemDoPlano
         }
     }
 
-    // P6: uma coluna tratada, com o mesmo tipo e situação nos dois lados. Primeiro os avisos da regra; depois a gerada, a
+    // P7: cada coluna pareada contra o par no destino, já com a regra efetiva (escrita ou propagada): a tratada precisa do
+    // mesmo tipo e situação nos dois lados; a outra só avisa a diferença.
+    private void ConferirPareadas()
+    {
+        foreach (var unidade in _unidades.Where(_pares.ContainsKey))
+        {
+            var nome = unidade.NomeTabela;
+            foreach (var (indice, coluna, doDestino) in _pares[unidade])
+            {
+                var no = new No(unidade, coluna.Nome);
+                if (_recusadas.Contains(no))
+                {
+                    continue;
+                }
+
+                if (_efetivas.TryGetValue(no, out var efetiva))
+                {
+                    if (coluna.Tipo != doDestino.Tipo || coluna.Situacao != doDestino.Situacao)
+                    {
+                        _coletor.Erro(
+                            new ErroPlano(
+                                CodigosPlanejar.TratadaComTipoDiferente,
+                                $"A coluna tratada tem tipo {Tipo(coluna)} na origem e {Tipo(doDestino)} no destino: o transformador é criado para um tipo só.{Propagada(efetiva)}",
+                                nome,
+                                coluna.Nome,
+                                posicao: NoYaml(efetiva.Escrita.Posicao, efetiva.Escrita.Local)),
+                            indice);
+                    }
+                    else
+                    {
+                        ConferirTratada(unidade, no, efetiva, coluna, doDestino, unidade.Destino!, indice);
+                    }
+                }
+                else if (coluna.Tipo != doDestino.Tipo)
+                {
+                    _coletor.Aviso(
+                        new Aviso(CodigosPlanejar.MaisEstreitaNoDestino, $"A coluna tem tipo {Tipo(coluna)} na origem e {Tipo(doDestino)} no destino: a cópia depende dos dados.", nome, coluna.Nome),
+                        indice);
+                }
+                else if (MaisEstreita(coluna, doDestino))
+                {
+                    _coletor.Aviso(
+                        new Aviso(CodigosPlanejar.MaisEstreitaNoDestino, "A coluna é mais estreita no destino (comprimento, faixa ou precisão): a cópia depende dos dados.", nome, coluna.Nome),
+                        indice);
+                }
+
+                if (!MesmaColacao(coluna, doDestino))
+                {
+                    _coletor.Aviso(
+                        new Aviso(CodigosPlanejar.ColacaoDiferente, "A colação da coluna se comporta diferente na origem e no destino: ordem e igualdade dos textos podem mudar.", nome, coluna.Nome),
+                        indice);
+                }
+            }
+        }
+    }
+
+    // Uma coluna tratada, com o mesmo tipo e situação nos dois lados. Primeiro os avisos da regra; depois a gerada, a
     // forma canônica e o tipo, que barram o resto; os nulos; e os limites, que dão o contexto com que o transformador é
     // criado, lido e descartado na sessão descartável.
-    private void ConferirTratada(Unidade unidade, RegraColunaEscrita regra, ColunaEsquema origem, ColunaEsquema destino, TabelaEsquema tabelaDoDestino, int indice)
+    private void ConferirTratada(Unidade unidade, No no, Efetiva efetiva, ColunaEsquema origem, ColunaEsquema destino, TabelaEsquema tabelaDoDestino, int indice)
     {
-        var resolvida = _resolvidas[regra];
+        var regra = efetiva.Escrita;
+        var resolvida = efetiva.Resolvida;
         var fabrica = resolvida.Fabrica;
         var nome = unidade.NomeTabela;
         var posicao = NoYaml(regra.Posicao, regra.Local);
+        var sufixo = Propagada(efetiva);
         void Erro(string codigo, string mensagem, PosicaoConfiguracao? onde) =>
-            _coletor.Erro(new ErroPlano(codigo, mensagem, nome, origem.Nome, posicao: onde ?? posicao), indice);
+            _coletor.Erro(new ErroPlano(codigo, mensagem + sufixo, nome, origem.Nome, posicao: onde ?? posicao), indice);
 
-        AvisarVersaoMaisNova(regra, fabrica, nome, origem.Nome, posicao, indice);
-        if (PoliticasQueAnulam.UsaEntradaMalformada(fabrica) && resolvida.Regra.EntradaMalformada == PoliticaEntradaMalformada.Preservar)
+        // Os avisos da regra saem uma vez, na coluna em que ela foi escrita, e não em cada propagada.
+        if (efetiva.Propagacao is null)
         {
-            var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, new PoliticaQueAnula("entradaMalformada: preservar", null, null));
-            _coletor.Aviso(
-                new Aviso(CodigosPlanejar.MalformadaPreservada, $"'entradaMalformada: preservar' ({deOnde}) copia em claro a entrada fora do formato.", nome, origem.Nome, posicao: onde ?? posicao),
-                indice);
+            AvisarVersaoMaisNova(regra, fabrica, nome, origem.Nome, posicao, indice);
+            if (PoliticasQueAnulam.UsaEntradaMalformada(fabrica) && resolvida.Regra.EntradaMalformada == PoliticaEntradaMalformada.Preservar)
+            {
+                var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, new PoliticaQueAnula("entradaMalformada: preservar", null, null));
+                _coletor.Aviso(
+                    new Aviso(CodigosPlanejar.MalformadaPreservada, $"'entradaMalformada: preservar' ({deOnde}) copia em claro a entrada fora do formato.", nome, origem.Nome, posicao: onde ?? posicao),
+                    indice);
+            }
         }
 
         if (origem.Geracao != GeracaoColuna.Nenhuma || destino.Geracao != GeracaoColuna.Nenhuma)
@@ -663,12 +700,33 @@ internal sealed class MontagemDoPlano
             }
         }
 
-        if (Contexto(regra, destino, tipo, Erro) is not { } contexto)
+        // A coluna de derivarDe precisa existir aqui e chegar ao transformador com a forma canônica: a regra propagada pela
+        // herança para a mãe ou para uma irmã pode não ter a coluna, e o leitor não sabe entregar a sem forma.
+        var derivada = Derivada(no, efetiva);
+        if (regra.DerivarDe is not null && derivada is null)
+        {
+            Erro(
+                CodigosPlanejar.DerivarDeInexistente,
+                $"A coluna {NomeTabela.Parte(_derivadas.GetValueOrDefault(regra)?.Nome ?? regra.DerivarDe.Nome)} de 'derivarDe' não existe nesta tabela: a regra propagada não tem de onde derivar o valor. Escreva nesta tabela uma regra própria, ou tire o 'derivarDe'.",
+                null);
+            return;
+        }
+
+        if (derivada is { } referida && (referida.Tipo is null || referida.Situacao != SituacaoTipo.Suportado))
+        {
+            Erro(
+                CodigosPlanejar.DerivarDeSemFormaCanonica,
+                $"A coluna {NomeTabela.Parte(referida.Nome)} de 'derivarDe' não tem forma canônica na origem ({Tipo(referida)}): o leitor não sabe entregar o valor dela ao transformador. Tire o 'derivarDe', ou aponte para uma coluna com forma canônica.",
+                null);
+            return;
+        }
+
+        if (Contexto(derivada, destino, tipo, Erro) is not { } contexto)
         {
             return;
         }
 
-        _contextos[regra] = contexto;
+        _contextos[no] = contexto;
         if (_criacao.Criar(fabrica, resolvida.Regra, contexto) is { } falha)
         {
             Erro(falha.Codigo, falha.Mensagem, null);
@@ -678,7 +736,7 @@ internal sealed class MontagemDoPlano
     // O contexto de criação pela coluna do destino; nulo quando o dialeto não mediu o que o contexto precisa. Em texto, o
     // limite vira unidades UTF-16 que cabem com certeza: em bytes, divide pelo maior caractere da codificação (sem as
     // propriedades do banco, 4, o pior caso); em binário, vai em bytes.
-    private ContextoDaColuna? Contexto(RegraColunaEscrita regra, ColunaEsquema destino, TipoColuna tipo, Action<string, string, PosicaoConfiguracao?> erro)
+    private ContextoDaColuna? Contexto(ColunaEsquema? derivada, ColunaEsquema destino, TipoColuna tipo, Action<string, string, PosicaoConfiguracao?> erro)
     {
         int? comprimento = null;
         if (tipo is TipoColuna.Texto or TipoColuna.Binario)
@@ -743,7 +801,7 @@ internal sealed class MontagemDoPlano
             (precisao, escala) = (medida, destino.Escala);
         }
 
-        return new ContextoDaColuna(tipo, comprimento, menor, maior, precisao, escala, destino.Colacao?.Nome, _derivadas.GetValueOrDefault(regra)?.Tipo);
+        return new ContextoDaColuna(tipo, comprimento, menor, maior, precisao, escala, destino.Colacao?.Nome, derivada?.Tipo);
     }
 
     private static string MensagemDaGerada(string lado) =>
@@ -845,8 +903,10 @@ internal sealed class MontagemDoPlano
             HashSet<string> identificadores = tabela is null ? [] : Identificadores(tabela, _origem.Esquema);
             var colunas = tabela?.Colunas.Select(coluna =>
             {
-                var regra = regras.GetValueOrDefault(coluna);
-                return new MapaColuna(coluna.Nome, coluna.Tipo, regra is null ? null : Regra(regra), new Classificacao(regra?.Sensivel == true, identificadores.Contains(coluna.Nome)));
+                var escrita = regras.GetValueOrDefault(coluna);
+                var no = new No(unidade, coluna.Nome);
+                var regra = _efetivas.TryGetValue(no, out var efetiva) ? Regra(no, efetiva) : escrita is null ? null : Mantida(escrita);
+                return new MapaColuna(coluna.Nome, coluna.Tipo, regra, new Classificacao(escrita?.Sensivel == true, identificadores.Contains(coluna.Nome) || _naChave.Contains(no)));
             }).ToArray() ?? [];
             tabelas.Add(new MapaTabela(unidade.NomeTabela, acao, escrita, colunas, entrada is null ? null : NoYaml(entrada.Posicao, entrada.Local)));
 
@@ -855,13 +915,14 @@ internal sealed class MontagemDoPlano
             var soAPropria = daOrigem?.SoAPropria == true || doDestino?.SoAPropria == true;
             var admiteFreeze = (doDestino ?? daOrigem)!.Value.AdmiteFreeze;
             var tratadas = tabela?.Colunas
-                .Where(coluna => regras.GetValueOrDefault(coluna) is { } regra && _resolvidas.ContainsKey(regra))
+                .Where(coluna => _efetivas.ContainsKey(new No(unidade, coluna.Nome)))
                 .Select(coluna =>
                 {
-                    var resolvida = _resolvidas[regras[coluna]];
+                    var no = new No(unidade, coluna.Nome);
+                    var resolvida = _efetivas[no].Resolvida;
 
                     // Sem o contexto, o executor não recriaria o transformador como o planejar o conferiu: é defeito.
-                    var contexto = _contextos.TryGetValue(regras[coluna], out var criado) ? criado : throw new InvalidOperationException("Coluna tratada sem o contexto de criação.");
+                    var contexto = _contextos.TryGetValue(no, out var criado) ? criado : throw new InvalidOperationException("Coluna tratada sem o contexto de criação.");
                     return new ColunaTratada(coluna.Nome, resolvida.Fabrica, resolvida.Regra, resolvida.Normalizados, contexto);
                 })
                 .ToArray() ?? [];
@@ -872,32 +933,31 @@ internal sealed class MontagemDoPlano
         return new PlanoMontado(tabelas, _coletor.Avisos(), carga);
     }
 
-    // A regra escrita como regra efetiva (sem propagação ainda): manter, ou o transformador resolvido com o domínio e as
-    // políticas efetivas.
-    private RegraColuna Regra(RegraColunaEscrita regra)
-    {
-        var posicao = NoYaml(regra.Posicao, regra.Local);
-        if (!_resolvidas.TryGetValue(regra, out var resolvida))
-        {
-            // A resolução recusa antes do banco qualquer regra que não resolve: sem ela, a coluna sairia em claro.
-            return regra.Tipo == TipoRegraColuna.Manter
-                ? new RegraColuna(TipoRegra.Manter, null, null, null, null, null, null, null, regra.Origem, null, null, posicao)
-                : throw new InvalidOperationException("Regra de transformação sem resolução.");
-        }
+    // A regra escrita que não transforma: manter. Uma de transformação sempre tem a efetiva; sem ela, a coluna sairia em
+    // claro, e é defeito.
+    private RegraColuna Mantida(RegraColunaEscrita regra) =>
+        regra.Tipo == TipoRegraColuna.Manter
+            ? new RegraColuna(TipoRegra.Manter, null, null, null, null, null, null, null, regra.Origem, null, null, NoYaml(regra.Posicao, regra.Local))
+            : throw new InvalidOperationException("Regra de transformação sem a regra efetiva.");
 
+    // A regra efetiva, escrita ou propagada: o transformador resolvido com o domínio e as políticas da regra escrita, a
+    // injetividade efetiva e, na propagada, por onde chegou e de onde.
+    private RegraColuna Regra(No no, Efetiva efetiva)
+    {
+        var resolvida = efetiva.Resolvida;
         return new RegraColuna(
             TipoRegra.Transformar,
             resolvida.Fabrica.Nome,
             resolvida.Fabrica.Versao,
             resolvida.Regra.Dominio,
-            resolvida.Fabrica.Injetividade,
+            _injetividades.GetValueOrDefault(no, resolvida.Fabrica.Injetividade),
             resolvida.Regra.EntradaInvalida,
             resolvida.Regra.EntradaMalformada,
-            _derivadas.GetValueOrDefault(regra)?.Nome,
-            regra.Origem,
-            null,
-            null,
-            posicao);
+            Derivada(no, efetiva)?.Nome,
+            efetiva.Escrita.Origem,
+            efetiva.Propagacao,
+            efetiva.PropagadaDe,
+            NoYaml(efetiva.Escrita.Posicao, efetiva.Escrita.Local));
     }
 
     // As colunas que identificam linhas: as da chave primária, as das chaves estrangeiras (dos dois lados) e as dos índices

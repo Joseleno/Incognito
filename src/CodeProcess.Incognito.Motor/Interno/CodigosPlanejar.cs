@@ -58,6 +58,24 @@ internal static class CodigosPlanejar
     /// <summary>Coluna tratada com tipo ou situação diferentes entre os lados (saída 2).</summary>
     internal const string TratadaComTipoDiferente = "INC3023";
 
+    /// <summary>Colunas ligadas por chave estrangeira ou herança com regras diferentes (saída 2).</summary>
+    internal const string RegrasDiferentesNoComponente = "INC3030";
+
+    /// <summary>Colunas ligadas que diferem só nos domínios citados (<c>dominioCpf</c> e afins) (saída 2).</summary>
+    internal const string DominiosCitadosDiferentes = "INC3031";
+
+    /// <summary>Coluna mantida ligada a uma coluna transformada: o valor real ficaria nela (saída 2).</summary>
+    internal const string MantidaNoComponente = "INC3032";
+
+    /// <summary>Regra com <c>derivarDe</c> ligada por chave estrangeira a outras colunas (saída 2).</summary>
+    internal const string DerivarDeNaChave = "INC3033";
+
+    /// <summary>A coluna de <c>derivarDe</c> não tem forma canônica na origem (saída 2).</summary>
+    internal const string DerivarDeSemFormaCanonica = "INC3034";
+
+    /// <summary>Coluna gerada ligada por chave estrangeira a uma coluna tratada (saída 2).</summary>
+    internal const string GeradaNoComponente = "INC3037";
+
     /// <summary>O tipo da coluna tratada no destino não está entre os que o transformador aceita (saída 2).</summary>
     internal const string TipoNaoAceito = "INC3040";
 
@@ -91,6 +109,24 @@ internal static class CodigosPlanejar
     internal const string NuloEmObrigatoria = "INC3048";
 
     /// <summary>
+    /// Coluna tratada com transformador sem injetividade em chave primária, índice único (pela coluna, por expressão ou por
+    /// gerada) ou chave estrangeira (saída 2).
+    /// </summary>
+    internal const string SemInjetividadeNaUnicidade = "INC3050";
+
+    /// <summary>
+    /// Índice único que compara a coluna tratada por uma igualdade indeterminada, ou não determinística sem prova na tabela
+    /// de formato fixo (saída 2).
+    /// </summary>
+    internal const string IgualdadeIndeterminada = "INC3051";
+
+    /// <summary>Regra que produz NULL num índice único que trata NULLs como iguais (saída 2).</summary>
+    internal const string NuloNoIndice = "INC3052";
+
+    /// <summary>Exclusão que cita coluna tratada com transformador sem injetividade (saída 2).</summary>
+    internal const string SemInjetividadeNaExclusao = "INC3053";
+
+    /// <summary>
     /// Tabela estrangeira no lado que a ação escrita toca (<c>copiar</c>: qualquer lado; <c>esvaziar</c>: o destino), ou com
     /// regra de coluna escrita (saída 2).
     /// </summary>
@@ -119,6 +155,42 @@ internal static class CodigosPlanejar
 
     /// <summary>Aviso: chave primária, chave estrangeira, índice único ou CHECK presente só num lado.</summary>
     internal const string RestricaoSoNumLado = "INC3523";
+
+    /// <summary>Aviso: chave estrangeira da origem que o banco não impõe ou não validou.</summary>
+    internal const string ChaveNaoValidada = "INC3530";
+
+    /// <summary>Aviso: transformador de fora numa coluna ligada por chave com igualdade que não é exata.</summary>
+    internal const string TerceiroLigadoSemIgualdadeExata = "INC3532";
+
+    /// <summary>Aviso: herdeira ignorada de mãe copiada com coluna tratada.</summary>
+    internal const string HerdeiraIgnorada = "INC3533";
+
+    /// <summary>Aviso: o tipo da coluna tratada tem restrição própria no destino, ou o dialeto não informa.</summary>
+    internal const string RestritaPeloTipo = "INC3540";
+
+    /// <summary>Aviso: CHECK imposto do destino que cita coluna tratada.</summary>
+    internal const string CheckComTratada = "INC3541";
+
+    /// <summary>Aviso: chave de partição do destino com coluna tratada, ou incompleta.</summary>
+    internal const string ParticaoComTratada = "INC3542";
+
+    /// <summary>Aviso: predicado de índice parcial que cita coluna tratada.</summary>
+    internal const string PredicadoComTratada = "INC3550";
+
+    /// <summary>Aviso: coluna tratada injetiva num elemento de expressão ou numa gerada indexada.</summary>
+    internal const string TratadaEmExpressao = "INC3551";
+
+    /// <summary>Aviso: o transformador normaliza a entrada, e entradas distintas podem dar a mesma saída no índice.</summary>
+    internal const string ColisaoPelaNormalizacao = "INC3552";
+
+    /// <summary>Aviso: exclusão que cita coluna tratada com transformador injetivo.</summary>
+    internal const string ExclusaoComTratada = "INC3553";
+
+    /// <summary>Aviso: transformador de fora em igualdade normalizada conhecida (sem a caixa ou sem os espaços finais).</summary>
+    internal const string TerceiroEmNormalizada = "INC3554";
+
+    /// <summary>Aviso: entrada preservada em claro no mesmo índice único que os pseudônimos.</summary>
+    internal const string PreservadaComPseudonimos = "INC3555";
 
     /// <summary>Aviso: tabela estrangeira nos dois lados e fora da configuração, ignorada.</summary>
     internal const string EstrangeiraIgnorada = "INC3572";
