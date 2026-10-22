@@ -29,8 +29,9 @@ internal delegate CorrespondenciaNome ComparadorDeNomes(string escrito, bool ent
 /// nomes da configuração resolvidos contra o catálogo, que barram o resto quando falham (P4), e as unidades, as ações,
 /// as estrangeiras, o esquema reservado e o pareamento das colunas (P5), a propagação das regras pelas chaves estrangeiras
 /// e pela herança (P6, em <c>MontagemDoPlano.Propagacao.cs</c>), a origem contra o destino, com o tipo, os limites e os
-/// nulos de cada coluna com regra efetiva e a criação do transformador dela numa sessão descartável (P7), e as restrições e
-/// a unicidade do destino (P8, em <c>MontagemDoPlano.Restricoes.cs</c> e <c>MontagemDoPlano.Unicidade.cs</c>). Os nomes casam só pelo dialeto
+/// nulos de cada coluna com regra efetiva e a criação do transformador dela numa sessão descartável (P7), as restrições e
+/// a unicidade do destino (P8, em <c>MontagemDoPlano.Restricoes.cs</c> e <c>MontagemDoPlano.Unicidade.cs</c>), e a fronteira
+/// entre as ações, as permissões, os residuais, a publicação e o banco (P9, em <c>MontagemDoPlano.Acesso.cs</c>). Os nomes casam só pelo dialeto
 /// (<see cref="ComparadorDeNomes"/>), nunca pelo texto: o casamento exato nunca vence, e a caixa diferente só vira dica.
 /// </summary>
 internal sealed partial class MontagemDoPlano
@@ -124,6 +125,7 @@ internal sealed partial class MontagemDoPlano
         montagem.ConferirPareadas();
         montagem.AvisarRestricoes();
         montagem.ConferirUnicidade();
+        montagem.ConferirAcesso();
         montagem._coletor.LancarSeHouverErros();
         return montagem.Publicar();
     }
@@ -750,6 +752,7 @@ internal sealed partial class MontagemDoPlano
                 return null;
             }
 
+            // Sem as propriedades, o plano já sai recusado (INC3082); o 4 só mantém a conta do pior caso até lá.
             var bytesPorCaractere = _destino.Esquema.Propriedades?.Codificacao.BytesPorCaractereMaximo ?? 4;
             comprimento = limite.Valor is not { } valor ? null
                 : tipo == TipoColuna.Binario || limite.Unidade != UnidadeComprimento.Bytes ? valor
@@ -785,20 +788,21 @@ internal sealed partial class MontagemDoPlano
         if (tipo == TipoColuna.Decimal)
         {
             // O decimal do .NET guarda até 28 dígitos: a precisão, a escala e os dígitos da parte inteira (precisão menos escala;
-            // com escala negativa, mais que a precisão) precisam caber.
-            var escalaMedida = destino.Escala ?? 0;
-            if (destino.Precisao is not { } medida || medida > MaiorPrecisao || escalaMedida > MaiorPrecisao || medida - escalaMedida > MaiorPrecisao)
+            // com escala negativa, mais que a precisão) precisam caber. Sem a escala, a parte inteira não se sabe.
+            if (destino.Precisao is not { } medida || destino.Escala is not { } escalaMedida || medida > MaiorPrecisao || escalaMedida > MaiorPrecisao || medida - escalaMedida > MaiorPrecisao)
             {
                 erro(
                     CodigosPlanejar.FaixaOuPrecisaoNaoMedida,
                     destino.Precisao is null
                         ? "A coluna decimal não declara a precisão no destino (ou o dialeto não a informou): sem ela, o pseudônimo pode não caber. Declare a precisão, ou use 'acao: manter' na coluna."
+                        : destino.Escala is null
+                        ? "O dialeto não informou a escala da coluna decimal no destino: sem ela, os dígitos da parte inteira não se sabem, e o pseudônimo pode não caber. Atualize o dialeto, ou use 'acao: manter' na coluna."
                         : $"A coluna decimal passa de {MaiorPrecisao.ToString(CultureInfo.InvariantCulture)} dígitos no destino (na precisão, na escala ou na parte inteira), o limite do decimal do .NET; use 'acao: manter' na coluna.",
                     null);
                 return null;
             }
 
-            (precisao, escala) = (medida, destino.Escala);
+            (precisao, escala) = (medida, escalaMedida);
         }
 
         return new ContextoDaColuna(tipo, comprimento, menor, maior, precisao, escala, destino.Colacao?.Nome, derivada?.Tipo);
@@ -929,7 +933,12 @@ internal sealed partial class MontagemDoPlano
             unidades.Add(new UnidadeDeCopia(unidade.NomeTabela, acao, soAPropria, admiteFreeze, daOrigem?.ColunasLidas ?? [], tratadas));
         }
 
-        var carga = new DadosDeExecucao(ConfiguracaoDaExecucao.De(_configuracao), _origem, _destino, unidades, _regras.Dominios);
+        var chaves = _chavesDoDiario
+            .Select(chave => new ChaveRemovida(new NomeTabela(chave.Tabela.Nome.Esquema, chave.Tabela.Nome.Nome), chave.Chave.Nome))
+            .OrderBy(chave => chave.Tabela, Comparer<NomeTabela>.Create(ColetorDoPlano.CompararTabelas))
+            .ThenBy(chave => chave.Chave, StringComparer.Ordinal)
+            .ToArray();
+        var carga = new DadosDeExecucao(ConfiguracaoDaExecucao.De(_configuracao), _origem, _destino, unidades, _regras.Dominios, chaves);
         return new PlanoMontado(tabelas, _coletor.Avisos(), carga);
     }
 
@@ -1105,13 +1114,12 @@ internal sealed partial class MontagemDoPlano
 
         if (destino.Precisao is { } precisao)
         {
-            if (origem.Precisao is not { } precisaoDaOrigem)
+            // A escala que o dialeto não informou é o pior caso: avisa.
+            if (origem.Precisao is not { } precisaoDaOrigem || destino.Escala is not { } escala || origem.Escala is not { } escalaDaOrigem)
             {
                 return true;
             }
 
-            var escala = destino.Escala ?? 0;
-            var escalaDaOrigem = origem.Escala ?? 0;
             return precisao - escala < precisaoDaOrigem - escalaDaOrigem || escala < escalaDaOrigem;
         }
 

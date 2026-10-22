@@ -40,11 +40,12 @@ public sealed class DadosDeExecucaoTestes
         string[] textos =
         [
             carga.ToString(), carga.Configuracao.ToString(), carga.Configuracao.Origem.ToString(), carga.Configuracao.Chave!.ToString(),
-            carga.Unidades[0].ToString(),
+            carga.Unidades[0].ToString(), new ChaveRemovida(new NomeTabela("loja", "homologacao"), "homologacao").ToString(),
         ];
 
         Assert.All(textos, texto => Assert.DoesNotContain("INCOGNITO_", texto, StringComparison.Ordinal));
         Assert.All(textos, texto => Assert.DoesNotContain("homologacao", texto, StringComparison.Ordinal));
+        Assert.Equal("ChaveRemovida", textos[^1]);
         Assert.Equal("DadosDeExecucao (1 unidades, 0 domínios)", carga.ToString());
         Assert.Equal("UnidadeDeCopia (0 colunas, 0 tratadas)", carga.Unidades[0].ToString());
     }
@@ -140,5 +141,6 @@ internal static class CargaSintetica
         new LeituraDoBanco(EsquemaSintetico.Coerente(), EsquemaSintetico.Identidade("loja")),
         new LeituraDoBanco(EsquemaSintetico.Coerente(), EsquemaSintetico.Identidade("loja_homolog")),
         [.. tabelas.Select(tabela => new UnidadeDeCopia(tabela.Nome, tabela.Acao, SoAPropria: false, AdmiteFreeze: true, [], []))],
+        [],
         []);
 }

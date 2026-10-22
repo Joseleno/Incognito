@@ -58,6 +58,15 @@ public sealed class EsquemaDeConformidade
     /// <summary>As tabelas com segurança por linha.</summary>
     public required Caso<IReadOnlyList<NomeObjeto>> SegurancaDeLinha { get; init; }
 
+    /// <summary>
+    /// As tabelas publicadas para replicação (a publicação replica a inserção ou o esvaziamento delas), com uma partição
+    /// publicada sozinha quando o banco tem partição como tabela.
+    /// </summary>
+    public required Caso<IReadOnlyList<NomeObjeto>> Publicacao { get; init; }
+
+    /// <summary>As tabelas que uma assinatura de replicação do próprio banco lista, ligada ou não.</summary>
+    public required Caso<IReadOnlyList<NomeObjeto>> Assinatura { get; init; }
+
     /// <summary>A única coluna com máscara dinâmica.</summary>
     public required Caso<ReferenciaColuna> Mascara { get; init; }
 
@@ -120,6 +129,12 @@ public sealed class TabelaInventariada
 
     /// <summary>Se tem segurança por linha.</summary>
     public bool SegurancaDeLinha { get; init; }
+
+    /// <summary>Se está publicada (padrão: não está; nulo: o dialeto não informa).</summary>
+    public bool? Publicada { get; init; } = false;
+
+    /// <summary>Se está numa assinatura (padrão: não está; nulo: o dialeto não informa).</summary>
+    public bool? Assinada { get; init; } = false;
 
     /// <summary>As colunas, na ordem do catálogo.</summary>
     public required IReadOnlyList<ColunaInventariada> Colunas { get; init; }

@@ -57,6 +57,9 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
     /// <summary>Compara como o PostgreSQL num banco de um byte por caractere: sem aspas, letra fora do ASCII é indeterminada.</summary>
     internal bool UmBytePorCaractere { get; init; }
 
+    /// <summary>A identidade de cada lado (pelo destino); nulo devolve a sintética, cifrada e com o servidor verificado.</summary>
+    internal Func<bool, IdentidadeLida>? Identidades { get; init; }
+
     public override string Nome
     {
         get
@@ -192,7 +195,7 @@ internal sealed class LeitorDoPlanejar(ProvedorDoPlanejar provedor, bool destino
 internal sealed class IdentidadeDoPlanejar(ProvedorDoPlanejar provedor, bool destino) : IdentidadeBanco
 {
     public override Task<IdentidadeLida> LerAsync(CancellationToken cancelamento) =>
-        provedor.Executar(Operacao.LerIdentidade, destino, () => EsquemaSintetico.Identidade(destino ? "loja_homolog" : "loja"), cancelamento);
+        provedor.Executar(Operacao.LerIdentidade, destino, () => provedor.Identidades?.Invoke(destino) ?? EsquemaSintetico.Identidade(destino ? "loja_homolog" : "loja"), cancelamento);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

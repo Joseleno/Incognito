@@ -24,6 +24,11 @@ public enum Defeito
     TemporalSemHistorico,
     ResiduoAusente,
     SegurancaDeLinhaAusente,
+    PublicacaoAusente,
+    PublicacaoNaoInformada,
+    PublicacaoNaRaiz,
+    AssinaturaAusente,
+    AssinaturaNaoInformada,
     MascaraAusente,
     NomeNaCaixaErrada,
     CitacaoSemEscape,
@@ -145,6 +150,8 @@ public enum Defeito
     TransporteOtimistaNoDestino,
     PermissaoDeTabelaRepetida,
     SegurancaDeLinhaVazia,
+    PublicacaoVazia,
+    AssinaturaVazia,
 
     // A recusa da conexão inaceitável: com o tipo comum, com o que estava na string, fora da faixa, ou não recusa.
     RecusaComoExcecaoComum,
@@ -345,7 +352,11 @@ internal static class BancoFalso
             ]);
         }
 
-        return tabelas;
+        // O banco completo informa a publicação e a assinatura de cada tabela, com uma partição publicada sozinha e outra
+        // tabela assinada; o incompleto não informa.
+        return completo
+            ? [.. tabelas.Select(tabela => Clonar(tabela, (nameof(TabelaEsquema.Publicada), tabela.Nome.Equals(Nome("pedidos_2026"))), (nameof(TabelaEsquema.Assinada), tabela.Nome.Equals(Nome("contatos")))))]
+            : tabelas;
     }
 
     // Os objetos do esquema do diário (a tabela e a sequence dele), em ordem ordinal de nome.
@@ -519,6 +530,12 @@ internal static class BancoFalso
         SegurancaDeLinha = completo
             ? Caso.Presente<IReadOnlyList<NomeObjeto>>(defeito == Defeito.SegurancaDeLinhaVazia ? [] : [Nome("segredos")])
             : Caso.Inexistente<IReadOnlyList<NomeObjeto>>("banco falso sem segurança por linha"),
+        Publicacao = completo
+            ? Caso.Presente<IReadOnlyList<NomeObjeto>>(defeito == Defeito.PublicacaoVazia ? [] : [Nome("pedidos_2026")])
+            : Caso.Inexistente<IReadOnlyList<NomeObjeto>>("banco falso que não informa a publicação"),
+        Assinatura = completo
+            ? Caso.Presente<IReadOnlyList<NomeObjeto>>(defeito == Defeito.AssinaturaVazia ? [] : [Nome("contatos")])
+            : Caso.Inexistente<IReadOnlyList<NomeObjeto>>("banco falso que não informa a assinatura"),
         Mascara = completo ? Caso.Presente(Coluna("contatos", "email")) : Caso.Inexistente<ReferenciaColuna>("banco falso sem máscara"),
 
         // Um caso sem declaração: o 'required' não impede null!.
@@ -618,6 +635,8 @@ internal static class BancoFalso
                 Estrangeira = tabela.Estrangeira,
                 Extensao = tabela.Extensao,
                 SegurancaDeLinha = tabela.SegurancaDeLinha,
+                Publicada = tabela.Publicada,
+                Assinada = tabela.Assinada,
                 Colunas = [.. tabela.Colunas.Select(Projetar)],
                 ChavePrimaria = tabela.ChavePrimaria,
                 ChavesEstrangeiras =
@@ -887,6 +906,21 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
                 break;
             case Defeito.SegurancaDeLinhaAusente:
                 Trocar(tabelas, "segredos", (nameof(TabelaEsquema.SegurancaDeLinha), false));
+                break;
+            case Defeito.PublicacaoAusente:
+                Trocar(tabelas, "pedidos_2026", (nameof(TabelaEsquema.Publicada), false));
+                break;
+            case Defeito.PublicacaoNaoInformada:
+                Trocar(tabelas, "itens", (nameof(TabelaEsquema.Publicada), null));
+                break;
+            case Defeito.PublicacaoNaRaiz:
+                Trocar(tabelas, "pedidos", (nameof(TabelaEsquema.Publicada), true));
+                break;
+            case Defeito.AssinaturaAusente:
+                Trocar(tabelas, "contatos", (nameof(TabelaEsquema.Assinada), false));
+                break;
+            case Defeito.AssinaturaNaoInformada:
+                Trocar(tabelas, "pedidos", (nameof(TabelaEsquema.Assinada), null));
                 break;
             case Defeito.MascaraAusente:
                 TrocarColuna(tabelas, "contatos", "email", (nameof(ColunaEsquema.Mascarada), false));

@@ -61,7 +61,8 @@ public sealed class CriacaoNoPlanoTestes
     public async Task O_contexto_decimal_leva_a_precisao_e_a_escala_do_destino_mesmo_estranhas()
     {
         var fabrica = new FabricaDeTeste();
-        foreach (var (precisao, escala) in new (int, int?)[] { (5, -2), (2, 5), (28, null) })
+        // A escala nula com a precisão é o pior caso (INC3047, no teste do nulo que nunca aprova).
+        foreach (var (precisao, escala) in new (int, int?)[] { (5, -2), (2, 5), (28, 0) })
         {
             fabrica.Contextos.Clear();
             var esquema = ComColunas(Decimal("valor", precisao, escala));
@@ -110,7 +111,10 @@ public sealed class CriacaoNoPlanoTestes
         var erro = Assert.Single(await RecusaAsync(Tabela("      doc: { transformador: exemplo.gravador@1 }\n"), umByte, umByte, Registro(fabrica)));
         Assert.Equal(("INC3043", "loja.clientes", "doc"), (erro.Codigo, erro.Tabela!.ToString(), erro.Coluna!.ToString()));
         Assert.Contains("3 bytes, não comporta um caractere de até 4 bytes", erro.Mensagem, StringComparison.Ordinal);
-        Assert.Equal("INC3043", Assert.Single(await RecusaAsync(Tabela("      doc: { transformador: exemplo.gravador@1 }\n"), umByte, semPropriedades, Registro(fabrica))).Codigo);
+        // Sem as propriedades, o plano já sai recusado pelo INC3082, e o limite conta o pior caso, 4 bytes.
+        Assert.Equal(
+            ["INC3043", "INC3082"],
+            (await RecusaAsync(Tabela("      doc: { transformador: exemplo.gravador@1 }\n"), umByte, semPropriedades, Registro(fabrica))).Select(erro => erro.Codigo).Order(StringComparer.Ordinal));
         Assert.Empty(fabrica.Contextos);
 
         // Com um byte por caractere, os mesmos 3 bytes cabem.

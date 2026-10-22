@@ -303,6 +303,56 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         WHERE NOT t.tgisinternal AND t.tgrelid IN (SELECT oid FROM tabelas)
         """;
 
+    // Se a tabela está numa publicação que replica a inserção ou o esvaziamento: pela publicação de todas as tabelas (só as
+    // persistentes, comuns e particionadas: a estrangeira e a unlogged nunca são publicadas), pela própria tabela ou por uma
+    // acima dela na árvore, e pelo esquema dela ou de uma acima. Pelos catálogos base, nunca pela pg_publication_tables, que
+    // traz o texto do filtro de linha. O esquema conta também quando só o de cima o publica: o pior caso. As publicadas
+    // diretamente saem uma vez, e os ancestrais só são procurados nas partições: com milhares de partições, a consulta por
+    // tabela e por publicação passava de meio segundo.
+    private const string ConsultaPublicacoes = Tabelas + "," + """
+        publicacoes AS (
+            SELECT p.oid, p.puballtables
+            FROM pg_catalog.pg_publication p
+            WHERE p.pubinsert OR p.pubtruncate),
+        diretas AS (
+            SELECT r.prrelid AS oid
+            FROM pg_catalog.pg_publication_rel r
+            JOIN publicacoes p ON p.oid = r.prpubid
+            UNION
+            SELECT c.oid
+            FROM pg_catalog.pg_publication_namespace s
+            JOIN publicacoes p ON p.oid = s.pnpubid
+            JOIN pg_catalog.pg_class c ON c.relnamespace = s.pnnspid)
+        SELECT c.oid AS tabela,
+               c.relkind IN ('r', 'p') AND c.relpersistence = 'p'
+                 AND (EXISTS (SELECT 1 FROM publicacoes WHERE puballtables)
+                      OR c.oid IN (SELECT oid FROM diretas)
+                      OR (c.relispartition AND EXISTS (SELECT 1 FROM pg_catalog.pg_partition_ancestors(c.oid) a WHERE a.relid IN (SELECT oid FROM diretas)))) AS publicada
+        FROM tabelas
+        JOIN pg_catalog.pg_class c ON c.oid = tabelas.oid
+        """;
+
+    // Se as assinaturas são legíveis pelo login: o PostgreSQL revoga do público só o texto da conexão, mas um servidor
+    // endurecido pode revogar o resto; ilegíveis, a assinatura de cada tabela fica sem resposta (o pior caso).
+    private const string ConsultaAssinaturasLegiveis = """
+        SELECT pg_catalog.has_table_privilege('pg_catalog.pg_subscription_rel', 'SELECT')
+               AND pg_catalog.has_column_privilege('pg_catalog.pg_subscription', 'oid', 'SELECT')
+               AND pg_catalog.has_column_privilege('pg_catalog.pg_subscription', 'subdbid', 'SELECT')
+        """;
+
+    // Se a tabela está numa assinatura deste banco, ligada ou não (a desligada aplica o que se acumulou ao ser ligada), em
+    // qualquer estado da sincronização. O pg_subscription é do servidor inteiro, e o pg_subscription_rel, de cada banco: o
+    // banco clonado de outro leva as linhas da assinatura do original, que não grava nele. Nunca o texto da conexão.
+    private const string ConsultaAssinaturas = Tabelas + "," + """
+        assinadas AS (
+            SELECT r.srrelid AS oid
+            FROM pg_catalog.pg_subscription_rel r
+            JOIN pg_catalog.pg_subscription s ON s.oid = r.srsubid
+            WHERE s.subdbid = (SELECT d.oid FROM pg_catalog.pg_database d WHERE d.datname = pg_catalog.current_database()))
+        SELECT tabelas.oid AS tabela, tabelas.oid IN (SELECT oid FROM assinadas) AS assinada
+        FROM tabelas
+        """;
+
     // As colunas que tiram valor de uma sequence: pelo default da coluna (o pg_attrdef depende da sequence), pelo default
     // de um domínio (o pg_type depende dela; vale para as colunas sem default próprio) e pela identity (a sequence depende
     // da coluna, internamente). O OWNED BY sozinho não conta: sem default, a coluna não tira valor da sequence.
@@ -484,6 +534,8 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             var checks = await LerChecksAsync(colunas, cancelamento).ConfigureAwait(false);
             var exclusoes = await LerExclusoesAsync(colunas, cancelamento).ConfigureAwait(false);
             var triggers = await LerTriggersAsync(cancelamento).ConfigureAwait(false);
+            var publicadas = await LerPublicacoesAsync(cancelamento).ConfigureAwait(false);
+            var assinadas = await LerAssinaturasAsync(cancelamento).ConfigureAwait(false);
             var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
             var reservado = await LerEsquemaReservadoAsync(cancelamento).ConfigureAwait(false);
@@ -506,6 +558,8 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                         ChavePrimaria = chavesPrimarias.TryGetValue(tabela.Oid, out var chave) ? chave : [],
                         ChavesEstrangeiras = chavesEstrangeiras.TryGetValue(tabela.Oid, out var estrangeiras) ? estrangeiras : [],
                         SegurancaDeLinha = tabela.SegurancaDeLinha,
+                        Publicada = publicadas.TryGetValue(tabela.Oid, out var publicada) ? publicada : null,
+                        Assinada = assinadas.TryGetValue(tabela.Oid, out var assinada) ? assinada : null,
                         IndicesUnicos = Ordenados(indicesUnicos[tabela.Oid], indice => indice.Nome),
                         RestricoesCheck = Ordenados(checks[tabela.Oid], check => check.Nome),
                         RestricoesExclusao = Ordenados(exclusoes[tabela.Oid], exclusao => exclusao.Nome),
@@ -1064,6 +1118,41 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         }
 
         return triggers.ToLookup(trigger => trigger.Tabela, trigger => trigger.Trigger);
+    }
+
+    private async Task<Dictionary<uint, bool>> LerPublicacoesAsync(CancellationToken cancelamento)
+    {
+        var publicadas = new Dictionary<uint, bool>();
+        await using var comando = new NpgsqlCommand(ConsultaPublicacoes, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            publicadas.Add(leitor.GetFieldValue<uint>(leitor.GetOrdinal("tabela")), leitor.GetBoolean(leitor.GetOrdinal("publicada")));
+        }
+
+        return publicadas;
+    }
+
+    // Vazio quando as assinaturas não são legíveis: nenhuma tabela tem resposta.
+    private async Task<Dictionary<uint, bool>> LerAssinaturasAsync(CancellationToken cancelamento)
+    {
+        var assinadas = new Dictionary<uint, bool>();
+        await using (var legiveis = new NpgsqlCommand(ConsultaAssinaturasLegiveis, conexao.Conexao))
+        {
+            if (await legiveis.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is not true)
+            {
+                return assinadas;
+            }
+        }
+
+        await using var comando = new NpgsqlCommand(ConsultaAssinaturas, conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            assinadas.Add(leitor.GetFieldValue<uint>(leitor.GetOrdinal("tabela")), leitor.GetBoolean(leitor.GetOrdinal("assinada")));
+        }
+
+        return assinadas;
     }
 
     // As colunas citadas pelos números, na ordem da tabela, sem as de sistema (negativas); a linha inteira (0) ou um número

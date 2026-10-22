@@ -19,12 +19,17 @@ namespace CodeProcess.Incognito.Interno;
 /// <param name="Destino">A leitura do destino.</param>
 /// <param name="Unidades">As unidades de cópia, na ordem de <see cref="Plano.Tabelas"/>.</param>
 /// <param name="Dominios">A tabela de domínios da sessão.</param>
+/// <param name="ChavesRemovidas">
+/// As chaves estrangeiras do destino que o diário remove antes de esvaziar e recria depois da carga: as do filho copiado, e
+/// as do pai copiado ou esvaziado, em ordem de tabela e chave.
+/// </param>
 internal sealed record DadosDeExecucao(
     ConfiguracaoDaExecucao Configuracao,
     LeituraDoBanco Origem,
     LeituraDoBanco Destino,
     IReadOnlyList<UnidadeDeCopia> Unidades,
-    IReadOnlyList<DefinicaoDominio> Dominios)
+    IReadOnlyList<DefinicaoDominio> Dominios,
+    IReadOnlyList<ChaveRemovida> ChavesRemovidas)
 {
     /// <summary>As unidades de cópia, copiadas.</summary>
     public IReadOnlyList<UnidadeDeCopia> Unidades { get; } = [.. Unidades];
@@ -32,8 +37,20 @@ internal sealed record DadosDeExecucao(
     /// <summary>A tabela de domínios, copiada.</summary>
     public IReadOnlyList<DefinicaoDominio> Dominios { get; } = [.. Dominios];
 
+    /// <summary>As chaves que o diário remove, copiadas.</summary>
+    public IReadOnlyList<ChaveRemovida> ChavesRemovidas { get; } = [.. ChavesRemovidas];
+
     /// <inheritdoc/>
     public override string ToString() => $"{nameof(DadosDeExecucao)} ({Unidades.Count} unidades, {Dominios.Count} domínios)";
+}
+
+/// <summary>Uma chave estrangeira do destino que o diário remove e recria.</summary>
+/// <param name="Tabela">A tabela que tem a chave (o filho), como o catálogo a guarda.</param>
+/// <param name="Chave">O nome da chave.</param>
+internal sealed record ChaveRemovida(NomeTabela Tabela, string Chave)
+{
+    /// <inheritdoc/>
+    public override string ToString() => nameof(ChaveRemovida);
 }
 
 /// <summary>Uma referência a segredo como foi escrita: o tipo e o texto do YAML, nunca o alvo resolvido.</summary>

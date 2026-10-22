@@ -304,6 +304,143 @@ public sealed class LeitorEsquemaPostgreSqlTestes(ServidorPostgreSql servidor)
         Assert.DoesNotContain(ServidorPostgreSql.Sentinela, recusa.ToString(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_publicacao_do_esquema_marca_as_tabelas_dele_e_as_particoes_de_fora_e_nao_a_unlogged()
+    {
+        // A partição de outro esquema é publicada pela raiz; a unlogged e a de outro esquema solta, não. Só o esvaziamento
+        // replicado já conta.
+        var esquema = await LerBancoAvulsoAsync(
+            "",
+            "CREATE SCHEMA a; CREATE SCHEMA b; CREATE TABLE a.comum (id integer); CREATE UNLOGGED TABLE a.rapida (id integer); "
+            + "CREATE TABLE a.raiz (id integer) PARTITION BY LIST (id); CREATE TABLE b.parte PARTITION OF a.raiz FOR VALUES IN (1); "
+            + "CREATE TABLE b.solta (id integer); CREATE PUBLICATION do_esquema FOR TABLES IN SCHEMA a WITH (publish = 'truncate');",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal<(string, bool?)>(
+            [("a.comum", true), ("a.raiz", true), ("a.rapida", false), ("b.parte", true), ("b.solta", false)],
+            esquema.Tabelas.Select(tabela => (tabela.Nome.ToString(), tabela.Publicada)).Order().ToArray());
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_particionada_publicada_marca_as_particoes_e_o_esquema_conta_so_pela_publicacao_dele()
+    {
+        // A partição não entra na pg_publication_rel quando a raiz é publicada; o esquema publicado sem inserção nem
+        // esvaziamento não conta, mesmo com outra publicação que os replica.
+        var esquema = await LerBancoAvulsoAsync(
+            "",
+            "CREATE TABLE public.raiz (id integer) PARTITION BY LIST (id); CREATE TABLE public.parte PARTITION OF public.raiz FOR VALUES IN (1); "
+            + "CREATE SCHEMA c; CREATE TABLE c.x (id integer); CREATE TABLE public.solta (id integer); "
+            + "CREATE PUBLICATION da_raiz FOR TABLE public.raiz WITH (publish = 'insert'); "
+            + "CREATE PUBLICATION do_esquema FOR TABLES IN SCHEMA c WITH (publish = 'update, delete');",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal<(string, bool?)>(
+            [("c.x", false), ("public.parte", true), ("public.raiz", true), ("public.solta", false)],
+            esquema.Tabelas.Select(tabela => (tabela.Nome.ToString(), tabela.Publicada)).Order().ToArray());
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_tabela_estrangeira_nunca_e_publicada()
+    {
+        var esquema = await LerBancoAvulsoAsync(
+            "",
+            "CREATE EXTENSION file_fdw; CREATE SERVER arquivos FOREIGN DATA WRAPPER file_fdw; "
+            + "CREATE FOREIGN TABLE public.remota (linha text) SERVER arquivos OPTIONS (filename '/dev/null'); CREATE TABLE public.t (id integer); "
+            + "CREATE PUBLICATION todas FOR ALL TABLES WITH (publish = 'insert');",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal<(string, bool?)>(
+            [("public.remota", false), ("public.t", true)],
+            esquema.Tabelas.Select(tabela => (tabela.Nome.ToString(), tabela.Publicada)).Order().ToArray());
+    }
+
+    [Theory]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    [InlineData("insert", true)]
+    [InlineData("update, delete", false)]
+    public async Task A_publicacao_de_todas_as_tabelas_marca_cada_uma_se_replica_a_insercao_ou_o_esvaziamento(string publica, bool publicada)
+    {
+        var esquema = await LerBancoAvulsoAsync(
+            "",
+            "CREATE TABLE public.t (id integer); CREATE TABLE public.p (id integer) PARTITION BY LIST (id); CREATE TABLE public.p1 PARTITION OF public.p FOR VALUES IN (1); "
+            + $"CREATE PUBLICATION todas FOR ALL TABLES WITH (publish = '{publica}');",
+            TestContext.Current.CancellationToken);
+
+        Assert.All(esquema.Tabelas, tabela => Assert.Equal(publicada, tabela.Publicada));
+        Assert.Equal(3, esquema.Tabelas.Count);
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_assinatura_deste_banco_marca_as_tabelas_dela_e_a_do_banco_clonado_nao()
+    {
+        // A assinatura desligada conta e lista a partição (o publicador não publica pela raiz). O clone leva as linhas do
+        // pg_subscription_rel, mas a assinatura continua do original, o único em que ela grava. Lido pelo leitor, que não é
+        // dono de nada nos três bancos.
+        var cancelamento = TestContext.Current.CancellationToken;
+        const string Tabelas = "CREATE TABLE public.t (id integer PRIMARY KEY); CREATE TABLE public.solta (id integer); "
+            + "CREATE TABLE public.p (id integer) PARTITION BY LIST (id); CREATE TABLE public.p1 PARTITION OF public.p FOR VALUES IN (1);";
+        var publicador = $"inc_avulso_{Guid.NewGuid():N}";
+        var assinante = $"inc_avulso_{Guid.NewGuid():N}";
+        var clone = $"inc_avulso_{Guid.NewGuid():N}";
+        try
+        {
+            await servidor.ExecutarAsync("postgres", $"CREATE DATABASE {publicador} TEMPLATE template0", cancelamento);
+            await servidor.ExecutarAsync(publicador, Tabelas + "CREATE PUBLICATION da_carga FOR TABLE public.t, public.p WITH (publish = 'update');", cancelamento);
+            await servidor.ExecutarAsync("postgres", $"CREATE DATABASE {assinante} TEMPLATE template0", cancelamento);
+            await servidor.ExecutarAsync(assinante, Tabelas, cancelamento);
+            await servidor.AssinarAsync(assinante, publicador, "da_carga", cancelamento);
+            await servidor.ExecutarAsync("postgres", $"CREATE DATABASE {clone} TEMPLATE {assinante}", cancelamento);
+
+            var doAssinante = await LerComoLeitorAsync(assinante, cancelamento);
+            var doClone = await LerComoLeitorAsync(clone, cancelamento);
+
+            Assert.Equal<(string, bool?)>(
+                [("public.p", false), ("public.p1", true), ("public.solta", false), ("public.t", true)],
+                doAssinante.Tabelas.Select(tabela => (tabela.Nome.ToString(), tabela.Assinada)).Order().ToArray());
+            Assert.All(doClone.Tabelas, tabela => Assert.False(tabela.Assinada));
+            Assert.Equal(4, doClone.Tabelas.Count);
+        }
+        finally
+        {
+            await servidor.ApagarAsync(clone);
+            await servidor.ApagarAsync(assinante);
+            await servidor.ApagarAsync(publicador);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task Sem_poder_ler_as_assinaturas_nenhuma_tabela_tem_resposta()
+    {
+        // O pg_subscription_rel é de cada banco: revogado só neste, o leitor não sabe o que está assinado.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var banco = $"inc_avulso_{Guid.NewGuid():N}";
+        try
+        {
+            await servidor.ExecutarAsync("postgres", $"CREATE DATABASE {banco} TEMPLATE template0", cancelamento);
+            await servidor.ExecutarAsync(banco, "CREATE TABLE public.t (id integer); REVOKE SELECT ON pg_catalog.pg_subscription_rel FROM PUBLIC;", cancelamento);
+
+            var esquema = await LerComoLeitorAsync(banco, cancelamento);
+
+            Assert.Null(Assert.Single(esquema.Tabelas).Assinada);
+            Assert.False(esquema.Tabelas[0].Publicada);
+        }
+        finally
+        {
+            await servidor.ApagarAsync(banco);
+        }
+    }
+
+    private async Task<EsquemaBanco> LerComoLeitorAsync(string banco, CancellationToken cancelamento)
+    {
+        await using var origem = await _provedor.ConectarOrigemAsync(new SegredoConexao(servidor.StringDeConexao(banco, ServidorPostgreSql.Leitor, servidor.SenhaLeitor)), cancelamento);
+        return await origem.Esquema.LerAsync(cancelamento);
+    }
+
     // Um banco criado do template0, com o esquema dado, lido pelo administrador (o leitor não tem nada nele) e apagado.
     private async Task<EsquemaBanco> LerBancoAvulsoAsync(string opcoes, string esquema, CancellationToken cancelamento)
     {

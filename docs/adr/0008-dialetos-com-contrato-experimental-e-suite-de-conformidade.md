@@ -217,3 +217,18 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   "corresponde" e um "não corresponde"), o inventário passa a conferir os objetos do esquema reservado na ordem e o fato do esquema
   `incognito` exige a lista; o falso ganha os defeitos `DobraComToLowerInvariant`, `IgnoraAspas` e
   `EscondeEsquemaReservado`.
+- 2026-10-22: o contrato ganha `TabelaEsquema.Publicada`, se a tabela física está numa publicação de replicação
+  lógica que replica a inserção ou o esvaziamento dela (pela própria tabela, por uma acima dela na árvore, pelo esquema
+  ou pela publicação de todas as tabelas). Vale para cada tabela da árvore, porque uma partição pode ser publicada
+  sozinha, com a raiz fora de qualquer publicação, e o que se grava pela raiz chega ao assinante dela; nulo é o pior
+  caso. O PostgreSQL lê os catálogos base das publicações, nunca a `pg_publication_tables`, que traz o texto do filtro
+  de linha. Na suíte, a fixture declara as tabelas publicadas, o inventário confere a marca de cada tabela e um fato a
+  confere nos dois lados; o falso ganha os defeitos `PublicacaoAusente` e `PublicacaoVazia`.
+- 2026-10-22: o contrato ganha `TabelaEsquema.Assinada`, se a tabela física está numa assinatura de replicação do
+  próprio banco, ligada ou não: o que chega da publicação assinada grava ao lado do que o Incognito gravou, e a
+  assinatura desligada aplica, ao ser ligada, o que se acumulou no publicador. Vale para cada tabela da árvore, como a
+  publicação; nulo é o pior caso. O PostgreSQL lê o `pg_subscription_rel` e só o banco de cada assinatura no
+  `pg_subscription`, que é do servidor inteiro (o banco clonado leva as linhas da assinatura do original, que não grava
+  nele), nunca o texto da conexão; sem permissão de ler as assinaturas, nenhuma tabela tem resposta. Na suíte, a
+  fixture declara as tabelas assinadas, o inventário confere a marca de cada tabela e um fato a confere nos dois lados;
+  o falso ganha os defeitos `AssinaturaAusente`, `AssinaturaNaoInformada` e `AssinaturaVazia`.

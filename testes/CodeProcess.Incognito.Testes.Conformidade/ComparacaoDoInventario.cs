@@ -124,6 +124,16 @@ internal static class ComparacaoDoInventario
             return $"segurança por linha lida {tabela.SegurancaDeLinha}, esperada {esperada.SegurancaDeLinha}";
         }
 
+        if (tabela.Publicada != esperada.Publicada)
+        {
+            return $"publicação lida {Texto(tabela.Publicada)}, esperada {Texto(esperada.Publicada)}";
+        }
+
+        if (tabela.Assinada != esperada.Assinada)
+        {
+            return $"assinatura lida {Texto(tabela.Assinada)}, esperada {Texto(esperada.Assinada)}";
+        }
+
         var colunas = tabela.Colunas.Select(coluna => coluna.Nome).ToArray();
         var colunasEsperadas = esperada.Colunas.Select(coluna => coluna.Nome).ToArray();
         if (colunas.FirstOrDefault(coluna => !colunasEsperadas.Contains(coluna)) is { } aMais)
