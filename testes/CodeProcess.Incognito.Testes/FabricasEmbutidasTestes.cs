@@ -37,7 +37,7 @@ public sealed class FabricasEmbutidasTestes : IDisposable
     }
 
     [Fact]
-    public void As_embutidas_sao_as_oito_da_versao_1_com_os_dominios_padrao()
+    public void As_embutidas_sao_as_nove_da_versao_1_com_os_dominios_padrao()
     {
         var esperadas = new (string Nome, string Dominio, Injetividade Injetividade, TipoColuna[] Tipos)[]
         {
@@ -49,6 +49,7 @@ public sealed class FabricasEmbutidasTestes : IDisposable
             ("br.chave-pix", "chave-pix", Injetividade.Probabilistica, [TipoColuna.Texto]),
             ("br.chave-dfe", "dfe-numero", Injetividade.Garantida, [TipoColuna.Texto]),
             ("texto.substituir", "texto.substituir", Injetividade.Nenhuma, [TipoColuna.Texto]),
+            ("id.permutar", "id.permutar", Injetividade.Garantida, [TipoColuna.Inteiro]),
         };
 
         Assert.Equal(esperadas.Length, TransformadoresEmbutidos.Fabricas.Count);
@@ -193,9 +194,10 @@ public sealed class FabricasEmbutidasTestes : IDisposable
         // A guarda vale para a embutida que vier: aceitar Inteiro sem pedir a faixa deixaria o pseudônimo estourar a coluna.
         var inteiras = TransformadoresEmbutidos.Fabricas.Where(fabrica => fabrica.TiposSuportados.Contains(TipoColuna.Inteiro)).ToList();
 
-        Assert.Equal(["br.cep", "br.cnpj", "br.cpf", "br.telefone"], inteiras.Select(fabrica => fabrica.Nome).Order(StringComparer.Ordinal));
-        Assert.All(inteiras, fabrica => Assert.Throws<RegraInvalidaException>(
-            () => fabrica.Criar(new ContextoCriacao(Regra(fabrica, temDerivarDe: fabrica.Nome == "br.cep" ? true : null), TipoColuna.Inteiro, _sessao) { TipoReferencia = TipoColuna.Texto })));
+        // O id.permutar recebe o N, para a recusa ser a da faixa e não a do N ausente.
+        Assert.Equal(["br.cep", "br.cnpj", "br.cpf", "br.telefone", "id.permutar"], inteiras.Select(fabrica => fabrica.Nome).Order(StringComparer.Ordinal));
+        Assert.All(inteiras, fabrica => Assert.Contains("não informa a faixa", Assert.Throws<RegraInvalidaException>(
+            () => fabrica.Criar(new ContextoCriacao(Regra(fabrica, temDerivarDe: fabrica.Nome == "br.cep" ? true : null), TipoColuna.Inteiro, _sessao) { TipoReferencia = TipoColuna.Texto, TamanhoDominio = 10_000 })).Message, StringComparison.Ordinal));
     }
 
     [Theory]
@@ -211,16 +213,28 @@ public sealed class FabricasEmbutidasTestes : IDisposable
     [MemberData(nameof(Nomes))]
     public void NULL_sai_NULL_e_valor_fora_do_tipo_lanca_sem_o_valor(string nome)
     {
+        // Em texto, quando a fábrica aceita; senão (o id.permutar), em número, com o texto como valor fora do tipo.
         var fabrica = Fabrica(nome);
-        var transformador = fabrica.Criar(Contexto(Regra(fabrica, temDerivarDe: nome == "br.cep"), TipoColuna.Texto, null));
+        var tipo = fabrica.TiposSuportados.Contains(TipoColuna.Texto) ? TipoColuna.Texto : TipoColuna.Inteiro;
+        var transformador = fabrica.Criar(Contexto(Regra(fabrica, temDerivarDe: nome == "br.cep"), tipo, null));
         var nulo = transformador.Transformar(null, new ContextoTransformacao("entidade"));
 
         Assert.Equal((null, Desfecho.Nulo), (nulo.Valor, nulo.Desfecho));
         Assert.False(transformador.TransformaNulo);
         Assert.Equal((fabrica.Nome, fabrica.Versao, fabrica.Injetividade), (transformador.Nome, transformador.Versao, transformador.Injetividade));
-        var excecao = Assert.Throws<ArgumentException>(() => transformador.Transformar(12345678909L, new ContextoTransformacao("entidade")));
-        Assert.DoesNotContain("12345678909", excecao.ToString(), StringComparison.Ordinal);
-        Assert.Contains("representação do tipo Texto", excecao.Message, StringComparison.Ordinal);
+        if (tipo == TipoColuna.Texto)
+        {
+            var excecao = Assert.Throws<ArgumentException>(() => transformador.Transformar(12345678909L, new ContextoTransformacao("entidade")));
+            Assert.DoesNotContain("12345678909", excecao.ToString(), StringComparison.Ordinal);
+            Assert.Contains("representação do tipo Texto", excecao.Message, StringComparison.Ordinal);
+        }
+        else
+        {
+            var excecao = Assert.Throws<ArgumentException>(() => transformador.Transformar(Sentinela, new ContextoTransformacao("entidade")));
+            Assert.DoesNotContain(Sentinela, excecao.ToString(), StringComparison.Ordinal);
+            Assert.Contains("representação do tipo Inteiro", excecao.Message, StringComparison.Ordinal);
+        }
+
         Assert.Throws<ArgumentException>(() => transformador.Transformar(Guid.Empty, default));
     }
 
@@ -448,7 +462,7 @@ public sealed class FabricasEmbutidasTestes : IDisposable
             EntradaMalformada = malformada,
         };
 
-    // A coluna inteira com a faixa do bigint, como o planejar informa.
+    // A coluna inteira com a faixa do bigint e, no id.permutar, um N, como o planejar informa.
     private ContextoCriacao Contexto(RegraTransformacao regra, TipoColuna tipo, int? comprimento) =>
         new(regra, tipo, _sessao)
         {
@@ -456,6 +470,7 @@ public sealed class FabricasEmbutidasTestes : IDisposable
             TipoReferencia = regra.TemDerivarDe == true ? TipoColuna.Texto : null,
             MenorInteiro = tipo == TipoColuna.Inteiro ? long.MinValue : null,
             MaiorInteiro = tipo == TipoColuna.Inteiro ? long.MaxValue : null,
+            TamanhoDominio = regra.Dominio.Nome == "id.permutar" ? 10_000_000_000 : null,
         };
 
     private sealed class Descartavel(Action aoDescartar) : IDisposable

@@ -82,10 +82,12 @@ public sealed class ResolucaoDeRegrasTestes
         var colunas = Resolver(Colunas(
             "      a: { transformador: br.cpf@1 }\n      b: { transformador: br.cnpj@1 }\n      c: { transformador: br.telefone@1 }\n"
             + "      d: { transformador: email@1 }\n      e: { transformador: br.cep@1, derivarDe: a }\n      f: { transformador: texto.substituir@1 }\n"
-            + "      g: { transformador: br.chave-pix@1 }\n      h: { transformador: br.chave-dfe@1 }\n")).Colunas;
+            + "      g: { transformador: br.chave-pix@1 }\n      h: { transformador: br.chave-dfe@1 }\n"
+            + "      i: { transformador: id.permutar@1, dominio: pedido-id }\n")).Colunas;
 
+        // O id.permutar declara o domínio na coluna (cada chave primária tem o seu).
         Assert.Equal(
-            ["cpf@1", "cnpj@1", "telefone@1", "email@1", "cep@1", "texto.substituir@1", "chave-pix@1", "dfe-numero@1"],
+            ["cpf@1", "cnpj@1", "telefone@1", "email@1", "cep@1", "texto.substituir@1", "chave-pix@1", "dfe-numero@1", "pedido-id@1"],
             colunas.Select(coluna => coluna.Regra.Dominio.ToString()));
         Assert.Equal(TransformadoresEmbutidos.Fabricas.Count, colunas.Count);
     }

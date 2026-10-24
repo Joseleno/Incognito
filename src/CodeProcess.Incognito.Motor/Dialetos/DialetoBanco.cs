@@ -8,8 +8,9 @@ namespace CodeProcess.Incognito.Dialetos;
 /// </summary>
 /// <remarks>
 /// <para>
-/// As partes de metadados (<see cref="Esquema"/>, <see cref="Identidade"/>) usam a conexão de controle e não são
-/// chamadas em paralelo; as operações sobre dados, quando entrarem no contrato, abrem as próprias conexões.
+/// As partes de metadados (<see cref="Esquema"/>, <see cref="Identidade"/>) e a leitura agregada da origem
+/// (<see cref="DialetoOrigem.Dados"/>) usam a conexão de controle e não são chamadas em paralelo; as operações que leem ou
+/// gravam linhas, quando entrarem no contrato, abrem as próprias conexões.
 /// </para>
 /// <para>
 /// O motor traduz toda exceção do dialeto: uma <see cref="DialetoRecusouException"/> vira erro do plano (saída 2); uma
@@ -59,11 +60,14 @@ public abstract class DialetoBanco : IAsyncDisposable
 }
 
 /// <summary>
-/// A origem: lida, nunca alterada. A leitura consistente dos dados entra no contrato com o INC da leitura.
+/// A origem: lida, nunca alterada. Além das partes comuns, a leitura agregada que o <c>planejar</c> precisa
+/// (<see cref="Dados"/>); a leitura consistente das linhas entra no contrato com o INC da leitura.
 /// </summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class DialetoOrigem : DialetoBanco
 {
+    /// <summary>A leitura agregada dos dados da origem (o maior valor de uma coluna).</summary>
+    public abstract LeitorDados Dados { get; }
 }
 
 /// <summary>

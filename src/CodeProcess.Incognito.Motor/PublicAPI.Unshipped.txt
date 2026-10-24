@@ -178,6 +178,8 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Linhagem.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Servidor.get -> string!
 [INCX001]CodeProcess.Incognito.Dialetos.IdentidadeLida.Servidor.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorDados
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorDados.LeitorDados() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.LeitorEsquema
 [INCX001]CodeProcess.Incognito.Dialetos.LeitorEsquema.LeitorEsquema() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.NomeObjeto
@@ -257,9 +259,11 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Esquema.get -> CodeProcess.Incognito.Dialetos.LeitorEsquema!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Identidade.get -> CodeProcess.Incognito.Dialetos.IdentidadeBanco!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.Sql.get -> CodeProcess.Incognito.Dialetos.DialetoSql!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoOrigem.Dados.get -> CodeProcess.Incognito.Dialetos.LeitorDados!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoSql.Citar(string! identificador) -> string!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoSql.CompararNome(string! escrito, bool entreAspas, string! doCatalogo) -> CodeProcess.Incognito.Dialetos.CorrespondenciaNome
 [INCX001]abstract CodeProcess.Incognito.Dialetos.IdentidadeBanco.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.IdentidadeLida!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorDados.LerMaiorValorAsync(CodeProcess.Incognito.Dialetos.ReferenciaColuna! coluna, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<long?>!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorEsquema.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.EsquemaBanco!>!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.ProvedorDialeto.ConectarDestinoAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoDestino!>!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.ProvedorDialeto.ConectarOrigemAsync(CodeProcess.Incognito.Dialetos.SegredoConexao! conexao, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.DialetoOrigem!>!

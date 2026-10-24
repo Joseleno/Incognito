@@ -58,6 +58,8 @@ CodeProcess.Incognito.Transformadores.ContextoCriacao.MenorInteiro.init -> void
 CodeProcess.Incognito.Transformadores.ContextoCriacao.Precisao.get -> int?
 CodeProcess.Incognito.Transformadores.ContextoCriacao.Precisao.init -> void
 CodeProcess.Incognito.Transformadores.ContextoCriacao.Regra.get -> CodeProcess.Incognito.Transformadores.RegraTransformacao!
+CodeProcess.Incognito.Transformadores.ContextoCriacao.TamanhoDominio.get -> long?
+CodeProcess.Incognito.Transformadores.ContextoCriacao.TamanhoDominio.init -> void
 CodeProcess.Incognito.Transformadores.ContextoCriacao.Tipo.get -> CodeProcess.Incognito.Transformadores.TipoColuna
 CodeProcess.Incognito.Transformadores.ContextoCriacao.TipoReferencia.get -> CodeProcess.Incognito.Transformadores.TipoColuna?
 CodeProcess.Incognito.Transformadores.ContextoCriacao.TipoReferencia.init -> void

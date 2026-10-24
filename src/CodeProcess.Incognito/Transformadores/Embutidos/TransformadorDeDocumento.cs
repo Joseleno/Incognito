@@ -7,11 +7,11 @@ internal delegate Desfecho PseudonimizarTexto(string entrada, out string? saida)
 internal delegate Desfecho PseudonimizarNumero(long entrada, out long? saida);
 
 /// <summary>
-/// Transformador dos documentos embutidos sem <c>derivarDe</c> (CPF, CNPJ, telefone e e-mail): entrega o valor à
-/// instância da sessão, em texto ou em número conforme o tipo da coluna.
+/// Transformador dos embutidos sem <c>derivarDe</c> (CPF, CNPJ, telefone, e-mail e identificador): entrega o valor à
+/// instância da sessão, em texto ou em número conforme o tipo da coluna (o identificador só em número).
 /// </summary>
 internal sealed class TransformadorDeDocumento(
-    string nome, Injetividade injetividade, TipoColuna tipo, PseudonimizarTexto texto, PseudonimizarNumero? numero) : Transformador
+    string nome, Injetividade injetividade, TipoColuna tipo, PseudonimizarTexto? texto, PseudonimizarNumero? numero) : Transformador
 {
     public override string Nome => nome;
 
@@ -25,7 +25,7 @@ internal sealed class TransformadorDeDocumento(
         {
             case null:
                 return new ResultadoTransformacao(null, Desfecho.Nulo);
-            case string entrada when tipo == TipoColuna.Texto:
+            case string entrada when tipo == TipoColuna.Texto && texto is not null:
                 var desfecho = texto(entrada, out var saida);
                 return new ResultadoTransformacao(saida, desfecho);
             case long entrada when tipo == TipoColuna.Inteiro && numero is not null:

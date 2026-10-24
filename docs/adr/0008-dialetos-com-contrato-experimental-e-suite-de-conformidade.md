@@ -232,3 +232,15 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   nele), nunca o texto da conexão; sem permissão de ler as assinaturas, nenhuma tabela tem resposta. Na suíte, a
   fixture declara as tabelas assinadas, o inventário confere a marca de cada tabela e um fato a confere nos dois lados;
   o falso ganha os defeitos `AssinaturaAusente`, `AssinaturaNaoInformada` e `AssinaturaVazia`.
+- 2026-10-24: a origem ganha a parte `DialetoOrigem.Dados` (`LeitorDados`), com `LerMaiorValorAsync`: o maior valor não
+  nulo de uma coluna inteira, nas linhas que a cópia lê (a particionada pela raiz, com as partições; as outras só com as
+  próprias linhas, sem as herdeiras de herança clássica), ou nulo sem valor. É a primeira leitura de linhas do contrato e
+  serve ao `id.permutar`, que calcula pelo maior identificador da origem o tamanho do domínio permutado. **Exceção ao item
+  5:** como é uma leitura agregada do `planejar`, de uma linha só, ela usa a conexão de controle, numa transação só de
+  leitura e sem paralelo; as operações que leem ou gravam linhas continuam com as próprias conexões. O valor lido é de
+  coluna tratada: o motor traduz qualquer exceção dessa parte só com o código ou o tipo, nunca com a mensagem, nem a de
+  uma recusa. A segurança por linha nunca filtra a leitura: o dialeto falha se ela vale para o login. No PostgreSQL, é a
+  única consulta sobre tabela do usuário (teste de arquitetura), conferida antes pelo catálogo (coluna `smallint`,
+  `integer` ou `bigint`, também por domínio), com `row_security = off`. Na suíte, um fato confere o caso comum, a coluna
+  sem valor, a coluna só com negativos, a particionada, a mãe de herança e a recusa de uma coluna de texto sem o texto das
+  linhas.

@@ -21,7 +21,7 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.TipoMalClassificado] = (true, [Consistencia("coluna loja.tipos.dados de texto sem colação"), Inventario("loja.tipos", "coluna dados: situação lida Suportado, esperada ComRessalva")]),
         [Defeito.TipoCanonicoForaDoSuportado] = (true, [Consistencia("coluna loja.calculos.dobro com tipo canônico fora de 'suportado'"), Inventario("loja.calculos", "coluna dobro: tipo canônico lido Inteiro, esperado nenhum")]),
         [Defeito.ParticaoSemPai] = (true, [(nameof(SuiteFalsa.A_particionada_e_as_particoes_apontam_o_pai), "Partição: filhas de loja.pedidos"), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "pai de loja.pedidos_2026"), Inventario("loja.pedidos_2026", "pai lido nenhum, esperado loja.pedidos")]),
-        [Defeito.HerancaSemMae] = (true, [(nameof(SuiteFalsa.As_herdeiras_apontam_a_mae), "Herança: filhas de loja.pessoa"), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "pai de loja.funcionario"), Inventario("loja.funcionario", "pai lido nenhum, esperado loja.pessoa")]),
+        [Defeito.HerancaSemMae] = (true, [(nameof(SuiteFalsa.As_herdeiras_apontam_a_mae), "Herança: filhas de loja.pessoa"), MaiorValor("Maior valor: o caso da mãe de herança não tem herdeira."), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "pai de loja.funcionario"), Inventario("loja.funcionario", "pai lido nenhum, esperado loja.pessoa")]),
         [Defeito.SequenceComUmaColuna] = (true, [(nameof(SuiteFalsa.A_sequence_compartilhada_e_vista_por_todas_as_colunas), "Sequence compartilhada: loja.seq_numero lida com"), Inventario("loja.seq_numero", "sequence usada por [loja.pedidos.numero], esperada por [loja.itens.numero, loja.pedidos.numero]")]),
         [Defeito.SequenceComColunaRepetida] = (true, [(nameof(SuiteFalsa.A_sequence_compartilhada_e_vista_por_todas_as_colunas), "Sequence compartilhada: loja.seq_numero lida com"), (nameof(SuiteFalsa.O_esquema_lido_e_consistente), "repetida na sequence loja.seq_numero"), Inventario("loja.seq_numero", "sequence usada por [loja.itens.numero, loja.pedidos.numero, loja.pedidos.numero]")]),
         [Defeito.GeradaNaoMarcada] = (true, [(nameof(SuiteFalsa.As_colunas_geradas_sao_marcadas_e_ficam_fora_da_copia), "Colunas geradas: lidas []"), Consistencia("coluna loja.calculos.dobro com referências da geração ausentes ou sobrando"), Inventario("loja.calculos", "coluna dobro: geração lida Nenhuma, esperada Armazenada")]),
@@ -167,6 +167,11 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.SegurancaDeLinhaVazia] = (true, [(nameof(SuiteFalsa.A_seguranca_por_linha_e_apontada), "Segurança por linha: a fixture a declara presente sem nenhuma tabela")]),
         [Defeito.PublicacaoVazia] = (true, [(nameof(SuiteFalsa.A_publicacao_e_apontada), "Publicação: a fixture a declara presente sem nenhuma tabela")]),
         [Defeito.AssinaturaVazia] = (true, [(nameof(SuiteFalsa.A_assinatura_e_apontada), "Assinatura: a fixture a declara presente sem nenhuma tabela")]),
+        [Defeito.MaiorValorErrado] = (true, [MaiorValor("Maior valor: loja.itens.pedido lido 32, esperado 31.")]),
+        [Defeito.MaiorValorSempreNulo] = (true, [MaiorValor("Maior valor: loja.itens.pedido lido nulo, esperado 31.")]),
+        [Defeito.MaiorValorSoDaRaiz] = (true, [MaiorValor("Maior valor: loja.pedidos.id lido nulo, esperado 88.")]),
+        [Defeito.MaiorValorComHerdeiras] = (true, [MaiorValor("Maior valor: loja.pessoa.id lido 60, esperado 12.")]),
+        [Defeito.MaiorValorComTextoNaRecusa] = (true, [MaiorValor("Maior valor: a recusa da coluna de texto loja.tipos.texto traz o valor das linhas.")]),
         [Defeito.RecusaComoExcecaoComum] = (true, [Recusa("Recusa: a origem lançou IncognitoException, e não DialetoRecusouException.")]),
         [Defeito.RecusaComAString] = (true, [Recusa("Recusa: a recusa da origem traz o que estava na string de conexão.")]),
         [Defeito.RecusaForaDaFaixa] = (true, [Recusa("Recusa: a origem recusou com um código fora da faixa dos dialetos (INC31xx a INC34xx).")]),
@@ -289,6 +294,8 @@ public sealed class SuiteDeConformidadeTestes
     private static (string Teste, string Trecho) Acesso(string trecho) => (nameof(SuiteFalsa.O_acesso_e_lido_em_cada_lado), trecho);
 
     private static (string Teste, string Trecho) Transporte(string trecho) => (nameof(SuiteFalsa.A_identidade_informa_o_transporte), trecho);
+
+    private static (string Teste, string Trecho) MaiorValor(string trecho) => (nameof(SuiteFalsa.O_maior_valor_e_lido_como_a_copia_le), trecho);
 
     private static (string Teste, string Trecho) Recusa(string trecho) => (nameof(SuiteFalsa.A_conexao_inaceitavel_e_recusada_pelo_tipo_da_recusa), trecho);
 

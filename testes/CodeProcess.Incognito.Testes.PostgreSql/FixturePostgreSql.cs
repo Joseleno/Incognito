@@ -160,6 +160,17 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
 
             // Pelo loopback com o TLS só preferido, num servidor sem TLS: em claro.
             Transporte = Caso.Presente(new TransporteEsperado(Cifrado: false, ServidorVerificado: false, Local: true)),
+
+            // As linhas do fim do script: a particionada pela raiz (o 75 está em pedidos_2) e a mãe sem a herdeira (que tem 60).
+            MaioresValores = new()
+            {
+                Comum = new(Coluna("lojas", "id"), 91),
+                SemValor = new(Coluna("cliente", "id"), null),
+                SoNegativos = new(Coluna("Cliente", "id"), -2),
+                Particionada = Caso.Presente(new MaiorValorEsperado(Coluna("pedidos", "id"), 75)),
+                MaeDeHeranca = Caso.Presente(new MaiorValorEsperado(Coluna("pessoa", "id"), 12)),
+                ColunaDeTexto = Coluna("tipos", "texto"),
+            },
         };
     }
 

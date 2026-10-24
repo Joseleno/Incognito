@@ -13,7 +13,7 @@ namespace CodeProcess.Incognito.Testes;
 public sealed class FabricasContraOsVetoresTestes
 {
     private static readonly string[] _transformadores =
-        ["br.cpf", "br.cnpj", "br.telefone", "email", "br.cep", "br.chave-pix", "br.chave-dfe", "texto.substituir"];
+        ["br.cpf", "br.cnpj", "br.telefone", "email", "br.cep", "br.chave-pix", "br.chave-dfe", "texto.substituir", "id.permutar"];
 
     // O transformador de cada componente das chaves: o domínio-alvo de dominioCpf, dominioCnpj, dominioEmail e
     // dominioTelefone.
@@ -40,7 +40,7 @@ public sealed class FabricasContraOsVetoresTestes
 
         // Uma sessão por ambiente para o arquivo inteiro: casos do mesmo domínio com políticas diferentes só saem certos
         // se a identidade das instâncias separar as políticas. Nas chaves, uma sessão por caso: cada caso tem a própria
-        // tabela de domínios (os componentes).
+        // tabela de domínios (os componentes). No id.permutar, uma por ambiente e N: numa execução, o domínio tem um N só.
         var sessoes = new Dictionary<string, SessaoTransformacao>(StringComparer.Ordinal);
         try
         {
@@ -49,7 +49,8 @@ public sealed class FabricasContraOsVetoresTestes
             {
                 var ambiente = caso.GetProperty("ambiente").GetString()!;
                 var componentes = caso.TryGetProperty("componentes", out var lidos) ? lidos : (JsonElement?)null;
-                var chaveDaSessao = componentes is null ? ambiente : $"{ambiente}#{indiceDoCaso}";
+                var tamanho = caso.TryGetProperty("n", out var n) ? n.GetInt64() : (long?)null;
+                var chaveDaSessao = componentes is not null ? $"{ambiente}#{indiceDoCaso}" : tamanho is { } valor ? $"{ambiente}#n={valor}" : ambiente;
                 indiceDoCaso++;
                 if (!sessoes.TryGetValue(chaveDaSessao, out var sessao))
                 {
@@ -92,6 +93,7 @@ public sealed class FabricasContraOsVetoresTestes
                     MenorInteiro = tipo == TipoColuna.Inteiro ? long.MinValue : null,
                     MaiorInteiro = tipo == TipoColuna.Inteiro ? long.MaxValue : null,
                     ComprimentoMaximo = caso.TryGetProperty("comprimentoMaximo", out var comprimento) && comprimento.ValueKind == JsonValueKind.Number ? comprimento.GetInt32() : null,
+                    TamanhoDominio = caso.TryGetProperty("n", out var n) ? n.GetInt64() : null,
                 };
                 transformador = fabrica.Criar(contexto);
                 transformadores.Add(tipo, transformador);

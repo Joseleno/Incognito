@@ -125,6 +125,71 @@ public sealed class DialetoProtegidoTestes
     }
 
     [Fact]
+    public async Task O_maior_valor_sai_como_veio_e_so_da_origem()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var pedidos = new ReferenciaColuna(new NomeObjeto("loja", "pedidos"), "id");
+        var provedor = new ProvedorDoPlanejar { Maiores = coluna => coluna.Equals(pedidos) ? 4_273L : null };
+
+        await using (var origem = await DialetoProtegido.ConectarAsync(provedor, "postgresql", LadoBanco.Origem, Conexao(), cancelamento))
+        {
+            Assert.Equal(4_273L, await origem.LerMaiorValorAsync(pedidos, cancelamento));
+            Assert.Null(await origem.LerMaiorValorAsync(new ReferenciaColuna(new NomeObjeto("loja", "clientes"), "id"), cancelamento));
+        }
+
+        // No destino é defeito do motor: o dialeto nem é chamado.
+        await using var destino = await DialetoProtegido.ConectarAsync(provedor, "postgresql", LadoBanco.Destino, Conexao(), cancelamento);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => destino.LerMaiorValorAsync(pedidos, cancelamento));
+        Assert.Equal(2, provedor.MaioresPedidos.Count);
+    }
+
+    [Fact]
+    public async Task Na_leitura_do_maior_valor_nem_a_recusa_leva_a_mensagem_do_dialeto()
+    {
+        // O valor lido é de coluna tratada, e o dialeto poderia escrevê-lo na mensagem: sai só o código, ou só o tipo.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var coluna = new ReferenciaColuna(new NomeObjeto("loja", "pedidos"), "id");
+        var casos = new (Func<Exception> Criar, string Codigo)[]
+        {
+            (() => new ExcecaoDoDriver(), "INC3001"),
+            (() => new DialetoRecusouException("INC3150", "recusa com " + Sentinela), "INC3150"),
+            (() => new IncognitoException("INC3150", "falha com " + Sentinela), "INC3150"),
+            (() => new DialetoRecusouException("INC2001", "fora da faixa com " + Sentinela), "INC3001"),
+        };
+
+        foreach (var (criar, codigo) in casos)
+        {
+            foreach (var operacao in new[] { Operacao.LerMaiorValor, Operacao.ObterDados })
+            {
+                foreach (var sincrono in new[] { false, true })
+                {
+                    var provedor = new ProvedorDoPlanejar { Lancar = Em(operacao, false, criar), Sincrono = sincrono };
+                    await using var banco = await DialetoProtegido.ConectarAsync(provedor, "postgresql", LadoBanco.Origem, Conexao(), cancelamento);
+
+                    var falha = Assert.IsType<FalhaDialetoException>(await Assert.ThrowsAnyAsync<Exception>(() => banco.LerMaiorValorAsync(coluna, cancelamento)), exactMatch: true);
+
+                    Assert.Equal(codigo, falha.Codigo);
+                    Assert.Contains("falhou ao ler o maior valor de uma coluna na origem", falha.Message, StringComparison.Ordinal);
+                    Assert.Equal(1, ClassificadorDeSaida.De(falha));
+                    Assert.Null(falha.InnerException);
+                    SemVazamento(falha);
+                }
+            }
+        }
+
+        // O cancelamento pedido pelo chamador sai como cancelamento novo, sem a interna.
+        using var fonte = new CancellationTokenSource();
+        await fonte.CancelAsync();
+        var cancelada = new ProvedorDoPlanejar { Lancar = Em(Operacao.LerMaiorValor, false, () => new OperationCanceledException(Sentinela, fonte.Token)) };
+        await using (var banco = await DialetoProtegido.ConectarAsync(cancelada, "postgresql", LadoBanco.Origem, Conexao(), cancelamento))
+        {
+            var excecao = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => banco.LerMaiorValorAsync(coluna, fonte.Token));
+            Assert.Null(excecao.InnerException);
+            Assert.DoesNotContain(Sentinela, excecao.ToString(), StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public async Task A_recusa_da_montagem_fecha_os_dois_lados_e_o_cancelamento_ao_comparar_e_falha()
     {
         // O destino sem a tabela pedidos: a montagem recusa (INC3020) com as duas conexões abertas, e as duas fecham.

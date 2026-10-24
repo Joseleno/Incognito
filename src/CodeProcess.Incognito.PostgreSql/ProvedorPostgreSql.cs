@@ -39,6 +39,7 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
         Esquema = new LeitorEsquemaPostgreSql(conexao, LancarSeDescartado);
         Identidade = new IdentidadePostgreSql(conexao, LancarSeDescartado);
         Sql = new DialetoSqlPostgreSql(conexao.Nomes);
+        Dados = new LeitorDadosPostgreSql(conexao, LancarSeDescartado);
     }
 
     public override LeitorEsquema Esquema { get; }
@@ -46,6 +47,8 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
     public override IdentidadeBanco Identidade { get; }
 
     public override DialetoSql Sql { get; }
+
+    public override LeitorDados Dados { get; }
 
     protected override async ValueTask DisposeAsyncCore()
     {
