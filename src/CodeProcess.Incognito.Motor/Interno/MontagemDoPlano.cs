@@ -28,7 +28,8 @@ internal delegate CorrespondenciaNome ComparadorDeNomes(string escrito, bool ent
 /// Do esquema lido e das regras resolvidas ao plano: as unidades de cópia e o pareamento entre origem e destino (P3), os
 /// nomes da configuração resolvidos contra o catálogo, que barram o resto quando falham (P4), e as unidades, as ações,
 /// as estrangeiras, o esquema reservado e o pareamento das colunas (P5), a propagação das regras pelas chaves estrangeiras
-/// e pela herança (P6, em <c>MontagemDoPlano.Propagacao.cs</c>), a origem contra o destino, com o tipo, os limites e os
+/// e pela herança (P6, em <c>MontagemDoPlano.Propagacao.cs</c>), as leituras do tamanho de cada domínio do <c>id.permutar</c>
+/// (P6b, em <c>MontagemDoPlano.Identificador.cs</c>), a origem contra o destino, com o tipo, os limites e os
 /// nulos de cada coluna com regra efetiva e a criação do transformador dela numa sessão descartável (P7), as restrições e
 /// a unicidade do destino (P8, em <c>MontagemDoPlano.Restricoes.cs</c> e <c>MontagemDoPlano.Unicidade.cs</c>), e a fronteira
 /// entre as ações, as permissões, os residuais, a publicação e o banco (P9, em <c>MontagemDoPlano.Acesso.cs</c>). Os nomes casam só pelo dialeto
@@ -47,12 +48,12 @@ internal sealed partial class MontagemDoPlano
     private readonly ConfiguracaoIncognito _configuracao;
     private readonly ResolucaoDeRegras _regras;
     private readonly RegistroTransformadores _registro;
-    private readonly CriacaoNoPlano _criacao;
     private readonly ComparadorDeNomes _daOrigem;
     private readonly ComparadorDeNomes _doDestino;
     private readonly LeituraDoBanco _origem;
     private readonly LeituraDoBanco _destino;
     private readonly ColetorDoPlano _coletor = new();
+    private CriacaoNoPlano? _criacao;
 
     private readonly List<Unidade> _unidades = [];
     private readonly Dictionary<TabelaEsquema, Unidade> _unidadeDe = new(ReferenceEqualityComparer.Instance);
@@ -69,7 +70,6 @@ internal sealed partial class MontagemDoPlano
         ConfiguracaoIncognito configuracao,
         ResolucaoDeRegras regras,
         RegistroTransformadores registro,
-        CriacaoNoPlano criacao,
         ComparadorDeNomes daOrigem,
         ComparadorDeNomes doDestino,
         LeituraDoBanco origem,
@@ -78,7 +78,6 @@ internal sealed partial class MontagemDoPlano
         _configuracao = configuracao;
         _regras = regras;
         _registro = registro;
-        _criacao = criacao;
         _daOrigem = daOrigem;
         _doDestino = doDestino;
         _origem = origem;
@@ -89,7 +88,10 @@ internal sealed partial class MontagemDoPlano
         }
     }
 
-    /// <summary>Monta o plano.</summary>
+    /// <summary>
+    /// Prepara o plano, sem E/S: as unidades, os nomes, a propagação e as colunas cujo maior valor o planejar lê
+    /// (<see cref="Leituras"/>), para depois anotar (<see cref="Anotar"/>) e concluir (<see cref="Concluir"/>).
+    /// </summary>
     /// <param name="configuracao">A configuração.</param>
     /// <param name="regras">As regras resolvidas.</param>
     /// <param name="registro">O registro, de onde sai a versão mais nova de cada transformador.</param>
@@ -97,37 +99,55 @@ internal sealed partial class MontagemDoPlano
     /// <param name="doDestino">A comparação de nomes do banco do destino.</param>
     /// <param name="origem">A leitura da origem, já conferida.</param>
     /// <param name="destino">A leitura do destino, já conferida.</param>
-    /// <param name="gerarChave">O gerador da chave aleatória da sessão descartável.</param>
-    /// <param name="cancelamento">Cancela o planejamento.</param>
-    /// <returns>O plano montado.</returns>
-    /// <exception cref="PlanoRecusadoException">Algum nome não se resolve, ou a configuração e o esquema não permitem copiar.</exception>
-    /// <exception cref="OperationCanceledException">Cancelado pelo chamador durante a criação dos transformadores.</exception>
-    internal static PlanoMontado Montar(
+    /// <returns>A montagem preparada.</returns>
+    /// <exception cref="PlanoRecusadoException">Algum nome não se resolve.</exception>
+    internal static MontagemDoPlano Preparar(
         ConfiguracaoIncognito configuracao,
         ResolucaoDeRegras regras,
         RegistroTransformadores registro,
         ComparadorDeNomes daOrigem,
         ComparadorDeNomes doDestino,
         LeituraDoBanco origem,
-        LeituraDoBanco destino,
-        Func<ChaveIncognito> gerarChave,
-        CancellationToken cancelamento)
+        LeituraDoBanco destino)
     {
-        // A sessão descartável vive só durante a montagem: os transformadores são criados e descartados nela, e a chave
-        // aleatória é zerada no fim, com erro ou sem.
-        using var criacao = new CriacaoNoPlano(gerarChave, configuracao.Ambiente, regras.Dominios, cancelamento);
-        var montagem = new MontagemDoPlano(configuracao, regras, registro, criacao, daOrigem, doDestino, origem, destino);
+        var montagem = new MontagemDoPlano(configuracao, regras, registro, daOrigem, doDestino, origem, destino);
         montagem.Indexar();
         montagem.ResolverNomes();
         montagem._coletor.LancarSeHouverErros();
         montagem.ConferirUnidades();
         montagem.Propagar();
-        montagem.ConferirPareadas();
-        montagem.AvisarRestricoes();
-        montagem.ConferirUnicidade();
-        montagem.ConferirAcesso();
-        montagem._coletor.LancarSeHouverErros();
-        return montagem.Publicar();
+        montagem.PrepararTamanhos();
+        return montagem;
+    }
+
+    /// <summary>Conclui o plano, depois das leituras anotadas: o tamanho de cada domínio, P7 a P9 e a publicação.</summary>
+    /// <param name="gerarChave">O gerador da chave aleatória da sessão descartável.</param>
+    /// <param name="cancelamento">Cancela o planejamento.</param>
+    /// <returns>O plano montado.</returns>
+    /// <exception cref="PlanoRecusadoException">A configuração e o esquema não permitem copiar.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador durante a criação dos transformadores.</exception>
+    internal PlanoMontado Concluir(Func<ChaveIncognito> gerarChave, CancellationToken cancelamento)
+    {
+        CalcularTamanhos();
+
+        // A sessão descartável vive só durante a conclusão: os transformadores são criados e descartados nela, e a chave
+        // aleatória é zerada no fim, com erro ou sem.
+        using var criacao = new CriacaoNoPlano(gerarChave, _configuracao.Ambiente, _regras.Dominios, cancelamento);
+        _criacao = criacao;
+        try
+        {
+            ConferirPareadas();
+            AvisarRestricoes();
+            ConferirUnicidade();
+            ConferirAcesso();
+            ConferirTamanhos();
+            _coletor.LancarSeHouverErros();
+            return Publicar();
+        }
+        finally
+        {
+            _criacao = null;
+        }
     }
 
     // P3: as unidades de cópia (toda tabela que não é partição) e o pareamento pelo dialeto do destino, com o nome da
@@ -649,7 +669,7 @@ internal sealed partial class MontagemDoPlano
             AvisarVersaoMaisNova(regra, fabrica, nome, origem.Nome, posicao, indice);
             if (PoliticasQueAnulam.UsaEntradaMalformada(fabrica) && resolvida.Regra.EntradaMalformada == PoliticaEntradaMalformada.Preservar)
             {
-                var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, new PoliticaQueAnula("entradaMalformada: preservar", null, null));
+                var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, new PoliticaQueAnula("entradaMalformada: preservar", null, null), propagada: false);
                 _coletor.Aviso(
                     new Aviso(CodigosPlanejar.MalformadaPreservada, $"'entradaMalformada: preservar' ({deOnde}) copia em claro a entrada fora do formato.", nome, origem.Nome, posicao: onde ?? posicao),
                     indice);
@@ -685,13 +705,14 @@ internal sealed partial class MontagemDoPlano
             return;
         }
 
+        // A fonte do id.permutar é da chave primária pela origem, mesmo que o destino não a tenha.
         var naChave = tabelaDoDestino.ChavePrimaria.Contains(destino.Nome, StringComparer.Ordinal);
-        if (!destino.Anulavel || naChave)
+        if (!destino.Anulavel || naChave || _fontes.Contains(no))
         {
-            var porque = naChave ? "é da chave primária no destino" : "não aceita NULL no destino";
+            var porque = naChave ? "é da chave primária no destino" : !destino.Anulavel ? "não aceita NULL no destino" : "é da chave primária na origem";
             foreach (var politica in PoliticasQueAnulam.Da(resolvida, _regras.Dominios))
             {
-                var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, politica);
+                var (onde, deOnde) = OndeEstaAPolitica(regra, resolvida, politica, efetiva.Propagacao is not null);
                 var (citado, saida) = politica.Dominio is null
                     ? ("", "troque a política onde ela está escrita, ou escreva outra na coluna")
                     : ($" do domínio {politica.Dominio}, citado em '{politica.Parametro}'", "troque a política do domínio citado, ou cite outro domínio");
@@ -728,8 +749,29 @@ internal sealed partial class MontagemDoPlano
             return;
         }
 
+        // O id.permutar só é criado com o N do domínio, e a coluna precisa comportar o maior pseudônimo, N − 1; sem N, o erro
+        // do domínio já saiu (ou sai no P9), e a coluna não é criada.
+        if (TamanhoDa(resolvida) is (true, var tamanho))
+        {
+            if (tamanho is not { } n)
+            {
+                return;
+            }
+
+            if (contexto.MaiorInteiro < n - 1)
+            {
+                Erro(
+                    CodigosPlanejar.TamanhoNaoCabe,
+                    $"A coluna não comporta no destino {(n - 1).ToString(CultureInfo.InvariantCulture)}, o maior pseudônimo do domínio {resolvida.Regra.Dominio.Nome} (N = {Potencia(n)}, calculado pela chave primária da origem): troque o tipo dela no destino por um inteiro maior, como o de 64 bits.",
+                    null);
+                return;
+            }
+
+            contexto = contexto with { TamanhoDominio = n };
+        }
+
         _contextos[no] = contexto;
-        if (_criacao.Criar(fabrica, resolvida.Regra, contexto) is { } falha)
+        if (_criacao!.Criar(fabrica, resolvida.Regra, contexto) is { } falha)
         {
             Erro(falha.Codigo, falha.Mensagem, null);
         }
@@ -821,31 +863,34 @@ internal sealed partial class MontagemDoPlano
         }
 
         var mensagem = $"Há versão mais nova do transformador {fabrica.Nome} (@{recente.ToString(CultureInfo.InvariantCulture)}); a regra usa a @{fabrica.Versao.ToString(CultureInfo.InvariantCulture)}.";
-        if (regra.Transformador is null && regra.Dominio is { } dominio && _configuracao.Dominios.FirstOrDefault(declarado => declarado.Nome == dominio) is { } declarado)
+        if (regra.Dominio is { } dominio && (regra.Transformador is null || DeclaraNaColuna(regra)) && Declaracao(dominio) is { } declarado)
         {
-            _coletor.Aviso(new Aviso(CodigosPlanejar.VersaoMaisNova, $"{mensagem} Ela vem do domínio {dominio}.", posicao: NoYaml(declarado.Posicao, declarado.Local)));
+            _coletor.Aviso(new Aviso(CodigosPlanejar.VersaoMaisNova, $"{mensagem} Ela vem do domínio {dominio}.", posicao: declarado.Posicao));
             return;
         }
 
         _coletor.Aviso(new Aviso(CodigosPlanejar.VersaoMaisNova, mensagem, tabela, coluna, posicao: posicao), indice);
     }
 
-    // De onde vem a política: escrita na coluna, na declaração do domínio, ou na raiz (que não guarda posição; aí o erro
-    // aponta a coluna). Um domínio declarado numa coluna (o do id.permutar) ainda não existe.
-    private (PosicaoConfiguracao? Onde, string DeOnde) OndeEstaAPolitica(RegraColunaEscrita regra, ColunaResolvida resolvida, PoliticaQueAnula politica)
+    // De onde vem a política: escrita na coluna, na declaração do domínio (na raiz ou numa coluna, a do id.permutar), ou
+    // na raiz 'politica' (que não guarda posição; aí o erro aponta a coluna). A propagada da coluna que declara o domínio
+    // aponta a declaração.
+    private (PosicaoConfiguracao? Onde, string DeOnde) OndeEstaAPolitica(RegraColunaEscrita regra, ColunaResolvida resolvida, PoliticaQueAnula politica, bool propagada)
     {
         var invalida = politica.Politica.StartsWith("entradaInvalida", StringComparison.Ordinal);
         bool Escrita(PoliticasDeEntrada politicas) => invalida ? politicas.EntradaInvalida is not null : politicas.EntradaMalformada is not null;
 
         if (politica.Dominio is null && Escrita(regra.Politicas))
         {
-            return (null, "escrita na coluna");
+            return propagada && DeclaraNaColuna(regra) && Declaracao(regra.Dominio!) is { Coluna: { } coluna } declarada
+                ? (declarada.Posicao, $"escrita no domínio {regra.Dominio}, na coluna {coluna}")
+                : (null, "escrita na coluna");
         }
 
         var dominio = politica.Dominio ?? resolvida.Regra.Dominio.Nome;
-        if (_configuracao.Dominios.FirstOrDefault(declarado => declarado.Nome == dominio) is { } declarado && Escrita(declarado.Politicas))
+        if (Declaracao(dominio) is { } declarado && Escrita(declarado.Politicas))
         {
-            return (NoYaml(declarado.Posicao, declarado.Local), $"escrita no domínio {dominio}");
+            return (declarado.Posicao, declarado.Coluna is { } naColuna ? $"escrita no domínio {dominio}, na coluna {naColuna}" : $"escrita no domínio {dominio}");
         }
 
         return (null, "da política global, em 'politica'");
@@ -954,6 +999,12 @@ internal sealed partial class MontagemDoPlano
     private RegraColuna Regra(No no, Efetiva efetiva)
     {
         var resolvida = efetiva.Resolvida;
+        var (permutada, tamanho) = TamanhoDa(resolvida);
+        if (permutada && tamanho is null)
+        {
+            throw new InvalidOperationException("Coluna do id.permutar sem o tamanho do domínio.");
+        }
+
         return new RegraColuna(
             TipoRegra.Transformar,
             resolvida.Fabrica.Nome,
@@ -966,7 +1017,8 @@ internal sealed partial class MontagemDoPlano
             efetiva.Escrita.Origem,
             efetiva.Propagacao,
             efetiva.PropagadaDe,
-            NoYaml(efetiva.Escrita.Posicao, efetiva.Escrita.Local));
+            NoYaml(efetiva.Escrita.Posicao, efetiva.Escrita.Local),
+            tamanho);
     }
 
     // As colunas que identificam linhas: as da chave primária, as das chaves estrangeiras (dos dois lados) e as dos índices

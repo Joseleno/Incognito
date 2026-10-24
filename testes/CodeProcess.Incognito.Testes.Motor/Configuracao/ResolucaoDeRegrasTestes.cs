@@ -59,7 +59,8 @@ public sealed class ResolucaoDeRegrasTestes
     [MemberData(nameof(Embutidas))]
     public void Parametro_desconhecido_de_um_transformador_embutido_e_recusado_pela_fabrica_com_linha_e_coluna(string nome)
     {
-        var derivar = nome == "br.cep" ? " derivarDe: cpf," : "";
+        // O id.permutar exige o domínio na coluna.
+        var derivar = nome switch { "br.cep" => " derivarDe: cpf,", "id.permutar" => " dominio: pedido-id,", _ => "" };
         var erro = Assert.Single(Erros(Colunas($"      x: {{ transformador: {nome}@1,{derivar} precisao: {Sentinela} }}\n")));
 
         Assert.Equal(("INC2022", 15), (erro.Codigo, erro.Linha));

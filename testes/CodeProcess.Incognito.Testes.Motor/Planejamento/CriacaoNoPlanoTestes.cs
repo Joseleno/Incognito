@@ -368,7 +368,7 @@ public sealed class CriacaoNoPlanoTestes
         using var criacao = new CriacaoNoPlano(ChaveIncognito.Gerar, "homologacao", [], TestContext.Current.CancellationToken);
         var valido = new ContextoDaColuna(TipoColuna.Inteiro, null, long.MinValue, long.MaxValue, null, null, null, null);
 
-        foreach (var contradito in new[] { valido with { MenorInteiro = 5, MaiorInteiro = 5 }, valido with { Escala = 0 }, valido with { Precisao = 0 }, valido with { ComprimentoMaximo = 0 } })
+        foreach (var contradito in new[] { valido with { MenorInteiro = 5, MaiorInteiro = 5 }, valido with { Escala = 0 }, valido with { Precisao = 0 }, valido with { ComprimentoMaximo = 0 }, valido with { TamanhoDominio = 0 } })
         {
             Assert.Throws<InvalidOperationException>(() => criacao.Criar(cpf, new RegraTransformacao(new DominioPseudonimo("cpf", 1)), contradito));
             Assert.Throws<InvalidOperationException>(() => criacao.Criar(deFora, new RegraTransformacao(new DominioPseudonimo("exemplo.gravador", 1)), contradito));

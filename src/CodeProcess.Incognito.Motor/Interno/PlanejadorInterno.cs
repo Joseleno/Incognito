@@ -81,9 +81,17 @@ internal static class PlanejadorInterno
             Conferir(leituraDaOrigem.Esquema, configuracao.Origem, LadoBanco.Origem);
             Conferir(leituraDoDestino.Esquema, configuracao.Destino, LadoBanco.Destino);
 
-            // P3 a P6: os nomes pelo dialeto de cada lado, com as conexões abertas, e a criação dos transformadores.
-            montado = MontagemDoPlano.Montar(
-                configuracao, regras, registro, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino, gerarChave ?? ChaveIncognito.Gerar, cancelamento);
+            // P3 a P6b: os nomes pelo dialeto de cada lado, com as conexões abertas, e as colunas do id.permutar a ler.
+            var montagem = MontagemDoPlano.Preparar(configuracao, regras, registro, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino);
+
+            // O maior valor de cada uma, em série, pelo envoltório da origem: fica na montagem, que só publica o N.
+            foreach (var coluna in montagem.Leituras)
+            {
+                montagem.Anotar(coluna, await origem.LerMaiorValorAsync(coluna, cancelamento).ConfigureAwait(false));
+            }
+
+            // P7 a P9: a criação dos transformadores, as restrições, o acesso e a publicação.
+            montado = montagem.Concluir(gerarChave ?? ChaveIncognito.Gerar, cancelamento);
         }
         catch
         {

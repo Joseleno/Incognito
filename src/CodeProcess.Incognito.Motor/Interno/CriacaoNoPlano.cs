@@ -16,8 +16,9 @@ namespace CodeProcess.Incognito.Interno;
 /// <param name="Escala">A escala, numa coluna decimal.</param>
 /// <param name="Colacao">O nome da colação do destino.</param>
 /// <param name="TipoReferencia">O tipo da coluna de <c>derivarDe</c> na origem.</param>
+/// <param name="TamanhoDominio">O N do domínio, só numa coluna do <c>id.permutar</c> embutido; o maior valor lido nunca entra.</param>
 internal sealed record ContextoDaColuna(
-    TipoColuna Tipo, int? ComprimentoMaximo, long? MenorInteiro, long? MaiorInteiro, int? Precisao, int? Escala, string? Colacao, TipoColuna? TipoReferencia)
+    TipoColuna Tipo, int? ComprimentoMaximo, long? MenorInteiro, long? MaiorInteiro, int? Precisao, int? Escala, string? Colacao, TipoColuna? TipoReferencia, long? TamanhoDominio = null)
 {
     /// <summary>Um contexto novo, para uma criação só (um contexto serve a uma fábrica).</summary>
     /// <param name="regra">A regra conferida.</param>
@@ -27,7 +28,7 @@ internal sealed record ContextoDaColuna(
     internal ContextoCriacao Novo(RegraTransformacao regra, SessaoTransformacao sessao)
     {
         // Conferido aqui, antes de qualquer fábrica: a recusa do núcleo para o contexto contraditório cairia na conta dela.
-        if (MenorInteiro >= MaiorInteiro || (Escala is not null && Precisao is null) || Precisao <= 0 || ComprimentoMaximo <= 0)
+        if (MenorInteiro >= MaiorInteiro || (Escala is not null && Precisao is null) || Precisao <= 0 || ComprimentoMaximo <= 0 || TamanhoDominio <= 0)
         {
             throw new InvalidOperationException("O planejar montou um contexto de criação que se contradiz.");
         }
@@ -41,6 +42,7 @@ internal sealed record ContextoDaColuna(
             Escala = Escala,
             Colacao = Colacao,
             TipoReferencia = TipoReferencia,
+            TamanhoDominio = TamanhoDominio,
         };
     }
 

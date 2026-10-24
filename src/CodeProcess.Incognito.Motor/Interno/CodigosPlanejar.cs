@@ -2,7 +2,7 @@ namespace CodeProcess.Incognito.Interno;
 
 /// <summary>
 /// Códigos do <c>planejar</c>, dentro de <c>INC3xxx</c> (planejar e destino): <c>INC300x</c> para a infraestrutura,
-/// <c>INC301x</c> a <c>INC309x</c> para os erros por área e <c>INC351x</c> a <c>INC359x</c> para os avisos. A saída sai do tipo da exceção, nunca do código. Um código nunca é reutilizado nem renumerado; cada um entra
+/// <c>INC301x</c> a <c>INC309x</c> para os erros por área (<c>INC309x</c>, o <c>id.permutar</c>) e <c>INC351x</c> a <c>INC359x</c> para os avisos. A saída sai do tipo da exceção, nunca do código. Um código nunca é reutilizado nem renumerado; cada um entra
 /// aqui quando a verificação que o usa é implementada.
 /// </summary>
 internal static class CodigosPlanejar
@@ -188,6 +188,21 @@ internal static class CodigosPlanejar
 
     /// <summary>O dialeto não informa a codificação e a versão do banco de um lado (saída 2).</summary>
     internal const string PropriedadesNaoInformadas = "INC3082";
+
+    /// <summary>
+    /// O N do domínio do <c>id.permutar</c> passaria de 10¹⁸, ou uma coluna do domínio não comporta N − 1 no destino
+    /// (saída 2).
+    /// </summary>
+    internal const string TamanhoNaoCabe = "INC3090";
+
+    /// <summary>Domínio do <c>id.permutar</c> sem coluna na chave primária de uma tabela copiada da origem (saída 2).</summary>
+    internal const string DominioSemFonte = "INC3091";
+
+    /// <summary>
+    /// Coluna do domínio do <c>id.permutar</c> fora da chave primária e sem chave estrangeira validada até ela, com valor a
+    /// partir de N e <c>entradaMalformada: falhar</c> (saída 2).
+    /// </summary>
+    internal const string ForaDoDominio = "INC3092";
 
     /// <summary>Aviso: outro objeto difere de um nome resolvido só pela caixa.</summary>
     internal const string NomeQuaseIgual = "INC3510";

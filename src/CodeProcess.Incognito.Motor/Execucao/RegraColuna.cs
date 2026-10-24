@@ -21,7 +21,8 @@ public sealed class RegraColuna
         OrigemRegra origem,
         PropagacaoRegra? propagacao,
         NomeColuna? propagadaDe,
-        PosicaoConfiguracao? posicao)
+        PosicaoConfiguracao? posicao,
+        long? tamanhoDominio = null)
     {
         var transformar = tipo == TipoRegra.Transformar;
         if (transformar != (transformador is not null) || transformar != versao.HasValue || transformar != injetividade.HasValue)
@@ -37,6 +38,11 @@ public sealed class RegraColuna
         if (propagacao.HasValue != (propagadaDe is not null))
         {
             throw new ArgumentException("A propagação e a coluna de onde ela veio existem juntas.", nameof(propagacao));
+        }
+
+        if (tamanhoDominio.HasValue && (!dominio.HasValue || tamanhoDominio <= 0))
+        {
+            throw new ArgumentException("Só a regra que transforma com domínio tem o tamanho do domínio, e ele é positivo.", nameof(tamanhoDominio));
         }
 
         if (transformador is not null)
@@ -66,6 +72,7 @@ public sealed class RegraColuna
         Propagacao = propagacao;
         PropagadaDe = propagadaDe;
         Posicao = posicao;
+        TamanhoDominio = tamanhoDominio;
     }
 
     /// <summary>Se a coluna é mantida ou transformada.</summary>
@@ -116,4 +123,11 @@ public sealed class RegraColuna
 
     /// <summary>Onde, no <c>incognito.yaml</c>, a regra foi escrita (na propagada, a da coluna de origem); nula quando não foi.</summary>
     public PosicaoConfiguracao? Posicao { get; }
+
+    /// <summary>
+    /// O tamanho do domínio (N) numa coluna do <c>id.permutar</c>: o pseudônimo vai de 1 a N − 1. Nulo nas outras regras.
+    /// Vem dos dados da origem no <c>planejar</c> (a menor potência de 10, a partir de 10⁴, acima de dez vezes o maior valor
+    /// da chave primária) e pode mudar entre execuções; o maior valor lido nunca é publicado.
+    /// </summary>
+    public long? TamanhoDominio { get; }
 }
