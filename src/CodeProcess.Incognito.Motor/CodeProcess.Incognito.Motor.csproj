@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CodeProcess.Incognito.Testes.Motor" />
+    <InternalsVisibleTo Include="CodeProcess.Incognito.Testes.PostgreSql" />
   </ItemGroup>
 
 </Project>

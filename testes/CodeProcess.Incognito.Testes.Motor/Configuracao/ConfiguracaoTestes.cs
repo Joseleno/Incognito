@@ -310,6 +310,17 @@ public sealed class ConfiguracaoTestes
     }
 
     [Fact]
+    public void Id_permutar_sem_dominio_na_coluna_e_recusado_e_o_declarado_na_raiz_e_aceito()
+    {
+        var erro = Yaml.UnicoErro(Yaml.Com("tabelas:\n  public.pedidos:\n    colunas:\n      id: { transformador: id.permutar@1 }\n"));
+        var naRaiz = Yaml.Ler(Yaml.Com("dominios:\n  pedido_id: { transformador: id.permutar@1 }\ntabelas:\n  public.pedidos:\n    colunas:\n      id: pedido_id\n"));
+
+        Assert.Equal(("INC2007", "/tabelas/public.pedidos/colunas/id/transformador"), (erro.Codigo, erro.Local));
+        Assert.Contains("O id.permutar precisa de 'dominio'", erro.Mensagem, StringComparison.Ordinal);
+        Assert.Equal("pedido_id", Assert.Single(naRaiz.Dominios).Nome);
+    }
+
+    [Fact]
     public void DerivarDe_em_ciclo_e_recusado_e_coluna_sem_regra_e_aceita()
     {
         static string Tabela(string colunas) => Yaml.Com("tabelas:\n  public.clientes:\n    colunas:\n" + colunas);

@@ -80,6 +80,7 @@ CodeProcess.Incognito.Execucao.RegraColuna.Origem.get -> CodeProcess.Incognito.C
 CodeProcess.Incognito.Execucao.RegraColuna.Posicao.get -> CodeProcess.Incognito.Execucao.PosicaoConfiguracao?
 CodeProcess.Incognito.Execucao.RegraColuna.Propagacao.get -> CodeProcess.Incognito.Execucao.PropagacaoRegra?
 CodeProcess.Incognito.Execucao.RegraColuna.PropagadaDe.get -> CodeProcess.Incognito.Execucao.NomeColuna?
+CodeProcess.Incognito.Execucao.RegraColuna.TamanhoDominio.get -> long?
 CodeProcess.Incognito.Execucao.RegraColuna.Tipo.get -> CodeProcess.Incognito.Execucao.TipoRegra
 CodeProcess.Incognito.Execucao.RegraColuna.Transformador.get -> string?
 CodeProcess.Incognito.Execucao.RegraColuna.Versao.get -> int?

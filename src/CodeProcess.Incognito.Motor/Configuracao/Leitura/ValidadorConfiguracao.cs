@@ -441,6 +441,13 @@ internal sealed partial class ValidadorConfiguracao
                 return null;
             }
 
+            // Sem o domínio padrão: cada chave primária permutada tem o seu, com o N dela.
+            if (noDominio is null && transformador.Nome == IdPermutar)
+            {
+                _erros.Adicionar(CodigosConfiguracao.Obrigatorio, noTransformador.Posicao, noTransformador.Local, "O id.permutar precisa de 'dominio' na coluna: cada chave primária tem o seu ({ transformador: id.permutar@1, dominio: pedido-id }), e as outras colunas o citam com { dominio: pedido-id }.");
+                return null;
+            }
+
             return new RegraColunaEscrita(vazia, TipoRegraColuna.Transformador, dominio, transformador, derivarDe, Parametros(mapa), politicas, sensivel, justificativa, OrigemRegra.Configuracao, chave.Posicao, mapa.Local);
         }
 

@@ -158,6 +158,13 @@ public sealed class TiposDoPlanoTestes
         Assert.Throws<ArgumentOutOfRangeException>(() => Regra(TipoRegra.Transformar, "br.cpf", 0, null, Injetividade.Garantida));
         Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Transformar, "br.cpf", 1, null, Injetividade.Garantida, PropagacaoRegra.Heranca, null));
         Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Transformar, "br.cpf", 1, null, Injetividade.Garantida, null, origem));
+
+        // O tamanho do domínio só na regra que transforma com domínio, e positivo.
+        Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Transformar, "nulo", 1, null, Injetividade.Nenhuma, tamanhoDominio: 10_000));
+        Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Manter, null, null, null, null, tamanhoDominio: 10_000));
+        Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Transformar, "id.permutar", 1, dominio, Injetividade.Garantida, tamanhoDominio: 0));
+        Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Transformar, "id.permutar", 1, dominio, Injetividade.Garantida, tamanhoDominio: -10_000));
+        Assert.Equal(10_000L, Regra(TipoRegra.Transformar, "id.permutar", 1, dominio, Injetividade.Garantida, tamanhoDominio: 10_000).TamanhoDominio);
         Assert.Throws<ArgumentException>(() => Regra(TipoRegra.Transformar, "br.cep", 1, null, Injetividade.Garantida, derivarDe: ""));
     }
 
@@ -212,6 +219,7 @@ public sealed class TiposDoPlanoTestes
         Injetividade? injetividade,
         PropagacaoRegra? propagacao = null,
         NomeColuna? propagadaDe = null,
-        string? derivarDe = null) =>
-        new(tipo, transformador, versao, dominio, injetividade, null, null, derivarDe, OrigemRegra.Configuracao, propagacao, propagadaDe, null);
+        string? derivarDe = null,
+        long? tamanhoDominio = null) =>
+        new(tipo, transformador, versao, dominio, injetividade, null, null, derivarDe, OrigemRegra.Configuracao, propagacao, propagadaDe, null, tamanhoDominio);
 }
