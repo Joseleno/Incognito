@@ -16,11 +16,13 @@ public enum Operacao
     Citar,
     CompararNome,
     Descartar,
+    LerMaiorValor,
 
     // Os getters das partes do banco conectado.
     ObterEsquema,
     ObterIdentidade,
     ObterSql,
+    ObterDados,
 }
 
 /// <summary>
@@ -59,6 +61,12 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
 
     /// <summary>A identidade de cada lado (pelo destino); nulo devolve a sintética, cifrada e com o servidor verificado.</summary>
     internal Func<bool, IdentidadeLida>? Identidades { get; init; }
+
+    /// <summary>O maior valor de cada coluna da origem; nulo devolve nulo (nenhuma linha).</summary>
+    internal Func<ReferenciaColuna, long?>? Maiores { get; init; }
+
+    /// <summary>As colunas cujo maior valor foi pedido, na ordem.</summary>
+    internal List<ReferenciaColuna> MaioresPedidos { get; } = [];
 
     public override string Nome
     {
@@ -123,12 +131,15 @@ internal sealed class OrigemDoPlanejar(ProvedorDoPlanejar provedor) : DialetoOri
     private readonly LeitorEsquema _esquema = new LeitorDoPlanejar(provedor, destino: false);
     private readonly IdentidadeBanco _identidade = new IdentidadeDoPlanejar(provedor, destino: false);
     private readonly DialetoSql _sql = new SqlDoPlanejar(provedor, destino: false);
+    private readonly LeitorDados _dados = new DadosDoPlanejar(provedor);
 
     public override LeitorEsquema Esquema => provedor.Obter(Operacao.ObterEsquema, false, _esquema);
 
     public override IdentidadeBanco Identidade => provedor.Obter(Operacao.ObterIdentidade, false, _identidade);
 
     public override DialetoSql Sql => provedor.Obter(Operacao.ObterSql, false, _sql);
+
+    public override LeitorDados Dados => provedor.Obter(Operacao.ObterDados, false, _dados);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
@@ -184,6 +195,25 @@ internal sealed class LeitorDoPlanejar(ProvedorDoPlanejar provedor, bool destino
 {
     public override Task<EsquemaBanco> LerAsync(CancellationToken cancelamento) =>
         provedor.Executar(Operacao.LerEsquema, destino, () => destino ? provedor.Destino : provedor.Origem, cancelamento);
+
+    public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+}
+
+internal sealed class DadosDoPlanejar(ProvedorDoPlanejar provedor) : LeitorDados
+{
+    public override Task<long?> LerMaiorValorAsync(ReferenciaColuna coluna, CancellationToken cancelamento)
+    {
+        lock (provedor.MaioresPedidos)
+        {
+            provedor.MaioresPedidos.Add(coluna);
+        }
+
+        return provedor.Executar(Operacao.LerMaiorValor, destino: false, () => provedor.Maiores?.Invoke(coluna), cancelamento);
+    }
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

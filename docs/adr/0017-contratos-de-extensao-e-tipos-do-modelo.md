@@ -136,3 +136,9 @@ carregá-los de um lado para o outro.
   exceção de uma embutida é defeito e sobe. O motor decide se a fábrica é embutida pela referência, nunca pelo `Equals`,
   que uma fábrica de fora pode sobrescrever. A metade do `planejar` é verificada por `CriacaoNoPlanoTestes` e, no núcleo,
   por `ContratoDeTransformacaoTestes` e `FabricasEmbutidasTestes` (o limite exato da faixa de cada documento).
+- 2026-10-24: o `ContextoCriacao` ganha `TamanhoDominio`, o N do `id.permutar` (o intervalo `[1, N)` permutado), que o
+  motor calcula no `planejar` pelo maior identificador da origem e só preenche para o `id.permutar` embutido; o `init`
+  recusa zero e negativo, e a fábrica confere a potência de 10 (de 10⁴ a 10¹⁸) e que a coluna comporta N − 1. O N não
+  entra na identidade da instância: a primeira coluna fixa o N do domínio na sessão, e outra coluna do mesmo domínio com
+  outro N é recusada, para a chave primária e as estrangeiras nunca saírem com permutações diferentes. O N é publicável
+  (a ordem de grandeza do maior identificador); o maior valor lido, não.

@@ -2,8 +2,8 @@ namespace CodeProcess.Incognito.Transformadores;
 
 /// <summary>
 /// O que a fábrica sabe para criar o transformador de uma coluna: a regra da configuração, o tipo, o comprimento, a faixa,
-/// a precisão e a colação da coluna e o tipo da coluna de <c>derivarDe</c>. O motor monta um a cada criação, pela coluna
-/// do destino; o construtor é público para testes de fábricas próprias.
+/// a precisão e a colação da coluna, o tipo da coluna de <c>derivarDe</c> e, no <c>id.permutar</c>, o tamanho do domínio.
+/// O motor monta um a cada criação, pela coluna do destino; o construtor é público para testes de fábricas próprias.
 /// </summary>
 /// <remarks>
 /// Um contexto serve a uma fábrica só: a primeira que o usa no <see cref="FabricaTransformador.Criar"/> fica com ele, e
@@ -14,6 +14,7 @@ public sealed class ContextoCriacao
 {
     private readonly int? _comprimentoMaximo;
     private readonly int? _precisao;
+    private readonly long? _tamanhoDominio;
     private readonly TipoColuna? _tipoReferencia;
     private FabricaTransformador? _fabrica;
 
@@ -64,11 +65,24 @@ public sealed class ContextoCriacao
 
     /// <summary>
     /// O maior valor que a coluna aceita, numa coluna <see cref="TipoColuna.Inteiro"/>; nulo quando não informado. As
-    /// fábricas embutidas que aceitam <see cref="TipoColuna.Inteiro"/> (<c>br.cpf</c>, <c>br.cnpj</c>, <c>br.cep</c> e
-    /// <c>br.telefone</c>) o exigem: sem ele, ou com ele abaixo do maior pseudônimo, o <c>Criar</c> lança
-    /// <see cref="RegraInvalidaException"/>.
+    /// fábricas embutidas que aceitam <see cref="TipoColuna.Inteiro"/> (<c>br.cpf</c>, <c>br.cnpj</c>, <c>br.cep</c>,
+    /// <c>br.telefone</c> e <c>id.permutar</c>) o exigem: sem ele, ou com ele abaixo do maior pseudônimo, o <c>Criar</c>
+    /// lança <see cref="RegraInvalidaException"/>.
     /// </summary>
     public long? MaiorInteiro { get; init; }
+
+    /// <summary>
+    /// O tamanho do domínio do <c>id.permutar</c>: o N do intervalo <c>[1, N)</c> permutado, que o motor calcula pelo
+    /// maior valor das chaves primárias do domínio na origem, no <c>planejar</c>, e que pode mudar entre execuções quando a
+    /// base cresce. O mesmo em todas as colunas do domínio; o motor só o preenche para o <c>id.permutar</c> embutido, que o
+    /// exige. Nulo quando não se aplica.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Na atribuição: zero ou negativo.</exception>
+    public long? TamanhoDominio
+    {
+        get => _tamanhoDominio;
+        init => _tamanhoDominio = value is null or > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value), "O tamanho do domínio precisa ser positivo.");
+    }
 
     /// <summary>
     /// A precisão de uma coluna <see cref="TipoColuna.Decimal"/> (dígitos ao todo); nula quando não informada.

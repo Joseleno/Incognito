@@ -408,6 +408,26 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.True(achados.Length == 0, $"O dialeto PostgreSQL lê texto opaco do catálogo: {string.Join("; ", achados)}.");
     }
 
+    [Fact]
+    public void O_dialeto_PostgreSql_so_le_linhas_de_tabela_do_usuario_pelo_maior_valor()
+    {
+        // As consultas do catálogo têm o FROM escrito; uma tabela do usuário só entra por um nome citado na hora (um FROM ou
+        // JOIN interpolado), e o agregado sobre ela, pelo max. Fora do leitor de dados, nenhum dos dois; nele, só o maior
+        // valor, numa coluna e com retorno inteiro.
+        const string Leitor = "LeitorDadosPostgreSql.cs";
+        var deTabela = new Regex(@"\b(FROM|JOIN)\s+(ONLY\s+)?\{|\bpg_catalog\.max\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        var arquivos = Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.cs");
+        var fora = arquivos
+            .Where(arquivo => !arquivo.EndsWith(Leitor, StringComparison.Ordinal))
+            .SelectMany(arquivo => deTabela.Matches(File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))).Select(achado => $"{arquivo}: {achado.Value}"))
+            .ToArray();
+        var leitor = File.ReadAllText(Path.Combine(Repositorio.Raiz(), Assert.Single(arquivos, arquivo => arquivo.EndsWith(Leitor, StringComparison.Ordinal))));
+
+        Assert.True(fora.Length == 0, $"Leitura de tabela do usuário fora do leitor de dados: {string.Join("; ", fora)}.");
+        Assert.Equal(2, deTabela.Count(leitor));
+        Assert.Contains("$\"SELECT pg_catalog.max({citada})::pg_catalog.int8 FROM {tabela}\"", leitor, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("SELECT pg_catalog.pg_get_expr(i.indpred, i.indrelid) FROM pg_catalog.pg_index i")]
     [InlineData("SELECT k::text FROM pg_catalog.pg_constraint k")]

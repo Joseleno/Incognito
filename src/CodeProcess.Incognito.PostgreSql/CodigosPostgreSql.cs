@@ -29,4 +29,7 @@ internal static class CodigosPostgreSql
 
     /// <summary>O catálogo tem um valor que o dialeto não conhece (de uma versão do PostgreSQL mais nova).</summary>
     internal const string CatalogoDesconhecido = "INC3107";
+
+    /// <summary>O maior valor foi pedido de uma tabela ou coluna que não existe, ou de uma coluna que não é inteira.</summary>
+    internal const string ColunaNaoInteira = "INC3108";
 }

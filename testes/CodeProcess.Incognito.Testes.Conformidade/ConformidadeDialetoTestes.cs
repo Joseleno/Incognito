@@ -381,6 +381,55 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_maior_valor_e_lido_como_a_copia_le()
+    {
+        // Pela origem, a única que tem a leitura agregada. A forma de cada caso é conferida antes: um caso mal declarado
+        // passaria sem provar nada.
+        var maiores = Esperado.MaioresValores;
+        Assert.True(maiores.Comum.Valor > 0, "Maior valor: o caso comum precisa de valor positivo.");
+        Assert.True(maiores.SemValor.Valor is null, "Maior valor: o caso sem valor precisa ser nulo.");
+        Assert.True(maiores.SoNegativos.Valor < 0, "Maior valor: o caso só com negativos precisa ser negativo.");
+        var esquema = await LerOrigemAsync();
+        MaiorValorEsperado[] casos =
+        [
+            maiores.Comum,
+            maiores.SemValor,
+            maiores.SoNegativos,
+            .. maiores.Particionada.Existe ? [maiores.Particionada.Valor] : Array.Empty<MaiorValorEsperado>(),
+            .. maiores.MaeDeHeranca.Existe ? [maiores.MaeDeHeranca.Valor] : Array.Empty<MaiorValorEsperado>(),
+        ];
+
+        var cancelamento = TestContext.Current.CancellationToken;
+        foreach (var caso in casos)
+        {
+            var tabela = esquema.Tabelas.FirstOrDefault(lida => lida.Nome.Equals(caso.Coluna.Tabela));
+            Assert.True(
+                tabela?.Colunas.Any(coluna => coluna.Nome == caso.Coluna.Coluna && coluna.Tipo == TipoColuna.Inteiro) == true,
+                $"Maior valor: {caso.Coluna} não é uma coluna inteira do esquema lido.");
+            var lido = await Par.Origem.Dados.LerMaiorValorAsync(caso.Coluna, cancelamento);
+            Assert.True(lido == caso.Valor, $"Maior valor: {caso.Coluna} lido {Texto(lido)}, esperado {Texto(caso.Valor)}.");
+        }
+
+        Assert.True(
+            !maiores.Particionada.Existe || esquema.Tabelas.Any(lida => lida.Nome.Equals(maiores.Particionada.Valor.Coluna.Tabela) && lida.Tipo == TipoTabela.Particionada),
+            "Maior valor: o caso da particionada não é uma tabela particionada.");
+        Assert.True(
+            !maiores.MaeDeHeranca.Existe || esquema.Tabelas.Any(lida => lida.Tipo == TipoTabela.Herdeira && maiores.MaeDeHeranca.Valor.Coluna.Tabela.Equals(lida.Pai)),
+            "Maior valor: o caso da mãe de herança não tem herdeira.");
+
+        // Uma coluna de texto: o dialeto recusa, e nenhum texto das linhas (o sentinela) vem na exceção.
+        var excecao = await Record.ExceptionAsync(() => Par.Origem.Dados.LerMaiorValorAsync(maiores.ColunaDeTexto, cancelamento));
+        Assert.True(excecao is not null, $"Maior valor: a coluna de texto {maiores.ColunaDeTexto} foi lida como inteira.");
+        var texto = excecao.ToString();
+        Assert.True(
+            !Esperado.Sentinelas.Any(sentinela => sentinela.Length > 0 && texto.Contains(sentinela, StringComparison.Ordinal)),
+            $"Maior valor: a recusa da coluna de texto {maiores.ColunaDeTexto} traz o valor das linhas.");
+
+        static string Texto(long? valor) => valor?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "nulo";
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_mascara_e_apontada()
     {
         var mascaradas = (await LerOrigemAsync()).Tabelas

@@ -572,3 +572,12 @@ GRANT USAGE, SELECT ON SEQUENCE loja.seq_avulsa TO incognito_leitor;
 INSERT INTO loja.tipos (id, texto, curto) VALUES (1, 'zqSENTINELAqz-linha', 'zqSENTINELAqz-l1'), (2, 'zqSENTINELAqz-linha', 'zqSENTINELAqz-l2');
 ALTER TABLE loja.tipos ADD COLUMN observacao text DEFAULT 'zqSENTINELAqz-faltante';
 ANALYZE loja.tipos;
+
+-- O maior valor de colunas inteiras, como a cópia lê: o de uma tabela comum, o de uma coluna só com negativos, o da raiz de
+-- uma particionada (o maior numa partição) e o da mãe de herança, com valor maior na herdeira (que não conta); a
+-- loja.cliente fica sem linhas.
+INSERT INTO loja.lojas (id) VALUES (1), (2), (91), (23);
+INSERT INTO loja."Cliente" (id) VALUES (-7), (-2);
+INSERT INTO loja.pedidos (loja, id) VALUES (1, 40), (2, 75);
+INSERT INTO loja.pessoa (id) VALUES (12);
+INSERT INTO loja.funcionario (id, matricula) VALUES (60, 1);

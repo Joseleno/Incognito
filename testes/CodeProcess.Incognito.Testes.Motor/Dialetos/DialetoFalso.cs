@@ -153,6 +153,13 @@ public enum Defeito
     PublicacaoVazia,
     AssinaturaVazia,
 
+    // O maior valor: errado, sempre nulo, só da raiz da particionada, com as herdeiras, e com o texto das linhas na recusa.
+    MaiorValorErrado,
+    MaiorValorSempreNulo,
+    MaiorValorSoDaRaiz,
+    MaiorValorComHerdeiras,
+    MaiorValorComTextoNaRecusa,
+
     // A recusa da conexão inaceitável: com o tipo comum, com o que estava na string, fora da faixa, ou não recusa.
     RecusaComoExcecaoComum,
     RecusaComAString,
@@ -251,8 +258,8 @@ internal static class BancoFalso
                     ChavePrimaria = ["loja", "id"],
                     Triggers = [new() { Nome = "tg_pedidos", Ligada = true, Herdada = true }],
                 },
-                Tabela("pessoa", Texto("nome")),
-                new() { Nome = Nome("funcionario"), Tipo = TipoTabela.Herdeira, Pai = Nome("pessoa"), Colunas = [Texto("nome"), Texto("cargo")] },
+                Tabela("pessoa", Inteiro("id"), Texto("nome")),
+                new() { Nome = Nome("funcionario"), Tipo = TipoTabela.Herdeira, Pai = Nome("pessoa"), Colunas = [Inteiro("id"), Texto("nome"), Texto("cargo")] },
                 Tabela("contato", Texto("canal")),
                 Tabela("endereco", Texto("cidade")),
                 Tabela("telefone", Texto("numero")),
@@ -549,6 +556,28 @@ internal static class BancoFalso
         Transporte = completo
             ? Caso.Presente(TransporteEsperado.De(Transporte())!)
             : Caso.Inexistente<TransporteEsperado>("banco falso sem transporte"),
+        MaioresValores = new()
+        {
+            Comum = new(Coluna("itens", "pedido"), 31),
+            SemValor = new(Coluna("itens", "numero"), null),
+            SoNegativos = new(Coluna("itens", "loja"), -4),
+            Particionada = completo ? Caso.Presente(new MaiorValorEsperado(Coluna("pedidos", "id"), 88)) : Caso.Inexistente<MaiorValorEsperado>("banco falso sem partições"),
+            MaeDeHeranca = completo ? Caso.Presente(new MaiorValorEsperado(Coluna("pessoa", "id"), 12)) : Caso.Inexistente<MaiorValorEsperado>("banco falso sem herança"),
+            ColunaDeTexto = Coluna("tipos", "texto"),
+        },
+    };
+
+    /// <summary>
+    /// O maior valor das colunas do falso, como a cópia lê: a particionada pela raiz (o maior está em <c>pedidos_2026</c>), a
+    /// mãe sem a herdeira (<c>funcionario</c> tem 60).
+    /// </summary>
+    internal static long? MaiorValor(ReferenciaColuna coluna, Defeito defeito) => (coluna.Tabela.Nome, coluna.Coluna) switch
+    {
+        ("itens", "pedido") => defeito == Defeito.MaiorValorErrado ? 32 : 31,
+        ("itens", "loja") => -4,
+        ("pedidos", "id") => defeito == Defeito.MaiorValorSoDaRaiz ? null : 88,
+        ("pessoa", "id") => defeito == Defeito.MaiorValorComHerdeiras ? 60 : 12,
+        _ => null,
     };
 
     // Como num PostgreSQL UTF-8: sem aspas, só A-Z dobra; entre aspas, nada; mais de 63 bytes não corresponde.
@@ -763,6 +792,23 @@ internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool compl
         new IdentidadeFalsa(banco, completo, defeito, vaza: defeito == Defeito.SentinelaNaIdentidadeDaOrigem && !privilegiado, origem: true);
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape, defeito);
+
+    public override LeitorDados Dados { get; } = new DadosFalsos(defeito);
+}
+
+// O maior valor em memória; a coluna de texto é recusada (com o sentinela das linhas, no defeito).
+internal sealed class DadosFalsos(Defeito defeito) : LeitorDados
+{
+    public override Task<long?> LerMaiorValorAsync(ReferenciaColuna coluna, CancellationToken cancelamento)
+    {
+        if (coluna.Tabela.Nome == "tipos")
+        {
+            var mensagem = "O maior valor só se lê de coluna inteira" + (defeito == Defeito.MaiorValorComTextoNaRecusa ? ": " + BancoFalso.Sentinela : ".");
+            return Task.FromException<long?>(new DialetoRecusouException("INC3399", mensagem));
+        }
+
+        return Task.FromResult(defeito == Defeito.MaiorValorSempreNulo ? null : BancoFalso.MaiorValor(coluna, defeito));
+    }
 }
 
 // O destino da suíte tem o mesmo esquema da origem, lido pelo dono.

@@ -90,6 +90,14 @@ public sealed class EsquemaDeConformidade
 
     /// <summary>O transporte das conexões da fixture, igual nos dois lados.</summary>
     public required Caso<TransporteEsperado> Transporte { get; init; }
+
+    /// <summary>
+    /// O maior valor de colunas inteiras da origem, como a cópia lê: o de uma tabela comum, o de uma coluna sem valor
+    /// (nulo), o de uma coluna só com negativos, o da raiz de uma particionada (o maior numa partição) e o da mãe de herança
+    /// clássica (sem as herdeiras, que têm valor maior); e uma coluna de texto com o sentinela nas linhas, que o dialeto
+    /// recusa sem trazer o valor.
+    /// </summary>
+    public required MaioresValoresEsperados MaioresValores { get; init; }
 }
 
 /// <summary>O inventário do esquema de conformidade.</summary>
@@ -595,3 +603,30 @@ public sealed record IdentificadorCitado(string Identificador, string Citado);
 /// <param name="DoCatalogo">O nome como o catálogo o guarda.</param>
 /// <param name="Esperada">A correspondência esperada, na origem e no destino.</param>
 public sealed record NomeComparado(string Escrito, bool EntreAspas, string DoCatalogo, CorrespondenciaNome Esperada);
+
+/// <summary>O maior valor que a leitura agregada da origem devolve para uma coluna; nulo quando nenhuma linha tem valor.</summary>
+/// <param name="Coluna">A coluna inteira.</param>
+/// <param name="Valor">O maior valor.</param>
+public sealed record MaiorValorEsperado(ReferenciaColuna Coluna, long? Valor);
+
+/// <summary>Os casos do maior valor (<see cref="EsquemaDeConformidade.MaioresValores"/>).</summary>
+public sealed class MaioresValoresEsperados
+{
+    /// <summary>Uma coluna de tabela comum, com valor positivo.</summary>
+    public required MaiorValorEsperado Comum { get; init; }
+
+    /// <summary>Uma coluna sem valor em nenhuma linha (tabela vazia, ou só NULL).</summary>
+    public required MaiorValorEsperado SemValor { get; init; }
+
+    /// <summary>Uma coluna só com valores negativos.</summary>
+    public required MaiorValorEsperado SoNegativos { get; init; }
+
+    /// <summary>A raiz de uma particionada, com o maior valor numa partição.</summary>
+    public required Caso<MaiorValorEsperado> Particionada { get; init; }
+
+    /// <summary>A mãe de herança clássica, com valor maior numa herdeira (que não conta).</summary>
+    public required Caso<MaiorValorEsperado> MaeDeHeranca { get; init; }
+
+    /// <summary>Uma coluna de texto com um sentinela nas linhas.</summary>
+    public required ReferenciaColuna ColunaDeTexto { get; init; }
+}

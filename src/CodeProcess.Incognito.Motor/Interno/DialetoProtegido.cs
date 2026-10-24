@@ -27,7 +27,8 @@ internal enum LadoBanco
 /// servidor); a recusa do dialeto (<see cref="DialetoRecusouException"/> com código da faixa) vira erro do plano, saída 2; a
 /// <see cref="IncognitoException"/> de tipo exato com código da faixa vira falha do dialeto com o código e a mensagem
 /// escapada e cortada; uma subclasse, só com o código (a mensagem é virtual e rodaria código do dialeto); e qualquer outra,
-/// inclusive código fora da faixa, vira falha <c>INC3001</c> só com o tipo, a operação e o lado.
+/// inclusive código fora da faixa, vira falha <c>INC3001</c> só com o tipo, a operação e o lado. Na leitura que traz dado de
+/// coluna (o maior valor), nem a recusa nem a <see cref="IncognitoException"/> de tipo exato levam a mensagem: só o código.
 /// </para>
 /// <para>
 /// Da exceção original nunca se lê <see cref="Exception.Data"/>, <see cref="Exception.StackTrace"/>,
@@ -143,6 +144,34 @@ internal sealed class DialetoProtegido : IAsyncDisposable
         return identidade ?? throw SemResultado(_provedor, Operacao, _lado);
     }
 
+    /// <summary>
+    /// Lê o maior valor de uma coluna inteira da origem. O valor é de coluna tratada: qualquer exceção sai só com o código
+    /// ou o tipo, nunca com a mensagem do dialeto, nem a de uma recusa.
+    /// </summary>
+    /// <param name="coluna">A tabela e a coluna, como o catálogo da origem as guarda.</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>O maior valor; nulo quando nenhuma linha tem valor na coluna.</returns>
+    /// <exception cref="InvalidOperationException">O banco é o destino: a leitura é só da origem (defeito do motor).</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou ou recusou a leitura.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    internal async Task<long?> LerMaiorValorAsync(ReferenciaColuna coluna, CancellationToken cancelamento)
+    {
+        const string Operacao = "ler o maior valor de uma coluna";
+        if (_banco is not DialetoOrigem origem)
+        {
+            throw new InvalidOperationException("O maior valor de uma coluna só se lê na origem.");
+        }
+
+        try
+        {
+            return await origem.Dados.LerMaiorValorAsync(coluna, cancelamento).ConfigureAwait(false);
+        }
+        catch (Exception excecao)
+        {
+            throw TraduzirSemMensagem(excecao, _provedor, Operacao, _lado, cancelamento);
+        }
+    }
+
     /// <summary>Cita um identificador na sintaxe do banco.</summary>
     /// <param name="identificador">O identificador, como o catálogo o guarda.</param>
     /// <returns>O identificador citado.</returns>
@@ -242,6 +271,35 @@ internal sealed class DialetoProtegido : IAsyncDisposable
         return excecao.GetType() == typeof(IncognitoException)
             ? new FalhaDialetoException(codigo, TextoSeguro.Mensagem(excecao.Message))
             : new FalhaDialetoException(codigo, $"O dialeto de {provedor} falhou ao {operacao}{NoLado(lado)} com o código {codigo}.");
+    }
+
+    /// <summary>
+    /// A exceção que sai no lugar da que o dialeto lançou numa operação que lê dado de coluna: como em
+    /// <see cref="Traduzir"/>, mas sem nunca ler a mensagem, nem a de uma recusa ou de uma <see cref="IncognitoException"/>
+    /// de tipo exato, que o dialeto poderia ter escrito com o valor lido.
+    /// </summary>
+    /// <param name="excecao">A exceção do dialeto, que não sai daqui.</param>
+    /// <param name="provedor">O nome do provedor na configuração.</param>
+    /// <param name="operacao">O que o motor pedia, no infinitivo.</param>
+    /// <param name="lado">O lado.</param>
+    /// <param name="cancelamento">O token do chamador.</param>
+    /// <returns>A exceção a lançar.</returns>
+    internal static Exception TraduzirSemMensagem(Exception excecao, string provedor, string operacao, LadoBanco lado, CancellationToken cancelamento)
+    {
+        if (cancelamento.IsCancellationRequested && SoCancelamento(excecao))
+        {
+            return new OperationCanceledException(cancelamento);
+        }
+
+        if (excecao is not IncognitoException incognito)
+        {
+            return FalhaSemMensagem(provedor, operacao, lado, excecao);
+        }
+
+        var codigo = incognito.Codigo;
+        return CodigosPlanejar.DaFaixaDosDialetos(codigo)
+            ? new FalhaDialetoException(codigo, $"O dialeto de {provedor} falhou ao {operacao}{NoLado(lado)} com o código {codigo}.")
+            : FalhaSemMensagem(provedor, operacao, lado, excecao);
     }
 
     private string Citar(Func<DialetoSql, string> citar)

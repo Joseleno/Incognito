@@ -18,11 +18,11 @@ public sealed class FronteiraDoDialetoTestes
     private static readonly Type[] _extensoes =
     [
         typeof(ProvedorDialeto), typeof(DialetoBanco), typeof(DialetoOrigem), typeof(DialetoDestino),
-        typeof(LeitorEsquema), typeof(IdentidadeBanco), typeof(DialetoSql),
+        typeof(LeitorEsquema), typeof(IdentidadeBanco), typeof(DialetoSql), typeof(LeitorDados),
     ];
 
     // As partes que só existem depois do conectar, que só o envoltório chama: ninguém mais as guarda.
-    private static readonly Type[] _conectados = [typeof(DialetoBanco), typeof(LeitorEsquema), typeof(IdentidadeBanco), typeof(DialetoSql)];
+    private static readonly Type[] _conectados = [typeof(DialetoBanco), typeof(LeitorEsquema), typeof(IdentidadeBanco), typeof(DialetoSql), typeof(LeitorDados)];
 
     [Fact]
     public void So_o_envoltorio_chama_o_dialeto_e_guarda_o_banco_conectado()
