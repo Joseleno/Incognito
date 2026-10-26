@@ -84,6 +84,9 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
     /// <summary>As concessões que o bloqueio do destino deu, na ordem.</summary>
     internal List<ConcessaoDoPlanejar> Concessoes { get; } = [];
 
+    /// <summary>Os marcadores que o destino gravou, na ordem.</summary>
+    internal List<(Guid Identificador, DateTimeOffset GravadoEm)> Gravados { get; } = [];
+
     public override string Nome
     {
         get
@@ -304,7 +307,19 @@ internal sealed class ConcessaoDoPlanejar(ProvedorDoPlanejar provedor) : Concess
 internal sealed class MarcadorDoPlanejar(ProvedorDoPlanejar provedor) : MarcadorDestino
 {
     public override Task GravarAsync(Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento) =>
-        provedor.Executar(Operacao.GravarMarcador, destino: true, () => true, cancelamento);
+        provedor.Executar(
+            Operacao.GravarMarcador,
+            destino: true,
+            () =>
+            {
+                lock (provedor.Gravados)
+                {
+                    provedor.Gravados.Add((identificador, gravadoEm));
+                }
+
+                return true;
+            },
+            cancelamento);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

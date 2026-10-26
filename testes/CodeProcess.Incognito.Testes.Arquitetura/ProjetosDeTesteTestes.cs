@@ -553,14 +553,14 @@ public sealed class ProjetosDeTesteTestes
     [Fact]
     public void Cada_arquivo_de_codigos_fica_na_sua_faixa_e_todo_codigo_do_planejar_tem_teste()
     {
-        // As faixas fecham quem pode usar cada código (decisão 86): o núcleo INC1xxx, a configuração INC2xxx, o planejar
-        // INC300x a INC309x nos erros e INC351x a INC359x nos avisos, e cada dialeto a sua; um código fora da faixa do arquivo
-        // seria um dialeto se passando por erro do planejar, ou o contrário.
+        // As faixas fecham quem pode usar cada código: o núcleo INC1xxx, a configuração INC2xxx, o planejar INC300x a
+        // INC309x nos erros, INC360x na proteção do destino e INC351x a INC359x nos avisos, e cada dialeto a sua; um código
+        // fora da faixa do arquivo seria um dialeto se passando por erro do planejar, ou o contrário.
         var faixas = new Dictionary<string, Regex>(StringComparer.Ordinal)
         {
             ["src/CodeProcess.Incognito/"] = new(@"^INC1[0-9]{3}$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.Motor/Configuracao/CodigosConfiguracao.cs"] = new(@"^INC2[0-9]{3}$", RegexOptions.ECMAScript),
-            ["src/CodeProcess.Incognito.Motor/Interno/CodigosPlanejar.cs"] = new(@"^INC30[0-9]{2}$|^INC35[1-9][0-9]$", RegexOptions.ECMAScript),
+            ["src/CodeProcess.Incognito.Motor/Interno/CodigosPlanejar.cs"] = new(@"^INC30[0-9]{2}$|^INC360[0-9]$|^INC35[1-9][0-9]$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.PostgreSql/CodigosPostgreSql.cs"] = new(@"^INC31[0-9]{2}$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.Motor/Interno/CodigosExecucao.cs"] = new(@"^INC4[0-9]{3}$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.SqlServer/"] = new(@"^INC32[0-9]{2}$", RegexOptions.ECMAScript),

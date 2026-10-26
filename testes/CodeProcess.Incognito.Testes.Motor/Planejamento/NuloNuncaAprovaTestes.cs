@@ -54,6 +54,8 @@ public sealed class NuloNuncaAprovaTestes
         ["EsquemaBanco.Acesso"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.Acesso), nulo ? null : Coerente().Acesso))), new("INC3062", null, null, null)),
         ["EsquemaBanco.ObjetosNoEsquemaReservado"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.ObjetosNoEsquemaReservado), nulo ? null : Array.Empty<NomeObjeto>()))), new("INC3073", null, null, null)),
         ["EsquemaBanco.Propriedades"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.Propriedades), nulo ? null : Coerente().Propriedades))), new("INC3082", null, null, null)),
+        // O nulo na origem é o pior caso, um destino preparado; no destino, ele só avisa no planejar (INC3583).
+        ["IdentidadeLida.Marcador"] = new("", nulo => new(Coerente(), Coerente(), Cifrado(true, true), MarcadorDaOrigemNulo: nulo), new("INC3602", null, null, null)),
         ["IdentidadeLida.Transporte"] = new("", nulo => new(Coerente(), Coerente(), nulo ? null : Cifrado(true, true)), new("INC3560", null, null, null)),
         ["ObjetoResidual.DependenciasIncompletas"] = new("", nulo => new(Coerente(), ComResidual(Visao(dependenciasIncompletas: nulo ? null : false, populada: true), podeLimpar: true)), new("INC3570", null, null, "mv_clientes")),
         ["ObjetoResidual.Populada"] = new("", nulo => new(Coerente(), ComResidual(Visao(dependenciasIncompletas: false, populada: nulo ? null : false), podeLimpar: false)), new("INC3070", null, null, "mv_clientes")),
@@ -79,7 +81,6 @@ public sealed class NuloNuncaAprovaTestes
     {
         ["PermissoesBanco.PodeCriarEsquema"] = "só o preparar-destino cria o esquema do diário (INC-035 e INC-036)",
         ["PermissoesBanco.PodeMarcarBanco"] = "só o preparar-destino marca o banco (INC-035)",
-        ["IdentidadeLida.Marcador"] = "a proteção do destino e o planejar recusam o nulo como pior caso no INC-035 PR 2, que traz o consumidor",
         ["TabelaEsquema.Extensao"] = "só para mensagem: a tabela adotada por extensão é classificada e copiada como as outras (relatório, INC-041)",
         ["ColunaEsquema.TipoBase"] = "só para mensagem e relatório: a semântica da coluna já vem pelo fim da cadeia de domínios (relatório, INC-041)",
     };
@@ -177,7 +178,7 @@ public sealed class NuloNuncaAprovaTestes
         {
             Identidades = destino => destino
                 ? BancoFalso.Clonar(Identidade("loja_homolog"), (nameof(IdentidadeLida.Transporte), leitura.TransporteDoDestino))
-                : Identidade("loja"),
+                : BancoFalso.Clonar(Identidade("loja"), (nameof(IdentidadeLida.Marcador), leitura.MarcadorDaOrigemNulo ? null : Ausente)),
         };
         try
         {
@@ -261,8 +262,8 @@ public sealed class NuloNuncaAprovaTestes
     /// <summary>Um cenário em que o campo é lido: o plano com ele no valor otimista e com ele nulo, e o item que o nulo produz.</summary>
     private sealed record Cenario(string Yaml, Func<bool, Leitura> Montar, Item Esperado, RegistroTransformadores? Registro = null);
 
-    /// <summary>As leituras de um cenário: os dois esquemas e o transporte do destino.</summary>
-    private sealed record Leitura(EsquemaBanco Origem, EsquemaBanco Destino, TransporteConexao? TransporteDoDestino)
+    /// <summary>As leituras de um cenário: os dois esquemas, o transporte do destino e se o marcador da origem é nulo.</summary>
+    private sealed record Leitura(EsquemaBanco Origem, EsquemaBanco Destino, TransporteConexao? TransporteDoDestino, bool MarcadorDaOrigemNulo = false)
     {
         internal Leitura(EsquemaBanco origem, EsquemaBanco destino)
             : this(origem, destino, Cifrado(true, true))

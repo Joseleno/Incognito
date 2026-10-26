@@ -435,6 +435,9 @@ internal sealed partial class MontagemDoPlano
 
         AvisarTransporte(_origem.Identidade.Transporte, "com a origem");
         AvisarTransporte(_destino.Identidade.Transporte, "com o destino");
+
+        // O marcador, o banco esperado e a linhagem: o destino ainda sem marcador só avisa aqui.
+        ConferenciaDoDestino.Conferir(_origem.Identidade, _destino.Identidade, _configuracao.Destino.BancoEsperado, exigirMarcador: false, _coletor);
     }
 
     private PropriedadesBanco? LerPropriedades(EsquemaBanco esquema, string lado)
