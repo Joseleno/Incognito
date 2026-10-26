@@ -80,12 +80,23 @@ internal static class EsquemaSintetico
         ChavesEstrangeiras = [new ChaveEstrangeira { Nome = "fk_pedidos_clientes", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true }],
     };
 
+    // A origem (loja) sem marcador e o destino com ele, em servidores e linhagens diferentes: nada a avisar.
     internal static IdentidadeLida Identidade(string banco) => new()
     {
         Banco = banco,
-        Servidor = "servidor-sintetico",
-        Linhagem = new Dictionary<string, string> { ["identificador"] = banco == "loja" ? "1" : "2" },
+        Servidor = banco == "loja" ? "origem-sintetica:5432" : "destino-sintetico:5432",
+        Linhagem = new Dictionary<string, string> { ["identificador"] = banco == "loja" ? "1" : "2", ["banco"] = "16384" },
         Transporte = new TransporteConexao { Cifrado = true, ServidorVerificado = true, Local = false },
+        Marcador = banco == "loja" ? Ausente : Marcado,
+    };
+
+    internal static MarcadorLido Ausente { get; } = new() { Situacao = SituacaoMarcador.Ausente };
+
+    internal static MarcadorLido Marcado { get; } = new()
+    {
+        Situacao = SituacaoMarcador.Valido,
+        Identificador = new Guid("6f1c2a4e-9b3d-4c8a-a1e5-0d7f3b2c9e14"),
+        GravadoEm = new DateTimeOffset(2026, 10, 26, 12, 0, 0, TimeSpan.Zero),
     };
 
     internal static NomeObjeto Nome(string nome) => new("loja", nome);

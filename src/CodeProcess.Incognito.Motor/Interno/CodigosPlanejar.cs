@@ -2,8 +2,9 @@ namespace CodeProcess.Incognito.Interno;
 
 /// <summary>
 /// Códigos do <c>planejar</c>, dentro de <c>INC3xxx</c> (planejar e destino): <c>INC300x</c> para a infraestrutura,
-/// <c>INC301x</c> a <c>INC309x</c> para os erros por área (<c>INC309x</c>, o <c>id.permutar</c>) e <c>INC351x</c> a <c>INC359x</c> para os avisos. A saída sai do tipo da exceção, nunca do código. Um código nunca é reutilizado nem renumerado; cada um entra
-/// aqui quando a verificação que o usa é implementada.
+/// <c>INC301x</c> a <c>INC309x</c> para os erros por área (<c>INC309x</c>, o <c>id.permutar</c>), <c>INC360x</c> para a
+/// proteção do destino e <c>INC351x</c> a <c>INC359x</c> para os avisos. A saída sai do tipo da exceção, nunca do código. Um
+/// código nunca é reutilizado nem renumerado; cada um entra aqui quando a verificação que o usa é implementada.
 /// </summary>
 internal static class CodigosPlanejar
 {
@@ -21,6 +22,9 @@ internal static class CodigosPlanejar
 
     /// <summary>Não há dialeto para o provedor da configuração, ou o dialeto tem outro nome (saída 2).</summary>
     internal const string DialetoAusente = "INC3003";
+
+    /// <summary>Outra execução tem o bloqueio do destino (saída 1, <c>BloqueioDestinoException</c>).</summary>
+    internal const string DestinoOcupado = "INC3004";
 
     /// <summary>Tabela escrita na configuração que não existe em nenhum dos bancos (saída 2).</summary>
     internal const string TabelaInexistente = "INC3010";
@@ -204,6 +208,30 @@ internal static class CodigosPlanejar
     /// </summary>
     internal const string ForaDoDominio = "INC3092";
 
+    /// <summary>O destino não tem o marcador do Incognito, ou o dialeto não informa (saída 2).</summary>
+    internal const string DestinoSemMarcador = "INC3600";
+
+    /// <summary>O marcador do Incognito não se lê num dos lados (saída 2).</summary>
+    internal const string MarcadorIlegivel = "INC3601";
+
+    /// <summary>A origem tem o marcador do Incognito, ou o dialeto não informa (saída 2).</summary>
+    internal const string OrigemMarcada = "INC3602";
+
+    /// <summary>O banco conectado no destino não é o <c>bancoEsperado</c> (saída 2).</summary>
+    internal const string BancoInesperado = "INC3603";
+
+    /// <summary>Tabela <c>ignorar</c> com linhas no destino, sem aceitar os dados existentes (saída 2).</summary>
+    internal const string IgnoradaComLinhas = "INC3604";
+
+    /// <summary>
+    /// O <c>preparar-destino</c> num banco com um comentário que não é marcador válido do Incognito, ou cujo marcador o
+    /// dialeto não informa (saída 2).
+    /// </summary>
+    internal const string ComentarioAlheio = "INC3605";
+
+    /// <summary>O <c>preparar-destino</c> num destino que é o próprio banco da origem (saída 2).</summary>
+    internal const string DestinoIgualAOrigem = "INC3606";
+
     /// <summary>Aviso: outro objeto difere de um nome resolvido só pela caixa.</summary>
     internal const string NomeQuaseIgual = "INC3510";
 
@@ -278,6 +306,12 @@ internal static class CodigosPlanejar
 
     /// <summary>Aviso: o destino guarda bytes sem codificação declarada, e a origem tem codificação.</summary>
     internal const string DestinoSemCodificacao = "INC3581";
+
+    /// <summary>Aviso: a origem e o destino têm a mesma linhagem, ou estão no mesmo endereço.</summary>
+    internal const string MesmaLinhagem = "INC3582";
+
+    /// <summary>Aviso: o destino ainda não tem o marcador do Incognito, no <c>planejar</c>.</summary>
+    internal const string DestinoAindaSemMarcador = "INC3583";
 
     /// <summary>Aviso: há versão mais nova do transformador registrada.</summary>
     internal const string VersaoMaisNova = "INC3590";
