@@ -244,3 +244,30 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   `integer` ou `bigint`, também por domínio), com `row_security = off`. Na suíte, um fato confere o caso comum, a coluna
   sem valor, a coluna só com negativos, a particionada, a mãe de herança e a recusa de uma coluna de texto sem o texto das
   linhas.
+- 2026-10-24: o destino ganha a proteção dele no contrato. A parte de dados da origem passa a se
+  chamar `LeitorDadosOrigem`, e o destino ganha três partes:
+  - `DialetoDestino.Bloqueio` (`BloqueioExecucao`, `TentarAdquirirAsync`), o bloqueio exclusivo de execução, que devolve
+    uma `ConcessaoBloqueio` (abstrata, com o ciclo de vida na base: o descarte libera uma vez e nunca lança; o token
+    `Perdido` marca a queda; `ConferirAsync` é o batimento);
+  - `DialetoDestino.Marcador` (`MarcadorDestino`, `GravarAsync`), a gravação do marcador do Incognito, que nunca
+    sobrescreve um comentário do banco; a leitura vem nos dois lados pela identidade (`IdentidadeLida.Marcador`, com a
+    situação `Ausente`, `Valido`, `Invalido` ou `Alheio`, e o texto de um comentário alheio nunca chega ao modelo);
+  - `DialetoDestino.Dados` (`LeitorDadosDestino`, `TemLinhasAsync`), se uma tabela do destino tem linha, como a cópia a
+    trataria, sem ler valor.
+
+  **Mudança do item 5:** o bloqueio vive numa **conexão dedicada**, sem pool, do mesmo servidor e banco da conexão de
+  controle (conferido na aquisição, numa primária), e não na conexão de controle, como este item dizia: a concessão
+  precisa sobreviver às transações e ao DDL da conexão de controle, e a queda dela precisa ser percebida sem derrubar
+  outra operação. A gravação do marcador e a existência de linhas usam a conexão de controle, em transação. O motor
+  traduz a identidade, a gravação, a existência de linhas e o bloqueio só com o código ou o tipo (o comentário do banco e
+  o destino restaurado podem ter dado real); a concessão volta protegida, e a perda sai como `INC4001` (saída 1), nunca
+  como cancelamento do chamador. No PostgreSQL: `pg_try_advisory_lock(int4, int4)` de sessão com a chave do Incognito
+  (positiva, documentada), com os keepalives TCP da sessão dedicada em minutos e um batimento com tempo-limite curto,
+  repetido por um temporizador; o marcador em `COMMENT ON DATABASE` (só o dono do banco; não segue `CREATE DATABASE ...
+  TEMPLATE` nem `pg_dump` sem `--create`), classificado no servidor; `SELECT EXISTS (SELECT FROM [ONLY] tabela)`, a
+  segunda consulta permitida sobre tabela do usuário, com `row_security = off` e `lock_timeout`. Na suíte, fatos para o
+  marcador (ausente, gravado e relido por outra instância, lido na origem, alheio e inválido nunca saem nem são
+  sobrescritos), para o bloqueio (exclusivo entre instâncias e liberado na hora, pedido duplo recusado, persistente
+  enquanto o destino trabalha, queda percebida, liberado no descarte do destino) e para a existência de linhas, cada um
+  derrubado por um defeito do falso; a fixture ganha os ganchos para reconectar o destino, comentar o banco como
+  administrador e derrubar a conexão do bloqueio.

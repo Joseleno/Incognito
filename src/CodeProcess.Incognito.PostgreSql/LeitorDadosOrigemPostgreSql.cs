@@ -15,7 +15,7 @@ namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 /// mensagem do servidor. A particionada é lida pela raiz (com as partições); as outras com <c>ONLY</c>, sem as herdeiras,
 /// como a cópia lê. O valor nunca entra em exceção nem mensagem do dialeto.
 /// </remarks>
-internal sealed class LeitorDadosPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorDados
+internal sealed class LeitorDadosOrigemPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorDadosOrigem
 {
     // O tipo base pela cadeia de domínios, e a forma da tabela; nada se lê se a tabela ou a coluna não existem.
     private const string ConsultaColuna = """

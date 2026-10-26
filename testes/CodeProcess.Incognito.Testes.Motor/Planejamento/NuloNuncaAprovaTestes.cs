@@ -79,6 +79,7 @@ public sealed class NuloNuncaAprovaTestes
     {
         ["PermissoesBanco.PodeCriarEsquema"] = "só o preparar-destino cria o esquema do diário (INC-035 e INC-036)",
         ["PermissoesBanco.PodeMarcarBanco"] = "só o preparar-destino marca o banco (INC-035)",
+        ["IdentidadeLida.Marcador"] = "a proteção do destino e o planejar recusam o nulo como pior caso no INC-035 PR 2, que traz o consumidor",
         ["TabelaEsquema.Extensao"] = "só para mensagem: a tabela adotada por extensão é classificada e copiada como as outras (relatório, INC-041)",
         ["ColunaEsquema.TipoBase"] = "só para mensagem e relatório: a semântica da coluna já vem pelo fim da cadeia de domínios (relatório, INC-041)",
     };
@@ -91,6 +92,8 @@ public sealed class NuloNuncaAprovaTestes
         ["IndiceUnico.Predicado"] = "nulo se o índice não é parcial",
         ["IndiceUnico.ReferenciasDasExpressoes"] = "nulo se o índice não tem elemento de expressão",
         ["LimiteComprimento.Valor"] = "nulo se o tipo não declara limite",
+        ["MarcadorLido.GravadoEm"] = "só no válido",
+        ["MarcadorLido.Identificador"] = "só no válido",
         ["TabelaEsquema.ChaveParticao"] = "A chave de partição de uma particionada, também da partição intermediária (que é particionada); nula nas outras",
         ["TabelaEsquema.Historico"] = "O histórico de uma temporal; nulo nas outras",
         ["TabelaEsquema.Pai"] = "A particionada de uma partição, ou a mãe de uma herdeira; nulo nas outras",

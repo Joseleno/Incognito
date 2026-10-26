@@ -39,11 +39,13 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     // O modo de TLS e o servidor depois do que o Incognito impõe: o transporte sai deles.
     private readonly SslMode _modo;
     private readonly string _servidor;
+    private readonly bool _origem;
 
-    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, int versao, RegraDosNomes nomes, SslMode modo, string servidor)
+    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, bool origem, int versao, RegraDosNomes nomes, SslMode modo, string servidor)
     {
         _fonte = fonte;
         _conexao = conexao;
+        _origem = origem;
         Versao = versao;
         Nomes = nomes;
         _modo = modo;
@@ -88,7 +90,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
             }
 
             var (versao, nomes) = await ConferirAsync(conexao, origem, cancelamento).ConfigureAwait(false);
-            return new ConexaoPostgreSql(fonte, conexao, versao, nomes, construtor.SslMode, construtor.Host!);
+            return new ConexaoPostgreSql(fonte, conexao, origem, versao, nomes, construtor.SslMode, construtor.Host!);
         }
         catch
         {
@@ -161,6 +163,76 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     /// <param name="cifradaNoServidor">Se o servidor diz que a sessão está cifrada; nulo se não diz.</param>
     /// <returns>O transporte.</returns>
     internal TransporteConexao Transporte(bool? cifradaNoServidor) => Transporte(_modo, _servidor, cifradaNoServidor);
+
+    /// <summary>
+    /// Abre outra conexão física pela mesma fonte (sem pool, com o mesmo registro e rastreamento desligados e as mesmas
+    /// opções impostas), conferida como a de controle, e confere que ela chegou ao mesmo banco: o mesmo cluster, oid,
+    /// endereço e porta, numa primária. O chamador a descarta.
+    /// </summary>
+    /// <param name="cancelamento">Cancela a abertura.</param>
+    /// <returns>A conexão aberta.</returns>
+    /// <exception cref="IncognitoException">Sessão divergente, ou outro banco, servidor ou uma réplica.</exception>
+    internal async Task<NpgsqlConnection> AbrirOutraAsync(CancellationToken cancelamento)
+    {
+        var outra = await _fonte.OpenConnectionAsync(cancelamento).ConfigureAwait(false);
+        try
+        {
+            await ConferirAsync(outra, _origem, cancelamento).ConfigureAwait(false);
+            var (desta, primaria) = await ImpressaoAsync(_conexao, cancelamento).ConfigureAwait(false);
+            var (daOutra, outraPrimaria) = await ImpressaoAsync(outra, cancelamento).ConfigureAwait(false);
+            if (desta != daOutra || !primaria || !outraPrimaria)
+            {
+                throw new IncognitoException(
+                    CodigosPostgreSql.BloqueioEmOutroBanco,
+                    "A conexão do bloqueio não chegou ao mesmo banco da conexão de controle, ou o banco é uma réplica: o bloqueio não protegeria o destino.");
+            }
+
+            return outra;
+        }
+        catch
+        {
+            await outra.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    // O banco de uma conexão: o oid, o endereço e a porta do servidor e, quando o login lê, o cluster; e se é primária.
+    private static async Task<(string Impressao, bool Primaria)> ImpressaoAsync(NpgsqlConnection conexao, CancellationToken cancelamento)
+    {
+        await using var comando = new NpgsqlCommand(
+            """
+            SELECT d.oid, pg_catalog.host(pg_catalog.inet_server_addr()), pg_catalog.inet_server_port(),
+                   pg_catalog.has_function_privilege('pg_catalog.pg_control_system()', 'EXECUTE'),
+                   NOT pg_catalog.pg_is_in_recovery()
+            FROM pg_catalog.pg_database d
+            WHERE d.datname = pg_catalog.current_database()
+            """,
+            conexao);
+        string impressao;
+        bool primaria;
+        bool podeLerSistema;
+        await using (var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false))
+        {
+            await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
+            impressao = string.Join(
+                '|',
+                leitor.GetFieldValue<uint>(0).ToString(CultureInfo.InvariantCulture),
+                leitor.IsDBNull(1) ? "" : leitor.GetString(1),
+                leitor.IsDBNull(2) ? "" : leitor.GetInt32(2).ToString(CultureInfo.InvariantCulture));
+            (podeLerSistema, primaria) = (leitor.GetBoolean(3), leitor.GetBoolean(4));
+        }
+
+        if (podeLerSistema)
+        {
+            await using var sistema = new NpgsqlCommand("SELECT system_identifier FROM pg_catalog.pg_control_system()", conexao);
+            if (await sistema.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is long identificador)
+            {
+                impressao += "|" + identificador.ToString(CultureInfo.InvariantCulture);
+            }
+        }
+
+        return (impressao, primaria);
+    }
 
     /// <summary>Fecha a conexão e a fonte.</summary>
     /// <returns>A tarefa.</returns>

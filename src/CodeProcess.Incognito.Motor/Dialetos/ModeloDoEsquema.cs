@@ -623,6 +623,46 @@ public sealed class IdentidadeLida
 
     /// <summary>Como a conexão chega ao servidor; nulo se o dialeto não informa (o pior caso: em claro, remoto).</summary>
     public TransporteConexao? Transporte { get; init; }
+
+    /// <summary>
+    /// O marcador do Incognito no banco: o destino precisa dele, e a origem com ele é recusada. Nulo se o dialeto
+    /// não informa, o pior caso nos dois lados.
+    /// </summary>
+    public MarcadorLido? Marcador { get; init; }
+}
+
+/// <summary>O que o banco tem no lugar do marcador do Incognito.</summary>
+[Experimental(ContratoExperimental.Diagnostico)]
+public enum SituacaoMarcador
+{
+    /// <summary>Nada: o banco não tem o comentário (ou a propriedade) em que o marcador fica.</summary>
+    Ausente = 0,
+
+    /// <summary>Um marcador do Incognito que se lê inteiro: a versão, o identificador e a data.</summary>
+    Valido = 1,
+
+    /// <summary>Começa como um marcador do Incognito, mas não se lê (versão desconhecida, identificador ou data malformados).</summary>
+    Invalido = 2,
+
+    /// <summary>Um comentário que não é do Incognito: o texto dele nunca sai do dialeto.</summary>
+    Alheio = 3,
+}
+
+/// <summary>
+/// O marcador lido. Só o válido traz o identificador e a data; o texto de um comentário alheio ou de um marcador ilegível
+/// nunca chega aqui (é texto de quem administra o banco, que pode ter qualquer coisa).
+/// </summary>
+[Experimental(ContratoExperimental.Diagnostico)]
+public sealed class MarcadorLido
+{
+    /// <summary>O que o banco tem.</summary>
+    public required SituacaoMarcador Situacao { get; init; }
+
+    /// <summary>O identificador aleatório gravado pelo <c>preparar-destino</c>; só no válido.</summary>
+    public Guid? Identificador { get; init; }
+
+    /// <summary>Quando o marcador foi gravado, em UTC e em segundos; só no válido.</summary>
+    public DateTimeOffset? GravadoEm { get; init; }
 }
 
 /// <summary>

@@ -98,6 +98,13 @@ public sealed class EsquemaDeConformidade
     /// recusa sem trazer o valor.
     /// </summary>
     public required MaioresValoresEsperados MaioresValores { get; init; }
+
+    /// <summary>
+    /// As tabelas do destino para a existência de linhas, como a cópia lê: uma com linha, uma vazia, a raiz de uma
+    /// particionada com linhas só nas partições (tem), a mãe de herança clássica com linha só na herdeira (não tem) e uma
+    /// tabela com a segurança por linha forçada para o dono (a leitura falha, nunca esconde linhas).
+    /// </summary>
+    public required LinhasNoDestino Linhas { get; init; }
 }
 
 /// <summary>O inventário do esquema de conformidade.</summary>
@@ -629,4 +636,36 @@ public sealed class MaioresValoresEsperados
 
     /// <summary>Uma coluna de texto com um sentinela nas linhas.</summary>
     public required ReferenciaColuna ColunaDeTexto { get; init; }
+}
+
+/// <summary>Os casos da existência de linhas no destino (<see cref="EsquemaDeConformidade.Linhas"/>).</summary>
+public sealed class LinhasNoDestino
+{
+    /// <summary>Uma tabela comum com linha.</summary>
+    public required NomeObjeto ComLinha { get; init; }
+
+    /// <summary>Uma tabela comum sem linha.</summary>
+    public required NomeObjeto Vazia { get; init; }
+
+    /// <summary>A raiz de uma particionada, com linhas só nas partições: tem linha.</summary>
+    public required Caso<NomeObjeto> Particionada { get; init; }
+
+    /// <summary>A mãe de herança clássica, com linha só numa herdeira: não tem (a cópia a lê sem as herdeiras).</summary>
+    public required Caso<NomeObjeto> MaeComLinhaSoNaHerdeira { get; init; }
+
+    /// <summary>Uma tabela com a segurança por linha que vale para o dono do destino: a leitura falha.</summary>
+    public required Caso<NomeObjeto> ComSegurancaPorLinha { get; init; }
+}
+
+/// <summary>O que a fixture grava, como administrador, no lugar do marcador de um banco do par.</summary>
+public enum ComentarioDoBanco
+{
+    /// <summary>Um comentário que não é do Incognito, com o sentinela.</summary>
+    Alheio,
+
+    /// <summary>O prefixo do marcador do Incognito seguido do sentinela: não se lê.</summary>
+    Invalido,
+
+    /// <summary>Um marcador válido, com o identificador e a data dados.</summary>
+    Valido,
 }

@@ -430,6 +430,218 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_existencia_de_linhas_e_lida_como_a_copia_le()
+    {
+        // Pelo destino, como o dono o lê. A segurança por linha que vale para o dono faz a leitura falhar, nunca esconder.
+        var linhas = Esperado.Linhas;
+        var cancelamento = TestContext.Current.CancellationToken;
+        (NomeObjeto Tabela, bool Tem, string Caso)[] casos =
+        [
+            (linhas.ComLinha, true, "com linha"),
+            (linhas.Vazia, false, "vazia"),
+            .. linhas.Particionada.Existe ? [(linhas.Particionada.Valor, true, "particionada com linhas só nas partições")] : Array.Empty<(NomeObjeto, bool, string)>(),
+            .. linhas.MaeComLinhaSoNaHerdeira.Existe ? [(linhas.MaeComLinhaSoNaHerdeira.Valor, false, "mãe com linha só na herdeira")] : Array.Empty<(NomeObjeto, bool, string)>(),
+        ];
+
+        foreach (var (tabela, tem, caso) in casos)
+        {
+            var lida = await Par.Destino.Dados.TemLinhasAsync(tabela, cancelamento);
+            Assert.True(lida == tem, $"Linhas: {tabela} ({caso}) lida {(lida ? "com" : "sem")} linha, esperada {(tem ? "com" : "sem")}.");
+        }
+
+        if (linhas.ComSegurancaPorLinha.Existe)
+        {
+            var tabela = linhas.ComSegurancaPorLinha.Valor;
+            var excecao = await Record.ExceptionAsync(() => Par.Destino.Dados.TemLinhasAsync(tabela, cancelamento));
+            Assert.True(excecao is not null, $"Linhas: {tabela}, com a segurança por linha para o dono, foi lida em vez de falhar.");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_marcador_ausente_e_lido_nos_dois_lados()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        foreach (var (lado, dialeto) in new (string, DialetoBanco)[] { ("origem", Par.Origem), ("destino", Par.Destino) })
+        {
+            var marcador = (await dialeto.Identidade.LerAsync(cancelamento)).Marcador;
+            Assert.True(marcador?.Situacao == SituacaoMarcador.Ausente, $"Marcador: o banco novo da {lado} lido como {Situacao(marcador)}, esperado ausente.");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_marcador_gravado_e_relido_por_outra_instancia()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var identificador = Guid.NewGuid();
+        var gravadoEm = AgoraEmSegundos();
+        await Par.Destino.Marcador.GravarAsync(identificador, gravadoEm, cancelamento);
+
+        var relido = (await Par.Destino.Identidade.LerAsync(cancelamento)).Marcador;
+        await using var outro = await fixture.ConectarOutroDestinoAsync(Par, cancelamento);
+        var persistido = (await outro.Identidade.LerAsync(cancelamento)).Marcador;
+
+        Assert.True(Igual(relido, identificador, gravadoEm), $"Marcador: relido na mesma instância como {Situacao(relido)}, diferente do gravado.");
+        Assert.True(Igual(persistido, identificador, gravadoEm), $"Marcador: relido por outra instância como {Situacao(persistido)}, diferente do gravado.");
+        var deNovo = await Record.ExceptionAsync(() => Par.Destino.Marcador.GravarAsync(Guid.NewGuid(), gravadoEm, cancelamento));
+        Assert.True(deNovo is DialetoRecusouException, $"Marcador: a segunda gravação sobre um marcador {(deNovo is null ? "passou" : $"lançou {deNovo.GetType().Name}")}, e não foi recusada.");
+        Assert.True(Igual((await outro.Identidade.LerAsync(cancelamento)).Marcador, identificador, gravadoEm), "Marcador: a segunda gravação recusada trocou o marcador.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_origem_le_o_marcador()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var identificador = Guid.NewGuid();
+        var gravadoEm = AgoraEmSegundos();
+        await fixture.ComentarAsync(Par, destino: false, ComentarioDoBanco.Valido, "", identificador, gravadoEm, cancelamento);
+
+        var lido = (await Par.Origem.Identidade.LerAsync(cancelamento)).Marcador;
+
+        Assert.True(Igual(lido, identificador, gravadoEm), $"Marcador: a origem marcada lida como {Situacao(lido)}, esperado o marcador gravado.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos()
+    {
+        // O texto de quem administra o banco pode ter qualquer coisa: nem a identidade nem a recusa da gravação o trazem, e
+        // a gravação nunca o sobrescreve.
+        var cancelamento = TestContext.Current.CancellationToken;
+        foreach (var (comentario, esperada) in new[] { (ComentarioDoBanco.Alheio, SituacaoMarcador.Alheio), (ComentarioDoBanco.Invalido, SituacaoMarcador.Invalido) })
+        {
+            var sentinela = "Comentario" + Guid.NewGuid().ToString("N")[..12] + "Q";
+            await fixture.ComentarAsync(Par, destino: true, comentario, sentinela, Guid.Empty, default, cancelamento);
+            await fixture.ComentarAsync(Par, destino: false, comentario, sentinela, Guid.Empty, default, cancelamento);
+            var textos = new List<string>();
+            foreach (var (lado, dialeto) in new (string, DialetoBanco)[] { ("origem", Par.Origem), ("destino", Par.Destino) })
+            {
+                var identidade = await dialeto.Identidade.LerAsync(cancelamento);
+                Assert.True(identidade.Marcador?.Situacao == esperada, $"Marcador: o comentário {esperada} da {lado} lido como {Situacao(identidade.Marcador)}.");
+                textos.AddRange([identidade.Banco, identidade.Servidor, .. identidade.Linhagem.Keys, .. identidade.Linhagem.Values]);
+            }
+
+            var recusa = await Record.ExceptionAsync(() => Par.Destino.Marcador.GravarAsync(Guid.NewGuid(), AgoraEmSegundos(), cancelamento));
+            Assert.True(recusa is DialetoRecusouException, $"Marcador: a gravação sobre o comentário {esperada} {(recusa is null ? "passou" : $"lançou {recusa.GetType().Name}")}, e não foi recusada.");
+            textos.Add(recusa!.ToString());
+            Assert.True(
+                (await Par.Destino.Identidade.LerAsync(cancelamento)).Marcador?.Situacao == esperada,
+                $"Marcador: a gravação recusada sobrescreveu o comentário {esperada}.");
+            Assert.True(!textos.Any(texto => texto.Contains(sentinela, StringComparison.OrdinalIgnoreCase)), $"Marcador: o texto do comentário {esperada} saiu do dialeto.");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_bloqueio_e_exclusivo_entre_instancias_e_liberado_explicitamente()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        await using var outro = await fixture.ConectarOutroDestinoAsync(Par, cancelamento);
+        var concessao = await Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(concessao is not null, "Bloqueio: o destino novo não adquiriu o bloqueio livre.");
+
+        var segunda = await outro.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(segunda is null, "Bloqueio: outra instância adquiriu o bloqueio que a primeira tem.");
+
+        await concessao.DisposeAsync();
+        Assert.False(concessao.Perdido.IsCancellationRequested, "Bloqueio: a liberação voluntária marcou a perda.");
+        await using var depois = await outro.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(depois is not null, "Bloqueio: outra instância não adquiriu o bloqueio logo depois da liberação.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_pedido_duplo_na_mesma_instancia_e_recusado()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var concessao = await Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(concessao is not null, "Bloqueio: o destino novo não adquiriu o bloqueio livre.");
+        await using (concessao)
+        {
+            var duplo = await Record.ExceptionAsync(() => Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento));
+            Assert.True(duplo is InvalidOperationException, $"Bloqueio: o segundo pedido na mesma instância {(duplo is null ? "passou" : $"lançou {duplo.GetType().Name}")}, e não InvalidOperationException.");
+        }
+
+        await using var depois = await Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(depois is not null, "Bloqueio: a mesma instância não adquiriu de novo depois de liberar.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_bloqueio_persiste_enquanto_o_destino_trabalha()
+    {
+        // A conexão de controle lê e abre transações com a concessão viva: o bloqueio não se solta com elas.
+        var cancelamento = TestContext.Current.CancellationToken;
+        await using var outro = await fixture.ConectarOutroDestinoAsync(Par, cancelamento);
+        var concessao = await Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(concessao is not null, "Bloqueio: o destino novo não adquiriu o bloqueio livre.");
+        await using (concessao)
+        {
+            await Par.Destino.Esquema.LerAsync(cancelamento);
+            await Par.Destino.Identidade.LerAsync(cancelamento);
+            await Par.Destino.Dados.TemLinhasAsync(Esperado.Linhas.ComLinha, cancelamento);
+
+            Assert.True(await outro.Bloqueio.TentarAdquirirAsync(cancelamento) is null, "Bloqueio: outra instância adquiriu o bloqueio depois de o destino ler e abrir transações.");
+            var batimento = await Record.ExceptionAsync(() => concessao.ConferirAsync(cancelamento));
+            Assert.True(batimento is null, $"Bloqueio: o batimento falhou ({batimento?.GetType().Name}) depois de o destino ler e abrir transações.");
+            Assert.False(concessao.Perdido.IsCancellationRequested, "Bloqueio: a concessão viva marcou a perda sem queda.");
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task A_queda_do_bloqueio_e_percebida()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        var concessao = await Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(concessao is not null, "Bloqueio: o destino novo não adquiriu o bloqueio livre.");
+        await using (concessao)
+        {
+            await fixture.DerrubarBloqueioAsync(Par, cancelamento);
+
+            var batimento = await Record.ExceptionAsync(() => concessao.ConferirAsync(cancelamento));
+            Assert.True(batimento is not null, "Bloqueio: o batimento passou depois da queda da conexão do bloqueio.");
+            Assert.True(concessao.Perdido.IsCancellationRequested, "Bloqueio: a queda da conexão do bloqueio não marcou a perda.");
+        }
+
+        await using var outro = await fixture.ConectarOutroDestinoAsync(Par, cancelamento);
+        await using var depois = await outro.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(depois is not null, "Bloqueio: o bloqueio ficou preso depois da queda.");
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task Descartar_o_destino_libera_a_concessao_viva()
+    {
+        var cancelamento = TestContext.Current.CancellationToken;
+        await using var outro = await fixture.ConectarOutroDestinoAsync(Par, cancelamento);
+        var concessao = await Par.Destino.Bloqueio.TentarAdquirirAsync(cancelamento);
+        Assert.True(concessao is not null, "Bloqueio: o destino novo não adquiriu o bloqueio livre.");
+
+        await Par.Destino.DisposeAsync();
+        await using (concessao)
+        {
+            await using var depois = await outro.Bloqueio.TentarAdquirirAsync(cancelamento);
+            Assert.True(depois is not null, "Bloqueio: descartar o destino com a concessão viva não liberou o bloqueio.");
+        }
+    }
+
+    // Agora, em UTC e em segundos: a forma que o marcador guarda.
+    private static DateTimeOffset AgoraEmSegundos()
+    {
+        var agora = DateTimeOffset.UtcNow;
+        return new DateTimeOffset(agora.Ticks - (agora.Ticks % TimeSpan.TicksPerSecond), TimeSpan.Zero);
+    }
+
+    private static bool Igual(MarcadorLido? marcador, Guid identificador, DateTimeOffset gravadoEm) =>
+        marcador is { Situacao: SituacaoMarcador.Valido } && marcador.Identificador == identificador && marcador.GravadoEm == gravadoEm;
+
+    private static string Situacao(MarcadorLido? marcador) => marcador?.Situacao.ToString() ?? "não informado";
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_mascara_e_apontada()
     {
         var mascaradas = (await LerOrigemAsync()).Tabelas

@@ -8,9 +8,11 @@ namespace CodeProcess.Incognito.Dialetos;
 /// </summary>
 /// <remarks>
 /// <para>
-/// As partes de metadados (<see cref="Esquema"/>, <see cref="Identidade"/>) e a leitura agregada da origem
-/// (<see cref="DialetoOrigem.Dados"/>) usam a conexão de controle e não são chamadas em paralelo; as operações que leem ou
-/// gravam linhas, quando entrarem no contrato, abrem as próprias conexões.
+/// As partes de metadados (<see cref="Esquema"/>, <see cref="Identidade"/>), a leitura agregada da origem
+/// (<see cref="DialetoOrigem.Dados"/>), a gravação do marcador e a leitura de existência do destino
+/// (<see cref="DialetoDestino.Marcador"/>, <see cref="DialetoDestino.Dados"/>) usam a conexão de controle e não são
+/// chamadas em paralelo; o bloqueio de execução (<see cref="DialetoDestino.Bloqueio"/>) vive numa conexão dedicada; as
+/// operações que leem ou gravam linhas, quando entrarem no contrato, abrem as próprias conexões.
 /// </para>
 /// <para>
 /// O motor traduz toda exceção do dialeto: uma <see cref="DialetoRecusouException"/> vira erro do plano (saída 2); uma
@@ -67,14 +69,22 @@ public abstract class DialetoBanco : IAsyncDisposable
 public abstract class DialetoOrigem : DialetoBanco
 {
     /// <summary>A leitura agregada dos dados da origem (o maior valor de uma coluna).</summary>
-    public abstract LeitorDados Dados { get; }
+    public abstract LeitorDadosOrigem Dados { get; }
 }
 
 /// <summary>
-/// O destino: esvaziado e gravado. Bloqueio, marcador, diário, restrições e gravação entram no contrato com o INC que
-/// os implementa.
+/// O destino: esvaziado e gravado. Além das partes comuns, o bloqueio de execução, a gravação do marcador e a leitura de
+/// existência de linhas; o diário, as restrições e a gravação entram no contrato com o INC que os implementa.
 /// </summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class DialetoDestino : DialetoBanco
 {
+    /// <summary>O bloqueio exclusivo de execução, em conexão própria.</summary>
+    public abstract BloqueioExecucao Bloqueio { get; }
+
+    /// <summary>A gravação do marcador do Incognito.</summary>
+    public abstract MarcadorDestino Marcador { get; }
+
+    /// <summary>Se uma tabela do destino tem linhas, sem ler valor.</summary>
+    public abstract LeitorDadosDestino Dados { get; }
 }

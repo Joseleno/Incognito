@@ -17,12 +17,19 @@ public enum Operacao
     CompararNome,
     Descartar,
     LerMaiorValor,
+    GravarMarcador,
+    TemLinhas,
+    AdquirirBloqueio,
+    ConferirBloqueio,
+    LiberarBloqueio,
 
     // Os getters das partes do banco conectado.
     ObterEsquema,
     ObterIdentidade,
     ObterSql,
     ObterDados,
+    ObterMarcador,
+    ObterBloqueio,
 }
 
 /// <summary>
@@ -67,6 +74,15 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
 
     /// <summary>As colunas cujo maior valor foi pedido, na ordem.</summary>
     internal List<ReferenciaColuna> MaioresPedidos { get; } = [];
+
+    /// <summary>Se o bloqueio do destino está com outra sessão (a tentativa devolve nulo).</summary>
+    internal bool Ocupado { get; init; }
+
+    /// <summary>Se cada tabela do destino tem linhas; nulo responde que nenhuma tem.</summary>
+    internal Func<NomeObjeto, bool>? Linhas { get; init; }
+
+    /// <summary>As concessões que o bloqueio do destino deu, na ordem.</summary>
+    internal List<ConcessaoDoPlanejar> Concessoes { get; } = [];
 
     public override string Nome
     {
@@ -131,7 +147,7 @@ internal sealed class OrigemDoPlanejar(ProvedorDoPlanejar provedor) : DialetoOri
     private readonly LeitorEsquema _esquema = new LeitorDoPlanejar(provedor, destino: false);
     private readonly IdentidadeBanco _identidade = new IdentidadeDoPlanejar(provedor, destino: false);
     private readonly DialetoSql _sql = new SqlDoPlanejar(provedor, destino: false);
-    private readonly LeitorDados _dados = new DadosDoPlanejar(provedor);
+    private readonly LeitorDadosOrigem _dados = new DadosDoPlanejar(provedor);
 
     public override LeitorEsquema Esquema => provedor.Obter(Operacao.ObterEsquema, false, _esquema);
 
@@ -139,7 +155,7 @@ internal sealed class OrigemDoPlanejar(ProvedorDoPlanejar provedor) : DialetoOri
 
     public override DialetoSql Sql => provedor.Obter(Operacao.ObterSql, false, _sql);
 
-    public override LeitorDados Dados => provedor.Obter(Operacao.ObterDados, false, _dados);
+    public override LeitorDadosOrigem Dados => provedor.Obter(Operacao.ObterDados, false, _dados);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
@@ -165,12 +181,21 @@ internal sealed class DestinoDoPlanejar(ProvedorDoPlanejar provedor) : DialetoDe
     private readonly LeitorEsquema _esquema = new LeitorDoPlanejar(provedor, destino: true);
     private readonly IdentidadeBanco _identidade = new IdentidadeDoPlanejar(provedor, destino: true);
     private readonly DialetoSql _sql = new SqlDoPlanejar(provedor, destino: true);
+    private readonly BloqueioExecucao _bloqueio = new BloqueioDoPlanejar(provedor);
+    private readonly MarcadorDestino _marcador = new MarcadorDoPlanejar(provedor);
+    private readonly LeitorDadosDestino _dados = new DadosDestinoDoPlanejar(provedor);
 
     public override LeitorEsquema Esquema => provedor.Obter(Operacao.ObterEsquema, true, _esquema);
 
     public override IdentidadeBanco Identidade => provedor.Obter(Operacao.ObterIdentidade, true, _identidade);
 
     public override DialetoSql Sql => provedor.Obter(Operacao.ObterSql, true, _sql);
+
+    public override BloqueioExecucao Bloqueio => provedor.Obter(Operacao.ObterBloqueio, true, _bloqueio);
+
+    public override MarcadorDestino Marcador => provedor.Obter(Operacao.ObterMarcador, true, _marcador);
+
+    public override LeitorDadosDestino Dados => provedor.Obter(Operacao.ObterDados, true, _dados);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
@@ -203,7 +228,7 @@ internal sealed class LeitorDoPlanejar(ProvedorDoPlanejar provedor, bool destino
     public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 }
 
-internal sealed class DadosDoPlanejar(ProvedorDoPlanejar provedor) : LeitorDados
+internal sealed class DadosDoPlanejar(ProvedorDoPlanejar provedor) : LeitorDadosOrigem
 {
     public override Task<long?> LerMaiorValorAsync(ReferenciaColuna coluna, CancellationToken cancelamento)
     {
@@ -214,6 +239,84 @@ internal sealed class DadosDoPlanejar(ProvedorDoPlanejar provedor) : LeitorDados
 
         return provedor.Executar(Operacao.LerMaiorValor, destino: false, () => provedor.Maiores?.Invoke(coluna), cancelamento);
     }
+
+    public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+}
+
+internal sealed class BloqueioDoPlanejar(ProvedorDoPlanejar provedor) : BloqueioExecucao
+{
+    public override Task<ConcessaoBloqueio?> TentarAdquirirAsync(CancellationToken cancelamento) =>
+        provedor.Executar<ConcessaoBloqueio?>(
+            Operacao.AdquirirBloqueio,
+            destino: true,
+            () =>
+            {
+                if (provedor.Ocupado)
+                {
+                    return null;
+                }
+
+                var concessao = new ConcessaoDoPlanejar(provedor);
+                lock (provedor.Concessoes)
+                {
+                    provedor.Concessoes.Add(concessao);
+                }
+
+                return concessao;
+            },
+            cancelamento);
+
+    public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+}
+
+/// <summary>Uma concessão do provedor de teste: conta as chamadas, lança sob comando e marca a perda quando pedido.</summary>
+internal sealed class ConcessaoDoPlanejar(ProvedorDoPlanejar provedor) : ConcessaoBloqueio
+{
+    /// <summary>Se a concessão foi liberada.</summary>
+    internal bool Liberada { get; private set; }
+
+    /// <summary>Marca a perda, como o dialeto faria ao perceber a queda da conexão.</summary>
+    internal void Perder() => SinalizarPerda();
+
+    public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    protected override Task ConferirAsyncCore(CancellationToken cancelamento) => provedor.Executar(Operacao.ConferirBloqueio, destino: true, () => true, cancelamento);
+
+    protected override async ValueTask LiberarAsyncCore()
+    {
+        Liberada = true;
+        await provedor.Executar(Operacao.LiberarBloqueio, destino: true, () => true);
+    }
+}
+
+internal sealed class MarcadorDoPlanejar(ProvedorDoPlanejar provedor) : MarcadorDestino
+{
+    public override Task GravarAsync(Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento) =>
+        provedor.Executar(Operacao.GravarMarcador, destino: true, () => true, cancelamento);
+
+    public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+}
+
+internal sealed class DadosDestinoDoPlanejar(ProvedorDoPlanejar provedor) : LeitorDadosDestino
+{
+    public override Task<bool> TemLinhasAsync(NomeObjeto tabela, CancellationToken cancelamento) =>
+        provedor.Executar(Operacao.TemLinhas, destino: true, () => provedor.Linhas?.Invoke(tabela) == true, cancelamento);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

@@ -39,7 +39,7 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
         Esquema = new LeitorEsquemaPostgreSql(conexao, LancarSeDescartado);
         Identidade = new IdentidadePostgreSql(conexao, LancarSeDescartado);
         Sql = new DialetoSqlPostgreSql(conexao.Nomes);
-        Dados = new LeitorDadosPostgreSql(conexao, LancarSeDescartado);
+        Dados = new LeitorDadosOrigemPostgreSql(conexao, LancarSeDescartado);
     }
 
     public override LeitorEsquema Esquema { get; }
@@ -48,7 +48,7 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
 
     public override DialetoSql Sql { get; }
 
-    public override LeitorDados Dados { get; }
+    public override LeitorDadosOrigem Dados { get; }
 
     protected override async ValueTask DisposeAsyncCore()
     {
@@ -74,7 +74,12 @@ internal sealed class DestinoPostgreSql : DialetoDestino
         Esquema = new LeitorEsquemaPostgreSql(conexao, LancarSeDescartado);
         Identidade = new IdentidadePostgreSql(conexao, LancarSeDescartado);
         Sql = new DialetoSqlPostgreSql(conexao.Nomes);
+        _bloqueio = new BloqueioPostgreSql(conexao, LancarSeDescartado);
+        Marcador = new MarcadorDestinoPostgreSql(conexao, LancarSeDescartado);
+        Dados = new LeitorDadosDestinoPostgreSql(conexao, LancarSeDescartado);
     }
+
+    private readonly BloqueioPostgreSql _bloqueio;
 
     public override LeitorEsquema Esquema { get; }
 
@@ -82,15 +87,29 @@ internal sealed class DestinoPostgreSql : DialetoDestino
 
     public override DialetoSql Sql { get; }
 
+    public override BloqueioExecucao Bloqueio => _bloqueio;
+
+    public override MarcadorDestino Marcador { get; }
+
+    public override LeitorDadosDestino Dados { get; }
+
+    // A concessão viva é liberada antes de fechar a fonte de que a conexão dela saiu.
     protected override async ValueTask DisposeAsyncCore()
     {
         try
         {
-            await _conexao.DisposeAsync().ConfigureAwait(false);
+            await _bloqueio.LiberarAsync().ConfigureAwait(false);
         }
         finally
         {
-            await base.DisposeAsyncCore().ConfigureAwait(false);
+            try
+            {
+                await _conexao.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                await base.DisposeAsyncCore().ConfigureAwait(false);
+            }
         }
     }
 }
