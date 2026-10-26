@@ -55,6 +55,34 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     public override SegredoConexao ConexaoRecusada(string sentinela) =>
         new($"Host=127.0.0.1,127.0.0.2;Database=loja_{sentinela};Username=u;Password={sentinela};Application Name={sentinela}");
 
+    /// <inheritdoc/>
+    public override Task<DialetoDestino> ConectarOutroDestinoAsync(ParDeBancos par, CancellationToken cancelamento) =>
+        _provedor.ConectarDestinoAsync(new SegredoConexao(servidor.StringDeConexao(par.BancoDestino, ServidorPostgreSql.Dono, servidor.SenhaDono)), cancelamento);
+
+    /// <inheritdoc/>
+    public override Task ComentarAsync(
+        ParDeBancos par, bool destino, ComentarioDoBanco comentario, string sentinela, Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento)
+    {
+        var banco = destino ? par.BancoDestino : par.BancoOrigem;
+        var texto = comentario switch
+        {
+            ComentarioDoBanco.Alheio => "Comentário de quem administra o banco: " + sentinela,
+            ComentarioDoBanco.Invalido => FormatoDoMarcador.Prefixo + sentinela,
+            _ => FormatoDoMarcador.Texto(identificador, gravadoEm),
+        };
+        return servidor.ExecutarAsync(banco, $"COMMENT ON DATABASE \"{banco}\" IS '{texto.Replace("'", "''", StringComparison.Ordinal)}'", cancelamento);
+    }
+
+    /// <inheritdoc/>
+    // Espera o fim da sessão (o segundo argumento): sem isso, o batimento seguinte ainda acharia o lock.
+    public override Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento) =>
+        servidor.ExecutarAsync(
+            par.BancoDestino,
+            string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"SELECT pg_catalog.pg_terminate_backend(l.pid, 5000) FROM pg_catalog.pg_locks l WHERE l.locktype = 'advisory' AND l.classid = {BloqueioPostgreSql.Classe} AND l.objid = {BloqueioPostgreSql.Execucao} AND l.objsubid = 2 AND l.database = (SELECT d.oid FROM pg_catalog.pg_database d WHERE d.datname = pg_catalog.current_database())"),
+            cancelamento);
+
     private async ValueTask<ParDeBancos> CriarAsync(Func<string, string> conexaoDaOrigem, Func<string, string> conexaoDoDestino, CancellationToken cancelamento)
     {
         var bancoOrigem = await servidor.ClonarModeloAsync(cancelamento);
@@ -170,6 +198,17 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Particionada = Caso.Presente(new MaiorValorEsperado(Coluna("pedidos", "id"), 75)),
                 MaeDeHeranca = Caso.Presente(new MaiorValorEsperado(Coluna("pessoa", "id"), 12)),
                 ColunaDeTexto = Coluna("tipos", "texto"),
+            },
+
+            // As linhas do fim do script, lidas pelo dono no destino: a mãe de herança múltipla só tem a linha da herdeira
+            // (loja.ficha), e a loja.forcada força a segurança por linha também para o dono.
+            Linhas = new()
+            {
+                ComLinha = Nome("lojas"),
+                Vazia = Nome("cliente"),
+                Particionada = Caso.Presente(Nome("pedidos")),
+                MaeComLinhaSoNaHerdeira = Caso.Presente(Nome("contato")),
+                ComSegurancaPorLinha = Caso.Presente(Nome("forcada")),
             },
         };
     }

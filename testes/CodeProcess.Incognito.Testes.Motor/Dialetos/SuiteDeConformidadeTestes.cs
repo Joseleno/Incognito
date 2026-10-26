@@ -172,6 +172,47 @@ public sealed class SuiteDeConformidadeTestes
         [Defeito.MaiorValorSoDaRaiz] = (true, [MaiorValor("Maior valor: loja.pedidos.id lido nulo, esperado 88.")]),
         [Defeito.MaiorValorComHerdeiras] = (true, [MaiorValor("Maior valor: loja.pessoa.id lido 60, esperado 12.")]),
         [Defeito.MaiorValorComTextoNaRecusa] = (true, [MaiorValor("Maior valor: a recusa da coluna de texto loja.tipos.texto traz o valor das linhas.")]),
+        [Defeito.MarcadorNaoInformado] = (true,
+        [
+            (nameof(SuiteFalsa.O_marcador_ausente_e_lido_nos_dois_lados), "Marcador: o banco novo da origem lido como não informado, esperado ausente."),
+            (nameof(SuiteFalsa.O_marcador_gravado_e_relido_por_outra_instancia), "Marcador: relido na mesma instância como não informado"),
+            (nameof(SuiteFalsa.A_origem_le_o_marcador), "Marcador: a origem marcada lida como não informado"),
+            (nameof(SuiteFalsa.O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos), "Marcador: o comentário Alheio da origem lido como não informado."),
+        ]),
+        [Defeito.MarcadorNaoPersiste] = (true, [(nameof(SuiteFalsa.O_marcador_gravado_e_relido_por_outra_instancia), "Marcador: relido na mesma instância como Ausente")]),
+        [Defeito.MarcadorAlheioVazado] = (true, [(nameof(SuiteFalsa.O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos), "Marcador: o texto do comentário Alheio saiu do dialeto.")]),
+        [Defeito.MarcadorInvalidoVazado] = (true, [(nameof(SuiteFalsa.O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos), "Marcador: o texto do comentário Invalido saiu do dialeto.")]),
+        [Defeito.MarcadorInvalidoComoAusente] = (true, [(nameof(SuiteFalsa.O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos), "Marcador: o comentário Invalido da origem lido como Ausente.")]),
+        [Defeito.GravacaoSobrescreve] = (true,
+        [
+            (nameof(SuiteFalsa.O_marcador_gravado_e_relido_por_outra_instancia), "Marcador: a segunda gravação sobre um marcador passou"),
+            (nameof(SuiteFalsa.O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos), "Marcador: a gravação sobre o comentário Alheio passou"),
+        ]),
+        [Defeito.OrigemNaoLeMarcador] = (true,
+        [
+            (nameof(SuiteFalsa.A_origem_le_o_marcador), "Marcador: a origem marcada lida como Ausente"),
+            (nameof(SuiteFalsa.O_comentario_alheio_e_o_invalido_nunca_saem_nem_sao_sobrescritos), "Marcador: o comentário Alheio da origem lido como Ausente."),
+        ]),
+        [Defeito.BloqueioNaoExclusivo] = (true,
+        [
+            (nameof(SuiteFalsa.O_bloqueio_e_exclusivo_entre_instancias_e_liberado_explicitamente), "Bloqueio: outra instância adquiriu o bloqueio que a primeira tem."),
+            (nameof(SuiteFalsa.O_bloqueio_persiste_enquanto_o_destino_trabalha), "Bloqueio: outra instância adquiriu o bloqueio depois de o destino ler e abrir transações."),
+        ]),
+        [Defeito.BloqueioNaoLibera] = (true,
+        [
+            (nameof(SuiteFalsa.O_bloqueio_e_exclusivo_entre_instancias_e_liberado_explicitamente), "Bloqueio: outra instância não adquiriu o bloqueio logo depois da liberação."),
+            (nameof(SuiteFalsa.O_pedido_duplo_na_mesma_instancia_e_recusado), "Bloqueio: a mesma instância não adquiriu de novo depois de liberar."),
+            (nameof(SuiteFalsa.Descartar_o_destino_libera_a_concessao_viva), "Bloqueio: descartar o destino com a concessão viva não liberou o bloqueio."),
+        ]),
+        [Defeito.BloqueioReentrante] = (true, [(nameof(SuiteFalsa.O_pedido_duplo_na_mesma_instancia_e_recusado), "Bloqueio: o segundo pedido na mesma instância passou")]),
+        [Defeito.BloqueioSoltaNoTrabalho] = (true, [(nameof(SuiteFalsa.O_bloqueio_persiste_enquanto_o_destino_trabalha), "Bloqueio: outra instância adquiriu o bloqueio depois de o destino ler e abrir transações.")]),
+        [Defeito.BatimentoSempreAprova] = (true, [(nameof(SuiteFalsa.A_queda_do_bloqueio_e_percebida), "Bloqueio: o batimento passou depois da queda da conexão do bloqueio.")]),
+        [Defeito.PerdaNaLiberacao] = (true, [(nameof(SuiteFalsa.O_bloqueio_e_exclusivo_entre_instancias_e_liberado_explicitamente), "Bloqueio: a liberação voluntária marcou a perda.")]),
+        [Defeito.DescarteNaoLibera] = (true, [(nameof(SuiteFalsa.Descartar_o_destino_libera_a_concessao_viva), "Bloqueio: descartar o destino com a concessão viva não liberou o bloqueio.")]),
+        [Defeito.LinhasSempreFalsas] = (true, [Linhas("Linhas: loja.itens (com linha) lida sem linha, esperada com.")]),
+        [Defeito.LinhasSoDaRaiz] = (true, [Linhas("Linhas: loja.pedidos (particionada com linhas só nas partições) lida sem linha, esperada com.")]),
+        [Defeito.LinhasComHerdeiras] = (true, [Linhas("Linhas: loja.contato (mãe com linha só na herdeira) lida com linha, esperada sem.")]),
+        [Defeito.LinhasFiltradas] = (true, [Linhas("Linhas: loja.segredos, com a segurança por linha para o dono, foi lida em vez de falhar.")]),
         [Defeito.RecusaComoExcecaoComum] = (true, [Recusa("Recusa: a origem lançou IncognitoException, e não DialetoRecusouException.")]),
         [Defeito.RecusaComAString] = (true, [Recusa("Recusa: a recusa da origem traz o que estava na string de conexão.")]),
         [Defeito.RecusaForaDaFaixa] = (true, [Recusa("Recusa: a origem recusou com um código fora da faixa dos dialetos (INC31xx a INC34xx).")]),
@@ -296,6 +337,8 @@ public sealed class SuiteDeConformidadeTestes
     private static (string Teste, string Trecho) Transporte(string trecho) => (nameof(SuiteFalsa.A_identidade_informa_o_transporte), trecho);
 
     private static (string Teste, string Trecho) MaiorValor(string trecho) => (nameof(SuiteFalsa.O_maior_valor_e_lido_como_a_copia_le), trecho);
+
+    private static (string Teste, string Trecho) Linhas(string trecho) => (nameof(SuiteFalsa.A_existencia_de_linhas_e_lida_como_a_copia_le), trecho);
 
     private static (string Teste, string Trecho) Recusa(string trecho) => (nameof(SuiteFalsa.A_conexao_inaceitavel_e_recusada_pelo_tipo_da_recusa), trecho);
 

@@ -409,7 +409,7 @@ public sealed class DialetoProtegidoTestes
     public async Task A_excecao_do_dialeto_de_tipo_exato_guarda_o_codigo_e_a_mensagem_escapada_e_cortada()
     {
         var mensagem = "nome \u001b[31m \\u000A \u202Eatrás\n" + new string('x', 600);
-        var provedor = new ProvedorDoPlanejar { Lancar = Em(Operacao.LerIdentidade, false, () => new IncognitoException("INC3150", mensagem, new ExcecaoDoDriver())) };
+        var provedor = new ProvedorDoPlanejar { Lancar = Em(Operacao.LerEsquema, false, () => new IncognitoException("INC3150", mensagem, new ExcecaoDoDriver())) };
 
         var falha = Assert.IsType<FalhaDialetoException>(await FalharAsync(provedor), exactMatch: true);
 

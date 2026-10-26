@@ -269,7 +269,7 @@ public sealed class ContratoDeDialetoTestes
 
         public override DialetoSql Sql => throw new NotSupportedException();
 
-        public override LeitorDados Dados => throw new NotSupportedException();
+        public override LeitorDadosOrigem Dados => throw new NotSupportedException();
 
         protected override async ValueTask DisposeAsyncCore()
         {

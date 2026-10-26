@@ -9,7 +9,7 @@ namespace CodeProcess.Incognito.Testes.PostgreSql;
 /// nunca devolver o maior das linhas visíveis, e o domínio sobre um inteiro conta como inteiro.
 /// </summary>
 /// <param name="servidor">O servidor (fixture de assembly).</param>
-public sealed class LeitorDadosPostgreSqlTestes(ServidorPostgreSql servidor)
+public sealed class LeitorDadosOrigemPostgreSqlTestes(ServidorPostgreSql servidor)
 {
     private readonly ProvedorPostgreSql _provedor = new();
 

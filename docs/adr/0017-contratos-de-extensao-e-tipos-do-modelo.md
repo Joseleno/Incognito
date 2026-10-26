@@ -142,3 +142,11 @@ carregá-los de um lado para o outro.
   entra na identidade da instância: a primeira coluna fixa o N do domínio na sessão, e outra coluna do mesmo domínio com
   outro N é recusada, para a chave primária e as estrangeiras nunca saírem com permutações diferentes. O N é publicável
   (a ordem de grandeza do maior identificador); o maior valor lido, não.
+- 2026-10-24: o contrato de dialeto ganha as partes do destino (`BloqueioExecucao`, `MarcadorDestino`,
+  `LeitorDadosDestino`), abstratas como as outras, e a `ConcessaoBloqueio`, a primeira parte com **método-modelo**: o
+  `DisposeAsync`, o `ConferirAsync` e o token `Perdido` são da base, não virtuais (o descarte libera uma vez e nunca
+  lança; a perda cancela o token, e a liberação voluntária nunca), e o dialeto implementa só o núcleo protegido
+  (`ConferirAsyncCore`, `LiberarAsyncCore`, `SinalizarPerda`). O `MarcadorLido` entra no modelo como saída do contrato,
+  com construtor público e `init`, como os outros. A exceção nova do motor, `BloqueioDestinoException` (saída 1: o
+  `INC3004` de outra execução com o bloqueio, e o `INC4001` do bloqueio perdido), é selada e sem construtor público,
+  como as outras.

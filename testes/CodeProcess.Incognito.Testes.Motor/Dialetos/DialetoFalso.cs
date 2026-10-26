@@ -160,6 +160,33 @@ public enum Defeito
     MaiorValorComHerdeiras,
     MaiorValorComTextoNaRecusa,
 
+    // O marcador: não informado, não persiste entre instâncias, vaza o texto do comentário alheio ou do inválido na recusa, lê o inválido
+    // como ausente, sobrescreve o comentário alheio, e a origem não o lê.
+    MarcadorNaoInformado,
+    MarcadorNaoPersiste,
+    MarcadorAlheioVazado,
+    MarcadorInvalidoVazado,
+    MarcadorInvalidoComoAusente,
+    GravacaoSobrescreve,
+    OrigemNaoLeMarcador,
+
+    // O bloqueio: não é exclusivo, não libera, aceita o pedido duplo, solta-se quando o destino trabalha, aprova o batimento
+    // sem conferir, marca a perda na liberação voluntária, e o descarte do destino não libera a concessão viva.
+    BloqueioNaoExclusivo,
+    BloqueioNaoLibera,
+    BloqueioReentrante,
+    BloqueioSoltaNoTrabalho,
+    BatimentoSempreAprova,
+    PerdaNaLiberacao,
+    DescarteNaoLibera,
+
+    // A existência de linhas no destino: sempre falsa, só da raiz da particionada, com as herdeiras, e filtrada pela
+    // segurança por linha em vez de falhar.
+    LinhasSempreFalsas,
+    LinhasSoDaRaiz,
+    LinhasComHerdeiras,
+    LinhasFiltradas,
+
     // A recusa da conexão inaceitável: com o tipo comum, com o que estava na string, fora da faixa, ou não recusa.
     RecusaComoExcecaoComum,
     RecusaComAString,
@@ -565,7 +592,43 @@ internal static class BancoFalso
             MaeDeHeranca = completo ? Caso.Presente(new MaiorValorEsperado(Coluna("pessoa", "id"), 12)) : Caso.Inexistente<MaiorValorEsperado>("banco falso sem herança"),
             ColunaDeTexto = Coluna("tipos", "texto"),
         },
+        Linhas = new()
+        {
+            ComLinha = Nome("itens"),
+            Vazia = Nome("cliente"),
+            Particionada = completo ? Caso.Presente(Nome("pedidos")) : Caso.Inexistente<NomeObjeto>("banco falso sem partições"),
+            MaeComLinhaSoNaHerdeira = completo ? Caso.Presente(Nome("contato")) : Caso.Inexistente<NomeObjeto>("banco falso sem herança"),
+            ComSegurancaPorLinha = completo ? Caso.Presente(Nome("segredos")) : Caso.Inexistente<NomeObjeto>("banco falso sem segurança por linha"),
+        },
     };
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EstadoDoBancoFalso> _bancos = new(StringComparer.Ordinal);
+
+    /// <summary>O estado de um banco falso que as instâncias conectadas a ele dividem (o comentário e o bloqueio).</summary>
+    internal static EstadoDoBancoFalso Estado(string banco) => _bancos.GetOrAdd(banco, _ => new EstadoDoBancoFalso());
+
+    /// <summary>Esquece o estado de um banco, no fim do teste.</summary>
+    internal static void Esquecer(string banco) => _bancos.TryRemove(banco, out _);
+
+    /// <summary>A existência de linhas do destino falso, como a cópia lê, com os defeitos.</summary>
+    internal static bool TemLinhas(NomeObjeto tabela, Defeito defeito)
+    {
+        if (defeito == Defeito.LinhasSempreFalsas)
+        {
+            return false;
+        }
+
+        return tabela.Nome switch
+        {
+            "itens" => true,
+            "cliente" => false,
+            "pedidos" => defeito != Defeito.LinhasSoDaRaiz,
+            "contato" => defeito == Defeito.LinhasComHerdeiras,
+            "segredos" when defeito == Defeito.LinhasFiltradas => false,
+            "segredos" => throw new DialetoRecusouException("INC3399", "A segurança por linha vale para o dono do destino."),
+            _ => throw new DialetoRecusouException("INC3399", "A tabela não existe no destino."),
+        };
+    }
 
     /// <summary>
     /// O maior valor das colunas do falso, como a cópia lê: a particionada pela raiz (o maior está em <c>pedidos_2026</c>), a
@@ -789,15 +852,15 @@ internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool compl
 
     // Só no par comum: o sentinela, por extenso, na identidade da origem.
     public override IdentidadeBanco Identidade { get; } =
-        new IdentidadeFalsa(banco, completo, defeito, vaza: defeito == Defeito.SentinelaNaIdentidadeDaOrigem && !privilegiado, origem: true);
+        new IdentidadeFalsa(banco, completo, defeito, vaza: defeito == Defeito.SentinelaNaIdentidadeDaOrigem && !privilegiado, origem: true, BancoFalso.Estado(banco));
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape, defeito);
 
-    public override LeitorDados Dados { get; } = new DadosFalsos(defeito);
+    public override LeitorDadosOrigem Dados { get; } = new DadosFalsos(defeito);
 }
 
 // O maior valor em memória; a coluna de texto é recusada (com o sentinela das linhas, no defeito).
-internal sealed class DadosFalsos(Defeito defeito) : LeitorDados
+internal sealed class DadosFalsos(Defeito defeito) : LeitorDadosOrigem
 {
     public override Task<long?> LerMaiorValorAsync(ReferenciaColuna coluna, CancellationToken cancelamento)
     {
@@ -811,14 +874,33 @@ internal sealed class DadosFalsos(Defeito defeito) : LeitorDados
     }
 }
 
-// O destino da suíte tem o mesmo esquema da origem, lido pelo dono.
+// O destino da suíte tem o mesmo esquema da origem, lido pelo dono; o comentário e o bloqueio ficam no estado do banco,
+// que as instâncias conectadas a ele dividem.
 internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoDestino
 {
+    private readonly BloqueioFalso _bloqueio = new(BancoFalso.Estado(banco), defeito);
+
     public override LeitorEsquema Esquema { get; } = leitor;
 
-    public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, completo, defeito, vaza: false, origem: false);
+    public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, completo, defeito, vaza: false, origem: false, BancoFalso.Estado(banco));
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape or Defeito.CitacaoErradaNoDestino, defeito);
+
+    public override BloqueioExecucao Bloqueio => _bloqueio;
+
+    public override MarcadorDestino Marcador { get; } = new MarcadorFalso(BancoFalso.Estado(banco), defeito);
+
+    public override LeitorDadosDestino Dados { get; } = new DadosDestinoFalsos(defeito);
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        if (defeito != Defeito.DescarteNaoLibera)
+        {
+            await _bloqueio.LiberarAsync();
+        }
+
+        await base.DisposeAsyncCore();
+    }
 
     // Só no par comum: o primeiro sentinela, em hexadecimal minúsculo, no texto do destino.
     public override string ToString() => defeito == Defeito.SentinelaNoTextoDoDestino && !privilegiado
@@ -1221,15 +1303,21 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
         Trocar(tabelas, tabela, lida => BancoFalso.Clonar(lida, (nameof(TabelaEsquema.ChavesEstrangeiras), lida.ChavesEstrangeiras.SelectMany(trocar).ToArray())));
 }
 
-internal sealed class IdentidadeFalsa(string banco, bool completo, Defeito defeito, bool vaza, bool origem) : IdentidadeBanco
+internal sealed class IdentidadeFalsa(string banco, bool completo, Defeito defeito, bool vaza, bool origem, EstadoDoBancoFalso estado) : IdentidadeBanco
 {
     private int _leituras;
 
     public override Task<IdentidadeLida> LerAsync(CancellationToken cancelamento)
     {
         _leituras++;
+        if (!origem && defeito == Defeito.BloqueioSoltaNoTrabalho)
+        {
+            estado.Soltar();
+        }
+
         return Task.FromResult(new IdentidadeLida
         {
+            Marcador = defeito == Defeito.MarcadorNaoInformado ? null : origem && defeito == Defeito.OrigemNaoLeMarcador ? new MarcadorLido { Situacao = SituacaoMarcador.Ausente } : estado.Marcador(defeito),
             Banco = defeito == Defeito.BancoErrado ? "outro-banco" : banco,
             Servidor = defeito == Defeito.IdentidadeInstavel ? $"servidor-{_leituras}" : vaza ? "servidor-" + BancoFalso.SentinelaCurto : "servidor-falso",
             Linhagem = defeito == Defeito.LinhagemVazia ? new Dictionary<string, string>() : new Dictionary<string, string> { ["identificador"] = "7" },
@@ -1286,6 +1374,193 @@ internal sealed class SqlFalso(bool semEscape, Defeito defeito = Defeito.Nenhum)
     }
 }
 
+/// <summary>O estado de um banco falso que as instâncias conectadas a ele dividem: o comentário e quem tem o bloqueio.</summary>
+internal sealed class EstadoDoBancoFalso
+{
+    /// <summary>O começo do marcador do falso.</summary>
+    internal const string Prefixo = "falso-destino:";
+
+    private readonly Lock _trava = new();
+    private string? _comentario;
+    private object? _dono;
+
+    internal string? Comentario
+    {
+        get
+        {
+            lock (_trava)
+            {
+                return _comentario;
+            }
+        }
+
+        set
+        {
+            lock (_trava)
+            {
+                _comentario = value;
+            }
+        }
+    }
+
+    internal static string Texto(Guid identificador, DateTimeOffset gravadoEm) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Prefixo}1:{identificador:D}:{gravadoEm.UtcTicks}");
+
+    /// <summary>O marcador lido do comentário.</summary>
+    internal MarcadorLido Marcador(Defeito defeito)
+    {
+        var comentario = Comentario;
+        if (comentario is null)
+        {
+            return new MarcadorLido { Situacao = SituacaoMarcador.Ausente };
+        }
+
+        if (!comentario.StartsWith(Prefixo, StringComparison.Ordinal))
+        {
+            return new MarcadorLido { Situacao = SituacaoMarcador.Alheio };
+        }
+
+        var partes = comentario[Prefixo.Length..].Split(':');
+        return partes is ["1", var identificador, var ticks] && Guid.TryParse(identificador, out var lido) && long.TryParse(ticks, System.Globalization.CultureInfo.InvariantCulture, out var quando)
+            ? new MarcadorLido { Situacao = SituacaoMarcador.Valido, Identificador = lido, GravadoEm = new DateTimeOffset(quando, TimeSpan.Zero) }
+            : new MarcadorLido { Situacao = defeito == Defeito.MarcadorInvalidoComoAusente ? SituacaoMarcador.Ausente : SituacaoMarcador.Invalido };
+    }
+
+    /// <summary>Dá o bloqueio a quem pede, se está livre (ou sempre, no defeito).</summary>
+    internal bool Pegar(object quem, bool sempre)
+    {
+        lock (_trava)
+        {
+            if (_dono is not null && !sempre)
+            {
+                return false;
+            }
+
+            _dono = quem;
+            return true;
+        }
+    }
+
+    internal bool Tem(object quem)
+    {
+        lock (_trava)
+        {
+            return ReferenceEquals(_dono, quem);
+        }
+    }
+
+    internal void Devolver(object quem)
+    {
+        lock (_trava)
+        {
+            if (ReferenceEquals(_dono, quem))
+            {
+                _dono = null;
+            }
+        }
+    }
+
+    /// <summary>A queda da conexão do bloqueio: o bloqueio fica livre.</summary>
+    internal void Soltar()
+    {
+        lock (_trava)
+        {
+            _dono = null;
+        }
+    }
+}
+
+// A gravação do marcador no estado do banco, com os defeitos de quem não persiste, vaza o texto ou sobrescreve.
+internal sealed class MarcadorFalso(EstadoDoBancoFalso estado, Defeito defeito) : MarcadorDestino
+{
+    public override Task GravarAsync(Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento)
+    {
+        if (identificador == Guid.Empty || gravadoEm.Offset != TimeSpan.Zero || gravadoEm.Ticks % TimeSpan.TicksPerSecond != 0)
+        {
+            throw new ArgumentException("Marcador fora da forma.", nameof(gravadoEm));
+        }
+
+        var atual = estado.Comentario;
+        if (atual is not null && defeito != Defeito.GravacaoSobrescreve)
+        {
+            var invalido = atual.StartsWith(EstadoDoBancoFalso.Prefixo, StringComparison.Ordinal);
+            var vazado = (defeito == Defeito.MarcadorAlheioVazado && !invalido) || (defeito == Defeito.MarcadorInvalidoVazado && invalido) ? ": " + atual : ".";
+            return Task.FromException(new DialetoRecusouException("INC3399", "O banco já tem um comentário" + vazado));
+        }
+
+        if (defeito != Defeito.MarcadorNaoPersiste)
+        {
+            estado.Comentario = EstadoDoBancoFalso.Texto(identificador, gravadoEm);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+// O bloqueio no estado do banco, com os defeitos de quem não é exclusivo ou aceita o pedido duplo.
+internal sealed class BloqueioFalso(EstadoDoBancoFalso estado, Defeito defeito) : BloqueioExecucao
+{
+    private ConcessaoFalsa? _viva;
+
+    public override Task<ConcessaoBloqueio?> TentarAdquirirAsync(CancellationToken cancelamento)
+    {
+        if (_viva is not null && defeito != Defeito.BloqueioReentrante)
+        {
+            return Task.FromException<ConcessaoBloqueio?>(new InvalidOperationException("Esta instância já tem o bloqueio."));
+        }
+
+        var concessao = new ConcessaoFalsa(estado, defeito, () => _viva = null);
+        if (!estado.Pegar(concessao, defeito == Defeito.BloqueioNaoExclusivo))
+        {
+            return Task.FromResult<ConcessaoBloqueio?>(null);
+        }
+
+        _viva = concessao;
+        return Task.FromResult<ConcessaoBloqueio?>(concessao);
+    }
+
+    internal ValueTask LiberarAsync() => _viva?.DisposeAsync() ?? ValueTask.CompletedTask;
+}
+
+internal sealed class ConcessaoFalsa(EstadoDoBancoFalso estado, Defeito defeito, Action aoLiberar) : ConcessaoBloqueio
+{
+    protected override Task ConferirAsyncCore(CancellationToken cancelamento) =>
+        defeito == Defeito.BatimentoSempreAprova || estado.Tem(this)
+            ? Task.CompletedTask
+            : Task.FromException(new IncognitoException("INC3399", "O bloqueio se perdeu."));
+
+    protected override ValueTask LiberarAsyncCore()
+    {
+        if (defeito != Defeito.BloqueioNaoLibera)
+        {
+            estado.Devolver(this);
+        }
+
+        aoLiberar();
+        if (defeito == Defeito.PerdaNaLiberacao)
+        {
+            SinalizarPerda();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class DadosDestinoFalsos(Defeito defeito) : LeitorDadosDestino
+{
+    public override Task<bool> TemLinhasAsync(NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        try
+        {
+            return Task.FromResult(BancoFalso.TemLinhas(tabela, defeito));
+        }
+        catch (DialetoRecusouException recusa)
+        {
+            return Task.FromException<bool>(recusa);
+        }
+    }
+}
+
 /// <summary>A fixture do dialeto falso: um par de bancos em memória por teste, com o mesmo esquema nos dois lados.</summary>
 internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaBanco, bool, EsquemaBanco>? perturbar = null) : FixtureDialeto
 {
@@ -1302,11 +1577,37 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
 
     public override SegredoConexao ConexaoRecusada(string sentinela) => new(ProvedorFalso.Inaceitavel + "senha=" + sentinela);
 
+    public override Task<DialetoDestino> ConectarOutroDestinoAsync(ParDeBancos par, CancellationToken cancelamento) =>
+        _provedor.ConectarDestinoAsync(new SegredoConexao(par.BancoDestino), cancelamento);
+
+    public override Task ComentarAsync(
+        ParDeBancos par, bool destino, ComentarioDoBanco comentario, string sentinela, Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento)
+    {
+        BancoFalso.Estado(destino ? par.BancoDestino : par.BancoOrigem).Comentario = comentario switch
+        {
+            ComentarioDoBanco.Alheio => "comentario de quem administra " + sentinela,
+            ComentarioDoBanco.Invalido => EstadoDoBancoFalso.Prefixo + sentinela,
+            _ => EstadoDoBancoFalso.Texto(identificador, gravadoEm),
+        };
+        return Task.CompletedTask;
+    }
+
+    public override Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento)
+    {
+        BancoFalso.Estado(par.BancoDestino).Soltar();
+        return Task.CompletedTask;
+    }
+
     private static async ValueTask<ParDeBancos> CriarAsync(ProvedorFalso provedor, CancellationToken cancelamento)
     {
         var sufixo = Guid.NewGuid().ToString("N");
         var origem = await provedor.ConectarOrigemAsync(new SegredoConexao($"origem-{sufixo}"), cancelamento);
         var destino = await provedor.ConectarDestinoAsync(new SegredoConexao($"destino-{sufixo}"), cancelamento);
-        return new ParDeBancos(origem, destino, $"origem-{sufixo}", $"destino-{sufixo}", () => ValueTask.CompletedTask);
+        return new ParDeBancos(origem, destino, $"origem-{sufixo}", $"destino-{sufixo}", () =>
+        {
+            BancoFalso.Esquecer($"origem-{sufixo}");
+            BancoFalso.Esquecer($"destino-{sufixo}");
+            return ValueTask.CompletedTask;
+        });
     }
 }

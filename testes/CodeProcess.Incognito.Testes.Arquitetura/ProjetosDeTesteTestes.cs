@@ -562,6 +562,7 @@ public sealed class ProjetosDeTesteTestes
             ["src/CodeProcess.Incognito.Motor/Configuracao/CodigosConfiguracao.cs"] = new(@"^INC2[0-9]{3}$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.Motor/Interno/CodigosPlanejar.cs"] = new(@"^INC30[0-9]{2}$|^INC35[1-9][0-9]$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.PostgreSql/CodigosPostgreSql.cs"] = new(@"^INC31[0-9]{2}$", RegexOptions.ECMAScript),
+            ["src/CodeProcess.Incognito.Motor/Interno/CodigosExecucao.cs"] = new(@"^INC4[0-9]{3}$", RegexOptions.ECMAScript),
             ["src/CodeProcess.Incognito.SqlServer/"] = new(@"^INC32[0-9]{2}$", RegexOptions.ECMAScript),
         };
         var declaracao = new Regex(@"const\s+string\s+\w+\s*=\s*""(INC[^""X][^""]*)""");

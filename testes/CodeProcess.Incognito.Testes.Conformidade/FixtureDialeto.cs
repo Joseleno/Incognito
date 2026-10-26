@@ -43,6 +43,39 @@ public abstract class FixtureDialeto
     /// <param name="sentinela">O texto que a recusa nunca pode trazer.</param>
     /// <returns>A string de conexão.</returns>
     public abstract SegredoConexao ConexaoRecusada(string sentinela);
+
+    /// <summary>
+    /// Conecta outra instância do destino do par, com o mesmo login: a exclusividade e a persistência do bloqueio valem
+    /// entre instâncias, nunca só dentro de uma.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="cancelamento">Cancela a conexão.</param>
+    /// <returns>O destino conectado, que o teste descarta.</returns>
+    public abstract Task<DialetoDestino> ConectarOutroDestinoAsync(ParDeBancos par, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Grava no lugar do marcador de um banco do par, como administrador e sem passar pelo dialeto: um comentário alheio ou
+    /// um inválido (o prefixo do marcador do dialeto) com o sentinela, ou um marcador válido com o identificador e a data.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="destino">Se é o banco do destino; senão, o da origem.</param>
+    /// <param name="comentario">O que gravar.</param>
+    /// <param name="sentinela">O texto que nenhuma saída pode trazer (no alheio e no inválido).</param>
+    /// <param name="identificador">O identificador do marcador válido.</param>
+    /// <param name="gravadoEm">A data do marcador válido, em UTC e sem fração de segundo.</param>
+    /// <param name="cancelamento">Cancela a gravação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task ComentarAsync(
+        ParDeBancos par, bool destino, ComentarioDoBanco comentario, string sentinela, Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Derruba, como administrador, a conexão do bloqueio de execução do destino do par: a queda que a concessão precisa
+    /// perceber.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento);
 }
 
 /// <summary>Os dois bancos de um teste, conectados.</summary>

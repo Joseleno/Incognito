@@ -27,8 +27,11 @@ internal enum LadoBanco
 /// servidor); a recusa do dialeto (<see cref="DialetoRecusouException"/> com código da faixa) vira erro do plano, saída 2; a
 /// <see cref="IncognitoException"/> de tipo exato com código da faixa vira falha do dialeto com o código e a mensagem
 /// escapada e cortada; uma subclasse, só com o código (a mensagem é virtual e rodaria código do dialeto); e qualquer outra,
-/// inclusive código fora da faixa, vira falha <c>INC3001</c> só com o tipo, a operação e o lado. Na leitura que traz dado de
-/// coluna (o maior valor), nem a recusa nem a <see cref="IncognitoException"/> de tipo exato levam a mensagem: só o código.
+/// inclusive código fora da faixa, vira falha <c>INC3001</c> só com o tipo, a operação e o lado. Nas operações que tocam dado
+/// de coluna ou texto de quem administra o banco (o maior valor, a identidade com o marcador, a gravação do marcador, a
+/// existência de linhas no destino e o bloqueio), nem a recusa nem a <see cref="IncognitoException"/> de tipo exato levam
+/// a mensagem: só o código. A concessão do bloqueio volta protegida (<see cref="ConcessaoProtegida"/>): a perda sai como
+/// <c>INC4001</c>, saída 1.
 /// </para>
 /// <para>
 /// Da exceção original nunca se lê <see cref="Exception.Data"/>, <see cref="Exception.StackTrace"/>,
@@ -122,11 +125,15 @@ internal sealed class DialetoProtegido : IAsyncDisposable
         return esquema ?? throw SemResultado(_provedor, Operacao, _lado);
     }
 
-    /// <summary>Lê a identidade.</summary>
+    /// <summary>
+    /// Lê a identidade, com o marcador. O banco pode ter no lugar do marcador um comentário de quem o administra, que o
+    /// dialeto poderia pôr na exceção: qualquer exceção sai só com o código ou o tipo. O marcador que se contradiz (válido
+    /// sem o identificador ou a data, ou o contrário) é falha do dialeto.
+    /// </summary>
     /// <param name="cancelamento">Cancela a leitura.</param>
     /// <returns>A identidade lida.</returns>
     /// <exception cref="PlanoRecusadoException">O dialeto recusou a leitura.</exception>
-    /// <exception cref="FalhaDialetoException">O dialeto falhou.</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou, ou leu um marcador que se contradiz.</exception>
     /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
     internal async Task<IdentidadeLida> LerIdentidadeAsync(CancellationToken cancelamento)
     {
@@ -138,10 +145,93 @@ internal sealed class DialetoProtegido : IAsyncDisposable
         }
         catch (Exception excecao)
         {
-            throw Traduzir(excecao, _provedor, Operacao, _lado, aceitaRecusa: true, cancelamento);
+            throw TraduzirSemMensagem(excecao, _provedor, Operacao, _lado, cancelamento, aceitaRecusa: true);
         }
 
-        return identidade ?? throw SemResultado(_provedor, Operacao, _lado);
+        if (identidade is null)
+        {
+            throw SemResultado(_provedor, Operacao, _lado);
+        }
+
+        return identidade.Marcador is { } marcador && !Coerente(marcador)
+            ? throw new FalhaDialetoException(CodigosPlanejar.EsquemaIncoerente, $"O dialeto de {_provedor} leu{NoLado(_lado)} um marcador do Incognito que se contradiz.")
+            : identidade;
+    }
+
+    /// <summary>
+    /// Grava o marcador do Incognito no destino. O banco pode ter um comentário de quem o administra: qualquer exceção sai só
+    /// com o código ou o tipo, e a recusa (o banco já tem algo, ou o login não pode gravar) vira erro do plano, saída 2.
+    /// </summary>
+    /// <param name="identificador">O identificador aleatório.</param>
+    /// <param name="gravadoEm">Quando, em UTC e sem fração de segundo.</param>
+    /// <param name="cancelamento">Cancela a gravação.</param>
+    /// <returns>A tarefa.</returns>
+    /// <exception cref="InvalidOperationException">O banco é a origem (defeito do motor).</exception>
+    /// <exception cref="PlanoRecusadoException">O dialeto recusou a gravação.</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    internal async Task GravarMarcadorAsync(Guid identificador, DateTimeOffset gravadoEm, CancellationToken cancelamento)
+    {
+        var destino = Destino("o marcador só se grava no destino");
+        try
+        {
+            await destino.Marcador.GravarAsync(identificador, gravadoEm, cancelamento).ConfigureAwait(false);
+        }
+        catch (Exception excecao)
+        {
+            throw TraduzirSemMensagem(excecao, _provedor, "gravar o marcador", _lado, cancelamento, aceitaRecusa: true);
+        }
+    }
+
+    /// <summary>
+    /// Se uma tabela do destino tem linhas. O destino pode guardar dado real: qualquer exceção sai só com o código ou o tipo,
+    /// e a recusa (tabela de outra forma, sem leitura, segurança por linha) vira erro do plano, saída 2.
+    /// </summary>
+    /// <param name="tabela">A tabela, como o catálogo do destino a guarda.</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>Se há linha.</returns>
+    /// <exception cref="InvalidOperationException">O banco é a origem (defeito do motor).</exception>
+    /// <exception cref="PlanoRecusadoException">O dialeto recusou a leitura.</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    internal async Task<bool> TemLinhasAsync(NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        var destino = Destino("a existência de linhas só se lê no destino");
+        try
+        {
+            return await destino.Dados.TemLinhasAsync(tabela, cancelamento).ConfigureAwait(false);
+        }
+        catch (Exception excecao)
+        {
+            throw TraduzirSemMensagem(excecao, _provedor, "ler se uma tabela tem linhas", _lado, cancelamento, aceitaRecusa: true);
+        }
+    }
+
+    /// <summary>
+    /// Tenta adquirir o bloqueio exclusivo de execução do destino, sem esperar. Qualquer exceção sai só com o código ou o
+    /// tipo, e a recusa também é falha (saída 1).
+    /// </summary>
+    /// <param name="cancelamento">Cancela a tentativa.</param>
+    /// <returns>A concessão protegida, que o chamador descarta; nula quando outra sessão tem o bloqueio.</returns>
+    /// <exception cref="InvalidOperationException">O banco é a origem (defeito do motor).</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou (uma recusa também é falha aqui).</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    internal async Task<ConcessaoProtegida?> TentarAdquirirBloqueioAsync(CancellationToken cancelamento)
+    {
+        const string Operacao = "adquirir o bloqueio";
+        var destino = Destino("o bloqueio só se adquire no destino");
+        ConcessaoBloqueio? concessao;
+        try
+        {
+            concessao = await destino.Bloqueio.TentarAdquirirAsync(cancelamento).ConfigureAwait(false);
+        }
+        catch (Exception excecao)
+        {
+            // Sem a mensagem: o dialeto poderia dizer quem tem o bloqueio (a sessão, o login, o endereço).
+            throw TraduzirSemMensagem(excecao, _provedor, Operacao, _lado, cancelamento);
+        }
+
+        return concessao is null ? null : new ConcessaoProtegida(concessao, concessao.Perdido);
     }
 
     /// <summary>
@@ -283,8 +373,9 @@ internal sealed class DialetoProtegido : IAsyncDisposable
     /// <param name="operacao">O que o motor pedia, no infinitivo.</param>
     /// <param name="lado">O lado.</param>
     /// <param name="cancelamento">O token do chamador.</param>
+    /// <param name="aceitaRecusa">Se a recusa vira erro do plano (saída 2), também sem a mensagem; senão, falha.</param>
     /// <returns>A exceção a lançar.</returns>
-    internal static Exception TraduzirSemMensagem(Exception excecao, string provedor, string operacao, LadoBanco lado, CancellationToken cancelamento)
+    internal static Exception TraduzirSemMensagem(Exception excecao, string provedor, string operacao, LadoBanco lado, CancellationToken cancelamento, bool aceitaRecusa = false)
     {
         if (cancelamento.IsCancellationRequested && SoCancelamento(excecao))
         {
@@ -297,10 +388,24 @@ internal sealed class DialetoProtegido : IAsyncDisposable
         }
 
         var codigo = incognito.Codigo;
-        return CodigosPlanejar.DaFaixaDosDialetos(codigo)
-            ? new FalhaDialetoException(codigo, $"O dialeto de {provedor} falhou ao {operacao}{NoLado(lado)} com o código {codigo}.")
-            : FalhaSemMensagem(provedor, operacao, lado, excecao);
+        if (!CodigosPlanejar.DaFaixaDosDialetos(codigo))
+        {
+            return FalhaSemMensagem(provedor, operacao, lado, excecao);
+        }
+
+        return aceitaRecusa && excecao is DialetoRecusouException
+            ? new PlanoRecusadoException([new ErroPlano(codigo, $"O dialeto de {provedor} recusou {operacao}{NoLado(lado)} com o código {codigo}.")])
+            : new FalhaDialetoException(codigo, $"O dialeto de {provedor} falhou ao {operacao}{NoLado(lado)} com o código {codigo}.");
     }
+
+    // O marcador coerente: a situação conhecida, e o identificador e a data, em UTC, só e sempre no válido.
+    private static bool Coerente(MarcadorLido marcador) =>
+        Enum.IsDefined(marcador.Situacao)
+        && (marcador.Situacao == SituacaoMarcador.Valido
+            ? marcador.Identificador is { } identificador && identificador != Guid.Empty && marcador.GravadoEm is { Offset.Ticks: 0 }
+            : marcador.Identificador is null && marcador.GravadoEm is null);
+
+    private DialetoDestino Destino(string motivo) => _banco as DialetoDestino ?? throw new InvalidOperationException($"No envoltório da origem: {motivo}.");
 
     private string Citar(Func<DialetoSql, string> citar)
     {
@@ -358,4 +463,94 @@ internal sealed class DialetoProtegido : IAsyncDisposable
         LadoBanco.Destino => " no destino",
         _ => "",
     };
+
+    /// <summary>
+    /// Uma concessão do bloqueio do destino, chamada só por aqui. A perda (a do dialeto, ou o batimento que falha) sai como
+    /// <see cref="BloqueioDestinoException"/> com <c>INC4001</c> (saída 1), nunca como cancelamento do chamador nem como
+    /// erro do plano; o <see cref="Perdido"/> daqui é cancelado fora da thread do dialeto (do driver); e o descarte libera
+    /// uma vez e nunca lança, para não tomar o lugar do erro de quem o chama.
+    /// </summary>
+    internal sealed class ConcessaoProtegida : IAsyncDisposable
+    {
+        private readonly ConcessaoBloqueio _concessao;
+        private readonly CancellationToken _doDialeto;
+        private readonly CancellationTokenSource _perdido = new();
+        private readonly CancellationTokenRegistration _registro;
+        private int _liberada;
+
+        internal ConcessaoProtegida(ConcessaoBloqueio concessao, CancellationToken doDialeto)
+        {
+            _concessao = concessao;
+            _doDialeto = doDialeto;
+            _registro = doDialeto.UnsafeRegister(static estado => _ = Task.Run(() => Cancelar((CancellationTokenSource)estado!)), _perdido);
+        }
+
+        /// <summary>Cancelado quando o bloqueio se perde, numa thread do motor.</summary>
+        internal CancellationToken Perdido => _perdido.Token;
+
+        /// <summary>O batimento antes de um passo crítico.</summary>
+        /// <param name="cancelamento">O token do chamador (o cancelamento dele não é perda).</param>
+        /// <returns>A tarefa.</returns>
+        /// <exception cref="BloqueioDestinoException">O bloqueio se perdeu (<c>INC4001</c>).</exception>
+        /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+        /// <exception cref="ObjectDisposedException">A concessão já foi liberada (defeito do motor).</exception>
+        internal async Task ConferirAsync(CancellationToken cancelamento)
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _liberada) != 0, this);
+            if (_doDialeto.IsCancellationRequested || _perdido.IsCancellationRequested)
+            {
+                throw Perda();
+            }
+
+            try
+            {
+                await _concessao.ConferirAsync(cancelamento).ConfigureAwait(false);
+            }
+            catch (Exception excecao) when (cancelamento.IsCancellationRequested && SoCancelamento(excecao))
+            {
+                throw new OperationCanceledException(cancelamento);
+            }
+            catch
+            {
+                Cancelar(_perdido);
+                throw Perda();
+            }
+        }
+
+        /// <summary>Libera o bloqueio, uma vez só; nunca lança.</summary>
+        /// <returns>A tarefa do descarte.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "O descarte nunca toma o lugar do erro de quem o chama; a concessão do dialeto já marca a perda.")]
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _liberada, 1) != 0)
+            {
+                return;
+            }
+
+            await _registro.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await _concessao.DisposeAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+        }
+
+        private static BloqueioDestinoException Perda() => new(
+            CodigosExecucao.BloqueioPerdido,
+            "O bloqueio do destino se perdeu (a conexão do bloqueio caiu, ou o banco não o confirma): a execução para sem escrever mais nada no destino.");
+
+        // Quem registrou no token é o motor; uma falha dele não derruba quem sinaliza.
+        private static void Cancelar(CancellationTokenSource perdido)
+        {
+            try
+            {
+                perdido.Cancel();
+            }
+            catch (AggregateException)
+            {
+            }
+        }
+    }
 }
