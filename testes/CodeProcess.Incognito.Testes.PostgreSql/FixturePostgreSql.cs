@@ -2,6 +2,7 @@ using CodeProcess.Incognito.Dialetos;
 using CodeProcess.Incognito.Dialetos.PostgreSql;
 using CodeProcess.Incognito.Testes.Conformidade;
 using CodeProcess.Incognito.Transformadores;
+using Npgsql;
 
 namespace CodeProcess.Incognito.Testes.PostgreSql;
 
@@ -75,13 +76,133 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
 
     /// <inheritdoc/>
     // Espera o fim da sessão (o segundo argumento): sem isso, o batimento seguinte ainda acharia o lock.
-    public override Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento) =>
+    public override Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento) => DerrubarAsync(par.BancoDestino, cancelamento);
+
+    private Task DerrubarAsync(string banco, CancellationToken cancelamento) =>
         servidor.ExecutarAsync(
-            par.BancoDestino,
+            banco,
             string.Create(
                 System.Globalization.CultureInfo.InvariantCulture,
                 $"SELECT pg_catalog.pg_terminate_backend(l.pid, 5000) FROM pg_catalog.pg_locks l WHERE l.locktype = 'advisory' AND l.classid = {BloqueioPostgreSql.Classe} AND l.objid = {BloqueioPostgreSql.Execucao} AND l.objsubid = 2 AND l.database = (SELECT d.oid FROM pg_catalog.pg_database d WHERE d.datname = pg_catalog.current_database())"),
             cancelamento);
+
+    /// <inheritdoc/>
+    public override async ValueTask<BancoDoDiario> CriarBancoDoDiarioAsync(CancellationToken cancelamento)
+    {
+        var banco = await servidor.CriarBancoDoDiarioAsync(cancelamento);
+        try
+        {
+            var destino = await ConectarDoDiarioAsync(banco, cancelamento);
+            return new BancoDoDiario(destino, banco, async () => await servidor.ApagarAsync(banco));
+        }
+        catch
+        {
+            await servidor.ApagarAsync(banco);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override Task<DialetoDestino> ConectarOutroAsync(BancoDoDiario banco, CancellationToken cancelamento) => ConectarDoDiarioAsync(banco.Banco, cancelamento);
+
+    /// <inheritdoc/>
+    public override async Task<string?> LerChaveAsync(BancoDoDiario banco, NomeObjeto tabela, string chave, CancellationToken cancelamento)
+    {
+        var imposta = servidor.Versao >= 180000 ? " || '|' || k.conenforced" : "";
+        await using var conexao = await servidor.AbrirComoAdministradorAsync(banco.Banco, cancelamento);
+        await using var comando = new NpgsqlCommand(
+            $"SELECT pg_catalog.pg_get_constraintdef(k.oid) || '|' || k.convalidated{imposta} FROM pg_catalog.pg_constraint k WHERE k.conrelid = $1::regclass AND k.conname = $2 AND k.conparentid = 0",
+            conexao);
+        comando.Parameters.Add(new NpgsqlParameter { Value = Citado(tabela) });
+        comando.Parameters.Add(new NpgsqlParameter { Value = chave });
+        return await comando.ExecuteScalarAsync(cancelamento) as string;
+    }
+
+    /// <inheritdoc/>
+    public override async Task<string> LerTriggersAsync(BancoDoDiario banco, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        await using var conexao = await servidor.AbrirComoAdministradorAsync(banco.Banco, cancelamento);
+        await using var comando = new NpgsqlCommand(
+            """
+            SELECT COALESCE(string_agg(c.relname || '.' || t.tgname || '=' || t.tgenabled::text, ';' ORDER BY c.relname, t.tgname), '')
+            FROM pg_catalog.pg_trigger t
+            JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+            WHERE NOT t.tgisinternal AND t.tgrelid IN (SELECT a.relid FROM pg_catalog.pg_partition_tree($1::regclass) a UNION SELECT $1::regclass)
+            """,
+            conexao);
+        comando.Parameters.Add(new NpgsqlParameter { Value = Citado(tabela) });
+        return (string)(await comando.ExecuteScalarAsync(cancelamento))!;
+    }
+
+    /// <inheritdoc/>
+    // Como réplica, as triggers de integridade não disparam: a linha entra sem a loja do código.
+    public override Task CriarOrfaoAsync(BancoDoDiario banco, string sentinela, CancellationToken cancelamento) =>
+        servidor.ExecutarAsync(
+            banco.Banco,
+            $"SET session_replication_role = replica; INSERT INTO loja.vendas (id, codigo) VALUES (999, '{sentinela.Replace("'", "''", StringComparison.Ordinal)}'); RESET session_replication_role",
+            cancelamento);
+
+    /// <inheritdoc/>
+    public override async Task<IAsyncDisposable> SegurarAsync(BancoDoDiario banco, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        var conexao = await servidor.AbrirComoAdministradorAsync(banco.Banco, cancelamento);
+        try
+        {
+            var transacao = await conexao.BeginTransactionAsync(cancelamento);
+            await using (var travar = new NpgsqlCommand($"LOCK TABLE {Citado(tabela)} IN ACCESS EXCLUSIVE MODE", conexao, transacao))
+            {
+                await travar.ExecuteNonQueryAsync(cancelamento);
+            }
+
+            return new AoDescartar(async () =>
+            {
+                await transacao.DisposeAsync();
+                await conexao.DisposeAsync();
+            });
+        }
+        catch
+        {
+            await conexao.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async Task<IAsyncDisposable> FalharNoFimDoDdlAsync(BancoDoDiario banco, CancellationToken cancelamento)
+    {
+        await servidor.ExecutarAsync(
+            banco.Banco,
+            "CREATE FUNCTION public.incognito_falhar() RETURNS event_trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'falha injetada no fim do comando'; END$$; "
+            + "CREATE EVENT TRIGGER incognito_falha ON ddl_command_end EXECUTE FUNCTION public.incognito_falhar()",
+            cancelamento);
+        return new AoDescartar(() => servidor.ExecutarAsync(banco.Banco, "DROP EVENT TRIGGER incognito_falha; DROP FUNCTION public.incognito_falhar()", CancellationToken.None));
+    }
+
+    /// <inheritdoc/>
+    public override Task RecriarComOutraDefinicaoAsync(BancoDoDiario banco, NomeObjeto tabela, string chave, CancellationToken cancelamento) =>
+        servidor.ExecutarAsync(banco.Banco, $"ALTER TABLE {Citado(tabela)} ADD CONSTRAINT \"{chave}\" FOREIGN KEY (id) REFERENCES loja.lojas (id) NOT VALID", cancelamento);
+
+    /// <inheritdoc/>
+    public override Task AdulterarAsync(BancoDoDiario banco, Adulteracao adulteracao, string sentinela, CancellationToken cancelamento) =>
+        servidor.ExecutarAsync(
+            banco.Banco,
+            adulteracao switch
+            {
+                Adulteracao.DefinicaoComOutraAcao => $"UPDATE incognito.restricao_removida SET definicao = definicao || ', ADD CONSTRAINT \"{sentinela}\" CHECK (true)' WHERE tipo = 'chave'",
+                Adulteracao.EscritaDeOutroPapel => $"GRANT UPDATE (definicao) ON incognito.restricao_removida TO {ServidorPostgreSql.Outro}",
+                Adulteracao.GatilhoNoDiario => "CREATE FUNCTION public.incognito_gancho() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RETURN NEW; END$$; "
+                    + "CREATE TRIGGER gancho BEFORE UPDATE ON incognito.restricao_removida FOR EACH ROW EXECUTE FUNCTION public.incognito_gancho()",
+                _ => "UPDATE incognito.execucao SET versao_diario = 99",
+            },
+            cancelamento);
+
+    /// <inheritdoc/>
+    public override Task DerrubarBloqueioAsync(BancoDoDiario banco, CancellationToken cancelamento) => DerrubarAsync(banco.Banco, cancelamento);
+
+    private Task<DialetoDestino> ConectarDoDiarioAsync(string banco, CancellationToken cancelamento) =>
+        _provedor.ConectarDestinoAsync(new SegredoConexao(servidor.StringDeConexao(banco, ServidorPostgreSql.Dono, servidor.SenhaDono)), cancelamento);
+
+    private static string Citado(NomeObjeto nome) => CitacaoPostgreSql.Citar(nome);
 
     private async ValueTask<ParDeBancos> CriarAsync(Func<string, string> conexaoDaOrigem, Func<string, string> conexaoDoDestino, CancellationToken cancelamento)
     {
@@ -209,6 +330,25 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Particionada = Caso.Presente(Nome("pedidos")),
                 MaeComLinhaSoNaHerdeira = Caso.Presente(Nome("contato")),
                 ComSegurancaPorLinha = Caso.Presente(Nome("forcada")),
+            },
+
+            // O banco do diário (diario-de-conformidade.sql): a particionada só volta sem validação do 18 em diante; antes,
+            // valida direto; a não imposta só existe no 18.
+            Diario = new()
+            {
+                Chaves =
+                [
+                    new(Nome("vendas"), "fk_vendas_lojas", SituacaoEntrada.SemValidacao),
+                    new(Nome("vendas"), "fk_vendas_par", SituacaoEntrada.SemValidacao),
+                    new(Nome("vendas"), "fk_vendas_codigo", SituacaoEntrada.SemValidacao),
+                    new(Nome("vendas"), "fk_vendas_pendente", null),
+                    new(Nome("pedidos"), "fk_pedidos_lojas", versao >= 180000 ? SituacaoEntrada.SemValidacao : null),
+                    .. versao >= 180000 ? [new ChaveDoDiario(Nome("vinculo"), "fk_vinculo_solto", null)] : Array.Empty<ChaveDoDiario>(),
+                    new(Nome("compras"), "fk_compras_lojas", SituacaoEntrada.SemValidacao),
+                ],
+                ComOrfao = new(Nome("vendas"), "fk_vendas_codigo", SituacaoEntrada.SemValidacao),
+                ComOutraDefinicao = new(Nome("compras"), "fk_compras_lojas", SituacaoEntrada.SemValidacao),
+                ComTriggers = [Nome("disparos"), Nome("pedidos"), Nome("pessoa")],
             },
         };
     }
@@ -656,13 +796,17 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
         ];
 
         // O esquema do diário: a tabela e o índice da chave dela, a particionada e o índice dela, a foreign table, a
-        // materialized view, a sequence e a view.
-        NomeObjeto[] reservado =
+        // materialized view, a sequence e a view, com o tipo (o que não é tabela comum, índice dela nem sequence é outro).
+        ObjetoReservado[] reservado =
         [
-            new("incognito", "execucao"), new("incognito", "execucao_pkey"), new("incognito", "lotes"), new("incognito", "lotes_id"),
-            new("incognito", "remota"), new("incognito", "resumo"), new("incognito", "seq_interna"), new("incognito", "vista"),
+            Reservado("execucao", TipoObjetoReservado.Tabela), Reservado("execucao_pkey", TipoObjetoReservado.Indice),
+            Reservado("lotes", TipoObjetoReservado.Outro), Reservado("lotes_id", TipoObjetoReservado.Outro),
+            Reservado("remota", TipoObjetoReservado.Outro), Reservado("resumo", TipoObjetoReservado.Outro),
+            Reservado("seq_interna", TipoObjetoReservado.Sequence), Reservado("vista", TipoObjetoReservado.Outro),
         ];
-        return new(tabelas, sequences, residuais, reservado);
+
+        // O gatilho de evento desligado fica de fora.
+        return new(tabelas, sequences, residuais, reservado) { TriggersDeEvento = ["et_conformidade"] };
     }
 
     // As tabelas dos objetos da tabela: índices únicos, CHECKs, exclusões, triggers e o estado das chaves estrangeiras.
@@ -767,8 +911,8 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Colunas = [Col("id", Inteiro, suportadoInteiro), ColTexto("valor", Texto, suportadoTexto)],
                 Triggers = [new("tg_desligada", Ligada: false), new("tg_esvaziar"), new("tg_ligada"), new("tg_replica", Ligada: false), new("tg_sempre")],
             },
-            Vinculo("vinculo_desligado", new("fk_desligado", ["loja"], Nome("lojas"), ["id"], Imposta: false)),
-            Vinculo("vinculo_replica", new("fk_replica", ["loja"], Nome("lojas"), ["id"], Imposta: false)),
+            Vinculo("vinculo_desligado", new("fk_desligado", ["loja"], Nome("lojas"), ["id"], Imposta: false, DesligadaSemRestauracao: true)),
+            Vinculo("vinculo_replica", new("fk_replica", ["loja"], Nome("lojas"), ["id"], Imposta: false, DesligadaSemRestauracao: true)),
             Vinculo("vinculo_pendente", new("fk_pendente", ["loja"], Nome("lojas"), ["id"], Validada: false)),
             .. dezoito ? [Vinculo("vinculo_solto", new("fk_solto", ["loja"], Nome("lojas"), ["id"], Imposta: false, Validada: false))] : Array.Empty<TabelaInventariada>(),
 
@@ -779,7 +923,7 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Tipo = TipoTabela.Particionada,
                 ChaveParticao = new(["parte"]),
                 Colunas = remessa,
-                ChavesEstrangeiras = [new("fk_remessas", ["loja"], Nome("lojas"), ["id"], Imposta: false)],
+                ChavesEstrangeiras = [new("fk_remessas", ["loja"], Nome("lojas"), ["id"], Imposta: false, DesligadaSemRestauracao: true)],
             },
             Particao("remessas_1", "remessas", remessa),
             Particao("remessas_2", "remessas", remessa),
@@ -859,6 +1003,8 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
 
     private static NomeObjeto Nome(string nome) => new("loja", nome);
 
+    private static ObjetoReservado Reservado(string nome, TipoObjetoReservado tipo) => new() { Nome = new NomeObjeto("incognito", nome), Tipo = tipo };
+
     private static ReferenciaColuna Coluna(string tabela, string coluna) => new(Nome(tabela), coluna);
 
     // A classe de uma coluna na matriz de tipos: a situação e o tipo canônico.
@@ -874,4 +1020,11 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
 
         internal static Classe Suportado(TipoColuna tipo) => new(SituacaoTipo.Suportado, tipo);
     }
+}
+
+/// <summary>O que a fixture desfaz no descarte.</summary>
+internal sealed class AoDescartar(Func<Task> desfazer) : IAsyncDisposable
+{
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync() => await desfazer();
 }

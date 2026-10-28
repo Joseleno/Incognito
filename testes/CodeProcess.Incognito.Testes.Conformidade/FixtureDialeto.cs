@@ -76,6 +76,149 @@ public abstract class FixtureDialeto
     /// <param name="cancelamento">Cancela a operação.</param>
     /// <returns>A tarefa.</returns>
     public abstract Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Cria um banco do diário novo (os casos de <see cref="CasosDoDiario"/>, sem o esquema do diário), de outro dono, com os
+    /// objetos e o direito de criar esquema dados ao login do destino, e o conecta com esse login. Nome único.
+    /// </summary>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>O banco, que o teste descarta.</returns>
+    public abstract ValueTask<BancoDoDiario> CriarBancoDoDiarioAsync(CancellationToken cancelamento);
+
+    /// <summary>Conecta outra instância do destino ao banco do diário, com o mesmo login.</summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="cancelamento">Cancela a conexão.</param>
+    /// <returns>O destino conectado, que o teste descarta.</returns>
+    public abstract Task<DialetoDestino> ConectarOutroAsync(BancoDoDiario banco, CancellationToken cancelamento);
+
+    /// <summary>
+    /// O estado de uma chave estrangeira, lido como administrador e sem passar pelo dialeto: um texto opaco que muda quando a
+    /// definição, a validação ou a imposição mudam.
+    /// </summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="tabela">A tabela da chave.</param>
+    /// <param name="chave">O nome.</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>O estado; nulo quando a chave não existe.</returns>
+    public abstract Task<string?> LerChaveAsync(BancoDoDiario banco, NomeObjeto tabela, string chave, CancellationToken cancelamento);
+
+    /// <summary>
+    /// O estado de todas as triggers de usuário de uma tabela e das partições dela, lido como administrador: um texto opaco
+    /// que muda quando o estado de qualquer uma muda.
+    /// </summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="tabela">A tabela (numa particionada, a raiz).</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>O estado.</returns>
+    public abstract Task<string> LerTriggersAsync(BancoDoDiario banco, NomeObjeto tabela, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Cria, como administrador e sem a conferência da chave, uma linha órfã em <see cref="CasosDoDiario.ComOrfao"/>, com o
+    /// sentinela no valor da chave.
+    /// </summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="sentinela">O texto que nenhuma saída pode trazer.</param>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task CriarOrfaoAsync(BancoDoDiario banco, string sentinela, CancellationToken cancelamento);
+
+    /// <summary>Segura a tabela em outra sessão, sem deixar ninguém mais tocá-la, até o descarte.</summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="tabela">A tabela.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>O que solta a tabela.</returns>
+    public abstract Task<IAsyncDisposable> SegurarAsync(BancoDoDiario banco, NomeObjeto tabela, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Faz falhar, até o descarte, toda alteração de tabela no banco depois de feita e antes do fim da transação (no
+    /// PostgreSQL, um gatilho de evento no fim do comando): a prova de que o registro e a alteração andam juntos.
+    /// </summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>O que tira a falha.</returns>
+    public abstract Task<IAsyncDisposable> FalharNoFimDoDdlAsync(BancoDoDiario banco, CancellationToken cancelamento);
+
+    /// <summary>Cria, como administrador, uma chave com o nome dado e outra definição (a mesma tabela, outras colunas ou ações).</summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="tabela">A tabela.</param>
+    /// <param name="chave">O nome.</param>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task RecriarComOutraDefinicaoAsync(BancoDoDiario banco, NomeObjeto tabela, string chave, CancellationToken cancelamento);
+
+    /// <summary>Adultera o diário criado, como administrador e sem passar pelo dialeto.</summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="adulteracao">O que fazer.</param>
+    /// <param name="sentinela">O texto que nenhuma saída pode trazer.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task AdulterarAsync(BancoDoDiario banco, Adulteracao adulteracao, string sentinela, CancellationToken cancelamento);
+
+    /// <summary>Derruba, como administrador, a conexão do bloqueio de execução no banco do diário.</summary>
+    /// <param name="banco">O banco do diário.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task DerrubarBloqueioAsync(BancoDoDiario banco, CancellationToken cancelamento);
+}
+
+/// <summary>O que a fixture faz com o diário criado, para a suíte conferir que o dialeto o recusa sem executar nada.</summary>
+public enum Adulteracao
+{
+    /// <summary>A definição guardada de uma chave removida ganha outra ação do <c>ALTER TABLE</c> depois dela, com o sentinela.</summary>
+    DefinicaoComOutraAcao,
+
+    /// <summary>Outro papel ganha o direito de mudar uma coluna do diário.</summary>
+    EscritaDeOutroPapel,
+
+    /// <summary>Uma tabela do diário ganha um gatilho, que rodaria código de outro papel a cada gravação.</summary>
+    GatilhoNoDiario,
+
+    /// <summary>Uma execução registrada passa a dizer uma versão do diário mais nova que a do dialeto.</summary>
+    VersaoMaisNova,
+}
+
+/// <summary>Um banco do diário conectado com o login do destino.</summary>
+public sealed class BancoDoDiario : IAsyncDisposable
+{
+    private readonly Func<ValueTask> _aoDescartar;
+    private int _descartado;
+
+    /// <summary>Monta o banco.</summary>
+    /// <param name="destino">O destino conectado.</param>
+    /// <param name="banco">O nome do banco.</param>
+    /// <param name="aoDescartar">O que a fixture faz no fim (apagar o banco), depois de descartar o dialeto.</param>
+    public BancoDoDiario(DialetoDestino destino, string banco, Func<ValueTask> aoDescartar)
+    {
+        Destino = destino ?? throw new ArgumentNullException(nameof(destino));
+        ArgumentException.ThrowIfNullOrEmpty(banco);
+        Banco = banco;
+        _aoDescartar = aoDescartar ?? throw new ArgumentNullException(nameof(aoDescartar));
+    }
+
+    /// <summary>O destino.</summary>
+    public DialetoDestino Destino { get; }
+
+    /// <summary>O nome do banco.</summary>
+    public string Banco { get; }
+
+    /// <summary>Descarta o dialeto e apaga o banco; idempotente.</summary>
+    /// <returns>A tarefa do descarte.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _descartado, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await Destino.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _aoDescartar().ConfigureAwait(false);
+        }
+    }
 }
 
 /// <summary>Os dois bancos de um teste, conectados.</summary>

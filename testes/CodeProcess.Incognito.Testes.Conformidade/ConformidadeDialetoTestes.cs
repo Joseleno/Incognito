@@ -22,7 +22,7 @@ namespace CodeProcess.Incognito.Testes.Conformidade;
 /// </remarks>
 /// <typeparam name="TFixture">A fixture do dialeto.</typeparam>
 /// <param name="fixture">A fixture.</param>
-public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IClassFixture<TFixture>, IAsyncLifetime
+public abstract partial class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IClassFixture<TFixture>, IAsyncLifetime
     where TFixture : FixtureDialeto
 {
     private ParDeBancos? _par;
@@ -32,6 +32,9 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
 
     /// <summary>O que a fixture declarou.</summary>
     protected EsquemaDeConformidade Esperado => fixture.Esperado;
+
+    // A fixture, para as outras partes da classe (o parâmetro do construtor primário só vale nesta).
+    private TFixture Fixtura => fixture;
 
     /// <summary>Cria o par de bancos do teste.</summary>
     /// <returns>A tarefa.</returns>
@@ -719,9 +722,9 @@ public abstract class ConformidadeDialetoTestes<TFixture>(TFixture fixture) : IC
         // Fora das tabelas, mas nunca escondido: o planejar precisa saber o que há no esquema reservado.
         var reservado = esquema.ObjetosNoEsquemaReservado;
         Assert.True(
-            reservado is not null && reservado.Contains(Esperado.ObjetoDoIncognito),
+            reservado is not null && reservado.Any(objeto => objeto.Nome.Equals(Esperado.ObjetoDoIncognito)),
             $"Esquema incognito: o objeto declarado ({Esperado.ObjetoDoIncognito}) não está entre os objetos do esquema reservado ({(reservado is null ? "não informados" : string.Join(", ", reservado))}).");
-        var fora = reservado!.Where(nome => nome.Esquema != "incognito").Select(nome => nome.ToString()).ToArray();
+        var fora = reservado!.Where(objeto => objeto.Nome.Esquema != "incognito").Select(objeto => objeto.ToString()).ToArray();
         Assert.True(fora.Length == 0, $"Esquema incognito: objetos de outro esquema entre os do reservado: {string.Join(", ", fora)}.");
     }
 

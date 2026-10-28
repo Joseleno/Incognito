@@ -12,7 +12,11 @@ namespace CodeProcess.Incognito.Interno;
 /// <summary>O que o dialeto leu de um banco.</summary>
 /// <param name="Esquema">O esquema, já conferido.</param>
 /// <param name="Identidade">A identidade.</param>
-internal sealed record LeituraDoBanco(EsquemaBanco Esquema, IdentidadeLida Identidade);
+/// <param name="ObjetosDoDiario">
+/// No destino, o que o diário do Incognito pode deixar no esquema reservado (o <c>planejar</c> aceita isso no destino); nula
+/// na origem.
+/// </param>
+internal sealed record LeituraDoBanco(EsquemaBanco Esquema, IdentidadeLida Identidade, IReadOnlyList<ObjetoReservado>? ObjetosDoDiario = null);
 
 
 /// <summary>
@@ -73,9 +77,9 @@ internal static class PlanejadorInterno
         try
         {
             origem = await ConectarAsync(dialetoDaOrigem!, configuracao.Origem, LadoBanco.Origem, resolverConexao, cancelamento).ConfigureAwait(false);
-            var leituraDaOrigem = await LerAsync(origem, cancelamento).ConfigureAwait(false);
+            var leituraDaOrigem = await LerAsync(origem, LadoBanco.Origem, cancelamento).ConfigureAwait(false);
             destino = await ConectarAsync(dialetoDoDestino!, configuracao.Destino, LadoBanco.Destino, resolverConexao, cancelamento).ConfigureAwait(false);
-            var leituraDoDestino = await LerAsync(destino, cancelamento).ConfigureAwait(false);
+            var leituraDoDestino = await LerAsync(destino, LadoBanco.Destino, cancelamento).ConfigureAwait(false);
 
             // P2: a coerência das duas leituras.
             Conferir(leituraDaOrigem.Esquema, configuracao.Origem, LadoBanco.Origem);
@@ -152,11 +156,11 @@ internal static class PlanejadorInterno
         return DialetoProtegido.ConectarAsync(dialeto, ValidadorConfiguracao.Nome(conexao.Provedor), lado, segredo, cancelamento);
     }
 
-    private static async Task<LeituraDoBanco> LerAsync(DialetoProtegido banco, CancellationToken cancelamento)
+    private static async Task<LeituraDoBanco> LerAsync(DialetoProtegido banco, LadoBanco lado, CancellationToken cancelamento)
     {
         var esquema = await banco.LerEsquemaAsync(cancelamento).ConfigureAwait(false);
         var identidade = await banco.LerIdentidadeAsync(cancelamento).ConfigureAwait(false);
-        return new LeituraDoBanco(esquema, identidade);
+        return new LeituraDoBanco(esquema, identidade, lado == LadoBanco.Destino ? banco.ObjetosDoDiario() : null);
     }
 
     private static void Conferir(EsquemaBanco esquema, ConexaoBanco conexao, LadoBanco lado)

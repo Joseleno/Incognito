@@ -105,15 +105,59 @@ public sealed class EsquemaDeConformidade
     /// tabela com a segurança por linha forçada para o dono (a leitura falha, nunca esconde linhas).
     /// </summary>
     public required LinhasNoDestino Linhas { get; init; }
+
+    /// <summary>Os casos do banco do diário (<see cref="FixtureDialeto.CriarBancoDoDiarioAsync"/>).</summary>
+    public required CasosDoDiario Diario { get; init; }
 }
+
+/// <summary>
+/// O banco do diário: chaves estrangeiras em cada estado e tabelas com triggers em cada estado, todas do login do destino,
+/// num banco de outro dono, em que o login pode criar esquema.
+/// </summary>
+public sealed class CasosDoDiario
+{
+    /// <summary>
+    /// As chaves estrangeiras, cada uma com a situação que a recriação devolve: validada com ações e adiável, composta com
+    /// <c>MATCH FULL</c>, de texto, não validada, de particionada e, onde existe, não imposta.
+    /// </summary>
+    public required IReadOnlyList<ChaveDoDiario> Chaves { get; init; }
+
+    /// <summary>A chave de texto numa tabela comum, validada, em que a fixture cria a linha órfã (a recriação devolve sem validação).</summary>
+    public required ChaveDoDiario ComOrfao { get; init; }
+
+    /// <summary>
+    /// A chave a que a fixture dá outra definição com o mesmo nome (<see cref="FixtureDialeto.RecriarComOutraDefinicaoAsync"/>),
+    /// validada numa tabela comum.
+    /// </summary>
+    public required ChaveDoDiario ComOutraDefinicao { get; init; }
+
+    /// <summary>
+    /// As tabelas com triggers, cada uma com tudo o que desliga: uma comum com triggers em cada estado, a raiz de uma
+    /// particionada (com a cópia desligada numa partição e uma trigger própria noutra) e a mãe de herança clássica.
+    /// </summary>
+    public required IReadOnlyList<NomeObjeto> ComTriggers { get; init; }
+}
+
+/// <summary>Uma chave estrangeira do banco do diário.</summary>
+/// <param name="Tabela">A tabela da chave.</param>
+/// <param name="Nome">O nome.</param>
+/// <param name="NaRecriacao">
+/// A situação que a recriação devolve: nula quando o estado original volta direto (a não validada, a não imposta, ou a
+/// particionada validada direto onde o banco não aceita sem validar); sem validação quando falta validar.
+/// </param>
+public sealed record ChaveDoDiario(NomeObjeto Tabela, string Nome, SituacaoEntrada? NaRecriacao);
 
 /// <summary>O inventário do esquema de conformidade.</summary>
 /// <param name="Tabelas">Todas as tabelas, em qualquer ordem.</param>
 /// <param name="Sequences">Todas as sequences, com as colunas que as usam.</param>
 /// <param name="Residuais">Todos os objetos residuais (vazia se o banco não tem nenhum).</param>
-/// <param name="ObjetosNoEsquemaReservado">Os objetos do esquema <c>incognito</c>, em ordem ordinal de nome.</param>
+/// <param name="ObjetosNoEsquemaReservado">Os objetos do esquema <c>incognito</c>, com o tipo, em ordem ordinal de nome.</param>
 public sealed record Inventario(
-    IReadOnlyList<TabelaInventariada> Tabelas, IReadOnlyList<SequenceEsperada> Sequences, IReadOnlyList<ResidualInventariado> Residuais, IReadOnlyList<NomeObjeto> ObjetosNoEsquemaReservado);
+    IReadOnlyList<TabelaInventariada> Tabelas, IReadOnlyList<SequenceEsperada> Sequences, IReadOnlyList<ResidualInventariado> Residuais, IReadOnlyList<ObjetoReservado> ObjetosNoEsquemaReservado)
+{
+    /// <summary>Os gatilhos de evento ligados no banco (um desligado fica de fora), em ordem ordinal; vazia se nenhum.</summary>
+    public IReadOnlyList<string> TriggersDeEvento { get; init; } = [];
+}
 
 /// <summary>Uma tabela do inventário: tudo o que o modelo diz dela e das colunas.</summary>
 public sealed class TabelaInventariada
@@ -372,8 +416,15 @@ public sealed record ResidualInventariado(NomeObjeto Nome, TipoObjetoResidual Ti
 /// <param name="ColunasReferenciadas">As colunas referenciadas, na mesma ordem.</param>
 /// <param name="Imposta">Se o banco a confere agora (padrão: sim).</param>
 /// <param name="Validada">Se as linhas antigas foram conferidas (padrão: sim).</param>
+/// <param name="DesligadaSemRestauracao">Se a conferência está desligada de um jeito que o login não restaura (padrão: não).</param>
 public sealed record ChaveEstrangeiraInventariada(
-    string Nome, IReadOnlyList<string> Colunas, NomeObjeto Referenciada, IReadOnlyList<string> ColunasReferenciadas, bool? Imposta = true, bool? Validada = true);
+    string Nome,
+    IReadOnlyList<string> Colunas,
+    NomeObjeto Referenciada,
+    IReadOnlyList<string> ColunasReferenciadas,
+    bool? Imposta = true,
+    bool? Validada = true,
+    bool? DesligadaSemRestauracao = false);
 
 /// <summary>Um elemento de índice único.</summary>
 /// <param name="Coluna">A coluna (nula num elemento de expressão).</param>

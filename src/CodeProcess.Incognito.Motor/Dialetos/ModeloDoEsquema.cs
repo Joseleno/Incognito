@@ -93,7 +93,8 @@ public sealed class EsquemaBanco
     private readonly IReadOnlyList<TabelaEsquema> _tabelas = [];
     private readonly IReadOnlyList<SequenceEsquema> _sequences = [];
     private readonly IReadOnlyList<ObjetoResidual> _residuais = [];
-    private readonly IReadOnlyList<NomeObjeto>? _reservado;
+    private readonly IReadOnlyList<ObjetoReservado>? _reservado;
+    private readonly IReadOnlyList<string>? _triggersDeEvento;
 
     /// <summary>As tabelas, inclusive partições, herdeiras e históricos de temporais.</summary>
     public required IReadOnlyList<TabelaEsquema> Tabelas { get => _tabelas; init => _tabelas = Lista.Copiar(value, nameof(Tabelas)); }
@@ -108,14 +109,26 @@ public sealed class EsquemaBanco
     public IReadOnlyList<ObjetoResidual> ObjetosResiduais { get => _residuais; init => _residuais = Lista.Copiar(value, nameof(ObjetosResiduais)); }
 
     /// <summary>
-    /// Os objetos do esquema <c>incognito</c>, reservado ao diário do Incognito (tabelas, views, índices e sequences), em
-    /// ordem ordinal de nome; vazia quando não há nenhum. As tabelas desse esquema nunca entram em <see cref="Tabelas"/>.
-    /// Nulo se o dialeto não informa: o <c>planejar</c> trata como o pior caso, porque o esquema pode esconder tabela ou dado.
+    /// Os objetos do esquema <c>incognito</c>, reservado ao diário do Incognito (tabelas, views, índices e sequences), com o
+    /// tipo de cada um, em ordem ordinal de nome; vazia quando não há nenhum. As tabelas desse esquema nunca entram em
+    /// <see cref="Tabelas"/>. Nulo se o dialeto não informa: o <c>planejar</c> trata como o pior caso, porque o esquema pode
+    /// esconder tabela ou dado. No destino, o <c>planejar</c> aceita os do próprio diário (<see cref="DiarioExecucao.ObjetosDoDiario"/>).
     /// </summary>
-    public IReadOnlyList<NomeObjeto>? ObjetosNoEsquemaReservado
+    public IReadOnlyList<ObjetoReservado>? ObjetosNoEsquemaReservado
     {
         get => _reservado;
         init => _reservado = value is null ? null : Lista.Copiar(value, nameof(ObjetosNoEsquemaReservado));
+    }
+
+    /// <summary>
+    /// Os gatilhos de evento ligados no banco (event triggers no PostgreSQL, triggers DDL do banco no SQL Server), pelo
+    /// nome, em ordem ordinal: disparam no que o diário faz no esquema, e só quem administra o servidor os desliga. Vazia se
+    /// nenhum; nulo se o dialeto não informa.
+    /// </summary>
+    public IReadOnlyList<string>? TriggersDeEvento
+    {
+        get => _triggersDeEvento;
+        init => _triggersDeEvento = value is null ? null : Lista.CopiarNomes(value, nameof(TriggersDeEvento));
     }
 
     /// <summary>
@@ -502,6 +515,14 @@ public sealed class ChaveEstrangeira
     /// Nulo: não informado, o pior caso.
     /// </summary>
     public bool? Validada { get; init; }
+
+    /// <summary>
+    /// Se a conferência da chave está desligada de um jeito que o login não restaura depois de removê-la e recriá-la (no
+    /// PostgreSQL, alguma trigger interna da chave, ou de uma cópia dela numa partição, fora do estado de origem: só o
+    /// superuser as desliga). <c>false</c> quando o estado volta igual pela definição (inclusive <c>NOT ENFORCED</c> e, no SQL
+    /// Server, <c>NOCHECK</c>). Nulo: não informado, o pior caso.
+    /// </summary>
+    public bool? DesligadaSemRestauracao { get; init; }
 }
 
 /// <summary>Uma sequence e as colunas que a usam (mais de uma: sequence compartilhada).</summary>

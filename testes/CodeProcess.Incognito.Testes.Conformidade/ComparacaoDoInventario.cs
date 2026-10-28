@@ -79,6 +79,16 @@ internal static class ComparacaoDoInventario
         {
             yield return $"esquema reservado: objetos lidos [{Lista(reservado)}], esperados [{Lista(esperado.ObjetosNoEsquemaReservado)}]";
         }
+
+        // Os gatilhos de evento ligados, na ordem do contrato; nulo diz que o dialeto não informa.
+        if (lido.TriggersDeEvento is not { } eventos)
+        {
+            yield return $"gatilhos de evento: não informados, esperados [{Lista(esperado.TriggersDeEvento)}]";
+        }
+        else if (!eventos.SequenceEqual(esperado.TriggersDeEvento, StringComparer.Ordinal))
+        {
+            yield return $"gatilhos de evento: lidos [{Lista(eventos)}], esperados [{Lista(esperado.TriggersDeEvento)}]";
+        }
     }
 
     private static string? Diferenca(TabelaEsquema tabela, TabelaInventariada esperada)
@@ -203,6 +213,8 @@ internal static class ComparacaoDoInventario
             ? $": colunas referenciadas lidas [{Lista(chave.ColunasReferenciadas)}], esperadas [{Lista(esperada.ColunasReferenciadas)}]"
         : chave.Imposta != esperada.Imposta ? $": imposta lida {Texto(chave.Imposta)}, esperada {Texto(esperada.Imposta)}"
         : chave.Validada != esperada.Validada ? $": validada lida {Texto(chave.Validada)}, esperada {Texto(esperada.Validada)}"
+        : chave.DesligadaSemRestauracao != esperada.DesligadaSemRestauracao
+            ? $": desligada sem restauração lida {Texto(chave.DesligadaSemRestauracao)}, esperada {Texto(esperada.DesligadaSemRestauracao)}"
         : null;
 
     // A ordem das dependências é do contrato: comparada também.

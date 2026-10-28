@@ -45,6 +45,7 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     private PostgreSqlContainer? _conteiner;
     private string? _modeloOrigem;
     private string? _modeloDestino;
+    private string? _modeloDiario;
 
     /// <summary>A senha do leitor.</summary>
     public string SenhaLeitor { get; } = NovaSenha();
@@ -92,10 +93,16 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
         await ConferirAsync(_modeloDestino, "presenca-do-sentinela.sql", "Lugares do esquema de conformidade sem o sentinela no destino", cancelamento);
         await ConferirAsync(_modeloDestino, "estado-dos-objetos.sql", "Casos do esquema de conformidade fora do estado declarado no destino", cancelamento);
 
+        // O banco do diário: do administrador, com os objetos do dono, que só pode criar esquema nele.
+        _modeloDiario = NovoNome("modelo_diario");
+        await ExecutarAsync(Administrador, $"CREATE DATABASE {_modeloDiario}", cancelamento);
+        await ExecutarAsync(Administrador, $"GRANT CONNECT, CREATE ON DATABASE {_modeloDiario} TO {Dono}", cancelamento);
+        await ExecutarAsync(_modeloDiario, LerRecurso("diario-de-conformidade.sql"), cancelamento);
+
         // As conexões do administrador não ficam em pool: fechadas aqui, os modelos podem ser clonados.
         await ExecutarAsync(
             Administrador,
-            $"ALTER DATABASE {_modeloOrigem} ALLOW_CONNECTIONS false; ALTER DATABASE {_modeloDestino} ALLOW_CONNECTIONS false",
+            $"ALTER DATABASE {_modeloOrigem} ALLOW_CONNECTIONS false; ALTER DATABASE {_modeloDestino} ALLOW_CONNECTIONS false; ALTER DATABASE {_modeloDiario} ALLOW_CONNECTIONS false",
             cancelamento);
     }
 
@@ -121,6 +128,19 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     /// <returns>O nome do banco.</returns>
     /// <remarks>O clone não herda o dono do modelo: o dono vem no CREATE DATABASE.</remarks>
     public Task<string> CriarDestinoAsync(CancellationToken cancelamento) => ClonarAsync("destino", _modeloDestino, $" OWNER {Dono}", cancelamento);
+
+    /// <summary>
+    /// Clona o banco-modelo do diário num banco novo do administrador, em que o dono pode conectar e criar esquema (o
+    /// clone não leva os direitos do banco).
+    /// </summary>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>O nome do banco.</returns>
+    public async Task<string> CriarBancoDoDiarioAsync(CancellationToken cancelamento)
+    {
+        var banco = await ClonarAsync("diario", _modeloDiario, "", cancelamento);
+        await ExecutarAsync(Administrador, $"GRANT CONNECT, CREATE ON DATABASE {banco} TO {Dono}", cancelamento);
+        return banco;
+    }
 
     /// <summary>Apaga o banco, derrubando as conexões que sobrarem, e antes as assinaturas dele.</summary>
     /// <param name="banco">O banco.</param>

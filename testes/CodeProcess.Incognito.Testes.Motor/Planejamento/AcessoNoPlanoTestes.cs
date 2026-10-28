@@ -69,7 +69,7 @@ public sealed class AcessoNoPlanoTestes
         var esquema = Trocar(ComChaveDoCpf(), "pedidos", tabela => BancoFalso.Clonar(
             tabela,
             (nameof(TabelaEsquema.Colunas), tabela.Colunas.Append(gerada).ToArray()),
-            (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { new ChaveEstrangeira { Nome = "fk_limpo", Colunas = ["cpf_limpo"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["cpf"], Imposta = true, Validada = true } })));
+            (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { new ChaveEstrangeira { Nome = "fk_limpo", Colunas = ["cpf_limpo"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["cpf"], Imposta = true, Validada = true, DesligadaSemRestauracao = false } })));
 
         var erros = await RecusaAsync("tabelas:\n  loja.clientes: { acao: ignorar }\n  loja.pedidos:\n    colunas:\n      cliente_cpf: { transformador: br.cpf@1 }\n", esquema, esquema);
 
@@ -486,7 +486,24 @@ public sealed class AcessoNoPlanoTestes
 
         Assert.Equal(("INC3065", "clientes_1"), (Assert.Single(daCopia).Codigo, daCopia[0].Objeto));
         Assert.Equal(("INC3065", "clientes_1"), (Assert.Single(daPropria).Codigo, daPropria[0].Objeto));
-        Assert.Contains("A partição loja.clientes_1 do destino tem trigger ligada", daPropria[0].Mensagem, StringComparison.Ordinal);
+        Assert.Contains("A partição loja.clientes_1 do destino tem trigger, e o login não pode desligar e religar", daPropria[0].Mensagem, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(null)]
+    public async Task Com_a_arvore_desligada_a_particao_so_com_trigger_desligada_tambem_exige_poder_religar_nela(bool? pode)
+    {
+        // O diário restaura cada tabela física sozinha: a cópia desligada numa partição volta desligada, e só quem pode
+        // alterar a partição a deixa assim.
+        var daRaiz = new TriggerEsquema { Nome = "tg", Ligada = true, Herdada = false };
+        var desligada = new TriggerEsquema { Nome = "tg", Ligada = false, Herdada = true };
+
+        var erros = await RecusaAsync("", Coerente(), ComPermissao(ComParticao([daRaiz], [desligada]), "clientes_1", (nameof(PermissoesTabela.PodeDesligarTriggers), pode)));
+        var semArvoreDesligada = await PlanejarAsync("", Coerente(), ComPermissao(ComParticao([], [desligada]), "clientes_1", (nameof(PermissoesTabela.PodeDesligarTriggers), pode)));
+
+        Assert.Equal(("INC3065", "clientes_1"), (Assert.Single(erros).Codigo, erros[0].Objeto));
+        Assert.NotNull(semArvoreDesligada);
     }
 
     [Fact]
@@ -509,7 +526,7 @@ public sealed class AcessoNoPlanoTestes
     [Fact]
     public async Task A_chave_declarada_na_particao_diz_a_particao()
     {
-        var chave = new ChaveEstrangeira { Nome = "fk_dono", Colunas = ["id"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true };
+        var chave = new ChaveEstrangeira { Nome = "fk_dono", Colunas = ["id"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true, DesligadaSemRestauracao = false };
         var destino = Trocar(ComParticao([], []), "clientes_1", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { chave })));
 
         var aviso = Assert.Single((await PlanejarAsync("tabelas:\n  loja.pedidos: { acao: ignorar }\n", Coerente(), destino)).Avisos, aviso => aviso.Objeto == "fk_dono");
@@ -567,7 +584,7 @@ public sealed class AcessoNoPlanoTestes
         // ESC e U+202E nos nomes da chave, da partição, da sequence, do residual, das colunas sem leitura e da codificação.
         var esc = ((char)0x1B).ToString();
         var rlo = ((char)0x202E).ToString();
-        var chave = new ChaveEstrangeira { Nome = "fk" + esc + "[2J", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true };
+        var chave = new ChaveEstrangeira { Nome = "fk" + esc + "[2J", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true, DesligadaSemRestauracao = false };
         var comChave = Trocar(Coerente(), "pedidos", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { chave })));
         var sequence = new SequenceEsquema { Nome = Nome("seq" + rlo), Colunas = [new ReferenciaColuna(Nome("clientes"), "id")] };
         var comSequence = BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.Sequences), new[] { sequence }), (nameof(EsquemaBanco.Acesso), Acesso(Coerente().Tabelas, [sequence], [])));
@@ -614,7 +631,7 @@ public sealed class AcessoNoPlanoTestes
     private static EsquemaBanco ComChaveDoCpf() => Trocar(Coerente(), "pedidos", tabela => BancoFalso.Clonar(
         tabela,
         (nameof(TabelaEsquema.Colunas), tabela.Colunas.Append(Texto("cliente_cpf", 11)).ToArray()),
-        (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_cpf", Colunas = ["cliente_cpf"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["cpf"], Imposta = true, Validada = true }).ToArray())));
+        (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_cpf", Colunas = ["cliente_cpf"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["cpf"], Imposta = true, Validada = true, DesligadaSemRestauracao = false }).ToArray())));
 
     // clientes particionada com uma partição, cada uma com as triggers dadas.
     private static EsquemaBanco ComParticao(TriggerEsquema[] daRaiz, TriggerEsquema[] daParticao)

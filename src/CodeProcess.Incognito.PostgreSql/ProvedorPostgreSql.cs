@@ -77,6 +77,7 @@ internal sealed class DestinoPostgreSql : DialetoDestino
         _bloqueio = new BloqueioPostgreSql(conexao, LancarSeDescartado);
         Marcador = new MarcadorDestinoPostgreSql(conexao, LancarSeDescartado);
         Dados = new LeitorDadosDestinoPostgreSql(conexao, LancarSeDescartado);
+        Diario = new DiarioPostgreSql(conexao, _bloqueio, LancarSeDescartado);
     }
 
     private readonly BloqueioPostgreSql _bloqueio;
@@ -92,6 +93,8 @@ internal sealed class DestinoPostgreSql : DialetoDestino
     public override MarcadorDestino Marcador { get; }
 
     public override LeitorDadosDestino Dados { get; }
+
+    public override DiarioExecucao Diario { get; }
 
     // A concessão viva é liberada antes de fechar a fonte de que a conexão dela saiu.
     protected override async ValueTask DisposeAsyncCore()

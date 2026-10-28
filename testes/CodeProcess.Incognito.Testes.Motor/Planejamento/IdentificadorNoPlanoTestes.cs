@@ -467,6 +467,7 @@ public sealed class IdentificadorNoPlanoTestes
         ColunasReferenciadas = referenciadas,
         Imposta = imposta,
         Validada = validada,
+        DesligadaSemRestauracao = false,
     };
 
     private static Task<Plano> PlanejarAsync(ProvedorDoPlanejar provedor, string yaml) => DialetoProtegidoTestes.PlanejarAsync(provedor, yaml: Yaml.Minimo + yaml);

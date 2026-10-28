@@ -196,6 +196,28 @@ public enum Defeito
     // A classe concreta da suíte aninhada em outra, ou aberta.
     SuiteAninhada,
     SuiteAberta,
+
+    // O leitor: a chave que o login não restaura lida como restaurável; os gatilhos de evento omitidos.
+    RestauravelSempre,
+    EventosOmitidos,
+
+    // O diário: sem exigir a concessão, sem persistir a criação, declarando objeto que não cria, com duas execuções em
+    // andamento, recriando validada a que não era, devolvendo nula a que falta validar, religando pela raiz, removendo sem
+    // registrar quando a alteração falha, validando com órfão, sem adotar a entrada pendente, falhando na restauração
+    // repetida, trocando a chave de outra definição e aceitando o diário adulterado.
+    DiarioSemConcessao,
+    DiarioNaoPersiste,
+    ObjetosDoDiarioAMais,
+    ExecucaoDupla,
+    RecriaValidada,
+    RecriaSemSituacao,
+    TriggersPelaRaiz,
+    RemocaoSemRegistro,
+    OrfaoValida,
+    NaoAdota,
+    RecriacaoNaoIdempotente,
+    SobrescreveOutraDefinicao,
+    AdulteracaoAceita,
 }
 
 /// <summary>
@@ -255,7 +277,7 @@ internal static class BancoFalso
                 Colunas = [Inteiro("pedido", anulavel: false), Inteiro("loja", anulavel: false), Inteiro("numero")],
                 ChavesEstrangeiras =
                 [
-                    new() { Nome = "fk_itens_pedidos", Colunas = ["loja", "pedido"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["loja", "id"], Imposta = true, Validada = true },
+                    new() { Nome = "fk_itens_pedidos", Colunas = ["loja", "pedido"], Referenciada = Nome("pedidos"), ColunasReferenciadas = ["loja", "id"], Imposta = true, Validada = true, DesligadaSemRestauracao = false },
                 ],
             },
             new() { Nome = new NomeObjeto("incognito", "execucao"), Colunas = [Texto("status")] },
@@ -299,7 +321,7 @@ internal static class BancoFalso
                     Colunas = [Texto("canal"), Texto("cidade"), Texto("numero")],
                     ChavesEstrangeiras =
                     [
-                        new() { Nome = "fk_ficha_contato", Colunas = ["canal"], Referenciada = Nome("contato"), ColunasReferenciadas = ["canal"], Imposta = false, Validada = false },
+                        new() { Nome = "fk_ficha_contato", Colunas = ["canal"], Referenciada = Nome("contato"), ColunasReferenciadas = ["canal"], Imposta = false, Validada = false, DesligadaSemRestauracao = true },
                     ],
                 },
 
@@ -393,12 +415,13 @@ internal static class BancoFalso
             : tabelas;
     }
 
-    // Os objetos do esquema do diário (a tabela e a sequence dele), em ordem ordinal de nome.
-    internal static NomeObjeto[] Reservado(bool completo) =>
+    // Os objetos do esquema do diário (a tabela e a sequence dele), com o tipo, em ordem ordinal de nome.
+    internal static ObjetoReservado[] Reservado(bool completo) =>
     [
-        .. Tabelas(completo).Select(tabela => tabela.Nome).Concat(Sequences(completo).Select(sequence => sequence.Nome))
-            .Where(nome => nome.Esquema == "incognito")
-            .OrderBy(nome => nome.Nome, StringComparer.Ordinal),
+        .. Tabelas(completo).Select(tabela => new ObjetoReservado { Nome = tabela.Nome, Tipo = TipoObjetoReservado.Tabela })
+            .Concat(Sequences(completo).Select(sequence => new ObjetoReservado { Nome = sequence.Nome, Tipo = TipoObjetoReservado.Sequence }))
+            .Where(objeto => objeto.Nome.Esquema == "incognito")
+            .OrderBy(objeto => objeto.Nome.Nome, StringComparer.Ordinal),
     ];
 
     internal static List<SequenceEsquema> Sequences(bool completo)
@@ -600,15 +623,43 @@ internal static class BancoFalso
             MaeComLinhaSoNaHerdeira = completo ? Caso.Presente(Nome("contato")) : Caso.Inexistente<NomeObjeto>("banco falso sem herança"),
             ComSegurancaPorLinha = completo ? Caso.Presente(Nome("segredos")) : Caso.Inexistente<NomeObjeto>("banco falso sem segurança por linha"),
         },
+        Diario = new()
+        {
+            Chaves =
+            [
+                new(Nome("vendas"), "fk_vendas_lojas", SituacaoEntrada.SemValidacao),
+                new(Nome("vendas"), "fk_vendas_par", SituacaoEntrada.SemValidacao),
+                new(Nome("vendas"), "fk_vendas_codigo", SituacaoEntrada.SemValidacao),
+                new(Nome("vendas"), "fk_vendas_pendente", null),
+                new(Nome("pedidos"), "fk_pedidos_lojas", SituacaoEntrada.SemValidacao),
+                new(Nome("vinculo"), "fk_vinculo_solto", null),
+                new(Nome("compras"), "fk_compras_lojas", SituacaoEntrada.SemValidacao),
+            ],
+            ComOrfao = new(Nome("vendas"), "fk_vendas_codigo", SituacaoEntrada.SemValidacao),
+            ComOutraDefinicao = new(Nome("compras"), "fk_compras_lojas", SituacaoEntrada.SemValidacao),
+            ComTriggers = [Nome("disparos"), Nome("pedidos"), Nome("pessoa")],
+        },
     };
 
+    /// <summary>Os gatilhos de evento ligados do banco falso, em ordem ordinal.</summary>
+    internal static readonly string[] TriggersDeEvento = ["et_auditoria", "et_conformidade"];
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EstadoDoBancoFalso> _bancos = new(StringComparer.Ordinal);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EstadoDoDiarioFalso> _diarios = new(StringComparer.Ordinal);
 
     /// <summary>O estado de um banco falso que as instâncias conectadas a ele dividem (o comentário e o bloqueio).</summary>
     internal static EstadoDoBancoFalso Estado(string banco) => _bancos.GetOrAdd(banco, _ => new EstadoDoBancoFalso());
 
+    /// <summary>O estado do diário de um banco falso (as chaves, as triggers e o diário dos casos), dividido como o do banco.</summary>
+    internal static EstadoDoDiarioFalso Diario(string banco) => _diarios.GetOrAdd(banco, _ => new EstadoDoDiarioFalso());
+
     /// <summary>Esquece o estado de um banco, no fim do teste.</summary>
-    internal static void Esquecer(string banco) => _bancos.TryRemove(banco, out _);
+    internal static void Esquecer(string banco)
+    {
+        _bancos.TryRemove(banco, out _);
+        _diarios.TryRemove(banco, out _);
+    }
 
     /// <summary>A existência de linhas do destino falso, como a cópia lê, com os defeitos.</summary>
     internal static bool TemLinhas(NomeObjeto tabela, Defeito defeito)
@@ -733,7 +784,7 @@ internal static class BancoFalso
                 ChavePrimaria = tabela.ChavePrimaria,
                 ChavesEstrangeiras =
                 [
-                    .. tabela.ChavesEstrangeiras.Select(chave => new ChaveEstrangeiraInventariada(chave.Nome, chave.Colunas, chave.Referenciada, chave.ColunasReferenciadas, chave.Imposta, chave.Validada)),
+                    .. tabela.ChavesEstrangeiras.Select(chave => new ChaveEstrangeiraInventariada(chave.Nome, chave.Colunas, chave.Referenciada, chave.ColunasReferenciadas, chave.Imposta, chave.Validada, chave.DesligadaSemRestauracao)),
                 ],
                 IndicesUnicos = [.. tabela.IndicesUnicos.Select(IndiceInventariado.De)],
                 Checks = [.. tabela.RestricoesCheck.Select(CheckInventariado.De)],
@@ -746,7 +797,8 @@ internal static class BancoFalso
             .. Residuais(completo).Select(residual =>
                 new ResidualInventariado(residual.Nome, residual.Tipo, residual.DependenciasIncompletas, residual.Populada) { DependeDe = residual.DependeDe }),
         ],
-        Reservado(completo));
+        Reservado(completo))
+    { TriggersDeEvento = completo ? TriggersDeEvento : [] };
 
     private static ColunaInventariada Projetar(ColunaEsquema coluna) => new()
     {
@@ -823,8 +875,16 @@ internal sealed class ProvedorFalso(bool completo, Defeito defeito, Func<Esquema
     public override Task<DialetoOrigem> ConectarOrigemAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
         Recusar<DialetoOrigem>(conexao) ?? Task.FromResult<DialetoOrigem>(new OrigemFalsa(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: false, privilegiado), completo, defeito, privilegiado));
 
+    /// <summary>O começo do nome dos bancos do diário: o leitor deles só lê o esquema reservado.</summary>
+    internal const string BancoDoDiario = "diario-";
+
     public override Task<DialetoDestino> ConectarDestinoAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
-        Recusar<DialetoDestino>(conexao) ?? Task.FromResult<DialetoDestino>(new DestinoFalso(conexao.Revelar(), new LeitorFalso(completo, defeito, perturbar, destino: true, privilegiado), completo, defeito, privilegiado));
+        Recusar<DialetoDestino>(conexao) ?? Task.FromResult<DialetoDestino>(new DestinoFalso(
+            conexao.Revelar(),
+            conexao.Revelar().StartsWith(BancoDoDiario, StringComparison.Ordinal) ? null : new LeitorFalso(completo, defeito, perturbar, destino: true, privilegiado),
+            completo,
+            defeito,
+            privilegiado));
 
     // A string inaceitável é recusada pelo tipo do contrato, com os defeitos da recusa.
     private Task<T>? Recusar<T>(SegredoConexao conexao)
@@ -876,11 +936,12 @@ internal sealed class DadosFalsos(Defeito defeito) : LeitorDadosOrigem
 
 // O destino da suíte tem o mesmo esquema da origem, lido pelo dono; o comentário e o bloqueio ficam no estado do banco,
 // que as instâncias conectadas a ele dividem.
-internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoDestino
+internal sealed class DestinoFalso(string banco, LeitorEsquema? leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoDestino
 {
     private readonly BloqueioFalso _bloqueio = new(BancoFalso.Estado(banco), defeito);
+    private DiarioFalso? _diario;
 
-    public override LeitorEsquema Esquema { get; } = leitor;
+    public override LeitorEsquema Esquema { get; } = leitor ?? new LeitorDoDiarioFalso(BancoFalso.Diario(banco));
 
     public override IdentidadeBanco Identidade { get; } = new IdentidadeFalsa(banco, completo, defeito, vaza: false, origem: false, BancoFalso.Estado(banco));
 
@@ -891,6 +952,8 @@ internal sealed class DestinoFalso(string banco, LeitorEsquema leitor, bool comp
     public override MarcadorDestino Marcador { get; } = new MarcadorFalso(BancoFalso.Estado(banco), defeito);
 
     public override LeitorDadosDestino Dados { get; } = new DadosDestinoFalsos(defeito);
+
+    public override DiarioExecucao Diario => _diario ??= new DiarioFalso(BancoFalso.Diario(banco), _bloqueio, defeito);
 
     protected override async ValueTask DisposeAsyncCore()
     {
@@ -948,10 +1011,11 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
             {
                 Defeito.EscondeEsquemaReservado => [],
                 Defeito.NaoInformaEsquemaReservado => null,
-                Defeito.ReservadoComOutroEsquema => [.. BancoFalso.Reservado(comRecursos), BancoFalso.Nome("intrusa")],
+                Defeito.ReservadoComOutroEsquema => [.. BancoFalso.Reservado(comRecursos), new ObjetoReservado { Nome = BancoFalso.Nome("intrusa"), Tipo = TipoObjetoReservado.Tabela }],
                 _ => BancoFalso.Reservado(comRecursos),
             },
             Propriedades = propriedades,
+            TriggersDeEvento = comRecursos && defeito != Defeito.EventosOmitidos ? BancoFalso.TriggersDeEvento : [],
             Acesso = Acesso(comRecursos, tabelas, residuais, sequences),
         };
         return Task.FromResult(perturbar is null ? esquema : perturbar(esquema, destino));
@@ -1191,6 +1255,9 @@ internal sealed class LeitorFalso(bool completo, Defeito defeito, Func<EsquemaBa
                 break;
             case Defeito.FkComRiDesligadaComoImposta:
                 TrocarChave(tabelas, f => [BancoFalso.Clonar(f, (nameof(ChaveEstrangeira.Imposta), true))], "ficha");
+                break;
+            case Defeito.RestauravelSempre:
+                TrocarChave(tabelas, f => [BancoFalso.Clonar(f, (nameof(ChaveEstrangeira.DesligadaSemRestauracao), false))], "ficha");
                 break;
             case Defeito.ElementoDeExpressaoSemReferencias:
                 TrocarIndice(tabelas, indices => [indices[0], BancoFalso.Clonar(indices[1], (nameof(IndiceUnico.ReferenciasDasExpressoes), null)), indices[2]]);
@@ -1520,10 +1587,19 @@ internal sealed class BloqueioFalso(EstadoDoBancoFalso estado, Defeito defeito) 
     }
 
     internal ValueTask LiberarAsync() => _viva?.DisposeAsync() ?? ValueTask.CompletedTask;
+
+    /// <summary>A concessão viva desta instância, ou nula.</summary>
+    internal ConcessaoFalsa? Viva => _viva;
 }
 
 internal sealed class ConcessaoFalsa(EstadoDoBancoFalso estado, Defeito defeito, Action aoLiberar) : ConcessaoBloqueio
 {
+    /// <summary>Se o banco ainda dá o bloqueio a esta concessão.</summary>
+    internal bool Viva => estado.Tem(this);
+
+    /// <summary>Marca a perda, quando o diário não acha o bloqueio com ela.</summary>
+    internal void MarcarPerda() => SinalizarPerda();
+
     protected override Task ConferirAsyncCore(CancellationToken cancelamento) =>
         defeito == Defeito.BatimentoSempreAprova || estado.Tem(this)
             ? Task.CompletedTask
@@ -1596,6 +1672,126 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
     {
         BancoFalso.Estado(par.BancoDestino).Soltar();
         return Task.CompletedTask;
+    }
+
+    public override async ValueTask<BancoDoDiario> CriarBancoDoDiarioAsync(CancellationToken cancelamento)
+    {
+        var banco = ProvedorFalso.BancoDoDiario + Guid.NewGuid().ToString("N");
+        var destino = await _provedor.ConectarDestinoAsync(new SegredoConexao(banco), cancelamento);
+        return new BancoDoDiario(destino, banco, () =>
+        {
+            BancoFalso.Esquecer(banco);
+            return ValueTask.CompletedTask;
+        });
+    }
+
+    public override Task<DialetoDestino> ConectarOutroAsync(BancoDoDiario banco, CancellationToken cancelamento) =>
+        _provedor.ConectarDestinoAsync(new SegredoConexao(banco.Banco), cancelamento);
+
+    public override Task<string?> LerChaveAsync(BancoDoDiario banco, NomeObjeto tabela, string chave, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            return Task.FromResult(estado.Chaves.TryGetValue((tabela, chave), out var lida) ? $"{lida.Definicao}|{lida.Validada}|{lida.Imposta}" : null);
+        }
+    }
+
+    public override Task<string> LerTriggersAsync(BancoDoDiario banco, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            var fisicas = estado.Arvores[tabela];
+            return Task.FromResult(string.Join(
+                ";",
+                estado.Triggers.Where(trigger => fisicas.Contains(trigger.Key.Tabela))
+                    .Select(trigger => $"{trigger.Key.Tabela}.{trigger.Key.Nome}={trigger.Value}")
+                    .Order(StringComparer.Ordinal)));
+        }
+    }
+
+    public override Task CriarOrfaoAsync(BancoDoDiario banco, string sentinela, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            estado.ComOrfao.Add((Esperado.Diario.ComOrfao.Tabela, Esperado.Diario.ComOrfao.Nome));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task<IAsyncDisposable> SegurarAsync(BancoDoDiario banco, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            estado.Seguradas.Add(tabela);
+        }
+
+        return Task.FromResult<IAsyncDisposable>(new AoDescartar(() =>
+        {
+            lock (estado.Trava)
+            {
+                estado.Seguradas.Remove(tabela);
+            }
+        }));
+    }
+
+    public override Task<IAsyncDisposable> FalharNoFimDoDdlAsync(BancoDoDiario banco, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            estado.FalharNoFim = true;
+        }
+
+        return Task.FromResult<IAsyncDisposable>(new AoDescartar(() =>
+        {
+            lock (estado.Trava)
+            {
+                estado.FalharNoFim = false;
+            }
+        }));
+    }
+
+    public override Task RecriarComOutraDefinicaoAsync(BancoDoDiario banco, NomeObjeto tabela, string chave, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            estado.Chaves[(tabela, chave)] = new ChaveFalsa("chave (loja) de loja.lojas (id), outra", true, true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task AdulterarAsync(BancoDoDiario banco, Adulteracao adulteracao, string sentinela, CancellationToken cancelamento)
+    {
+        var estado = BancoFalso.Diario(banco.Banco);
+        lock (estado.Trava)
+        {
+            estado.Adulteracoes.Add(adulteracao);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task DerrubarBloqueioAsync(BancoDoDiario banco, CancellationToken cancelamento)
+    {
+        BancoFalso.Estado(banco.Banco).Soltar();
+        return Task.CompletedTask;
+    }
+
+    // O que a fixture desfaz no descarte.
+    private sealed class AoDescartar(Action desfazer) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            desfazer();
+            return ValueTask.CompletedTask;
+        }
     }
 
     private static async ValueTask<ParDeBancos> CriarAsync(ProvedorFalso provedor, CancellationToken cancelamento)

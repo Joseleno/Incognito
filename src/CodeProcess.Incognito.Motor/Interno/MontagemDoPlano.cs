@@ -39,7 +39,7 @@ internal sealed partial class MontagemDoPlano
 {
     // O esquema do diário do Incognito, e os de sistema do PostgreSQL (os do SQL Server vêm com o dialeto dele): uma entrada
     // neles nunca é tabela de cópia.
-    private const string Reservado = "incognito";
+    internal const string Reservado = "incognito";
 
     // A maior precisão que o decimal do .NET representa sem perda.
     private const int MaiorPrecisao = 28;
@@ -493,15 +493,17 @@ internal sealed partial class MontagemDoPlano
             }
         }
 
-        ConferirReservado(_origem.Esquema, "na origem");
-        ConferirReservado(_destino.Esquema, "no destino");
+        ConferirReservado(_origem.Esquema, "na origem", []);
+        ConferirReservado(_destino.Esquema, "no destino", _destino.ObjetosDoDiario ?? []);
     }
 
     private bool TemParticaoEstrangeira(Unidade unidade) =>
         _origem.Esquema.Tabelas.Concat(_destino.Esquema.Tabelas)
             .Any(tabela => tabela.Tipo == TipoTabela.Particao && tabela.Estrangeira && ReferenceEquals(_unidadeDe.GetValueOrDefault(tabela), unidade));
 
-    private void ConferirReservado(EsquemaBanco esquema, string lado)
+    // O esquema reservado: nada nele na origem; no destino, só o que o diário do Incognito deixa (nome e tipo), e o aviso
+    // quando o diário ainda não está todo lá.
+    private void ConferirReservado(EsquemaBanco esquema, string lado, IReadOnlyList<ObjetoReservado> doDiario)
     {
         if (esquema.ObjetosNoEsquemaReservado is not { } objetos)
         {
@@ -517,12 +519,20 @@ internal sealed partial class MontagemDoPlano
             .Concat(esquema.ObjetosResiduais.Select(residual => residual.Nome))
             .Where(nome => string.Equals(nome.Esquema, Reservado, StringComparison.Ordinal));
         var acao = lado == "na origem" ? "renomeie o esquema na origem ou leia de uma cópia sem ele" : "remova o esquema do destino antes de copiar";
-        foreach (var objeto in objetos.Concat(copiaveis).Distinct())
+        var aceitos = doDiario.ToHashSet();
+        foreach (var objeto in objetos.Where(objeto => !aceitos.Contains(objeto)).Select(objeto => objeto.Nome).Concat(copiaveis).Distinct())
         {
             _coletor.Erro(new ErroPlano(
                 CodigosPlanejar.ObjetoNoEsquemaReservado,
                 $"Há {Exibir(objeto)} {lado}, no esquema reservado ao Incognito: {acao}.",
                 objeto: objeto.Nome));
+        }
+
+        if (doDiario.Count > 0 && !doDiario.All(objetos.Contains))
+        {
+            _coletor.Aviso(new Aviso(
+                CodigosPlanejar.DestinoAindaSemDiario,
+                "O destino ainda não tem o diário do Incognito: rode o preparar-destino antes de executar, que o recusa sem ele."));
         }
     }
 

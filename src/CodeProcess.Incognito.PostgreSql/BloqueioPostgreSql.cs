@@ -86,6 +86,9 @@ internal sealed class BloqueioPostgreSql(ConexaoPostgreSql conexao, Action lanca
         }
     }
 
+    /// <summary>A concessão viva desta instância, ou nula: o diário só trabalha com ela.</summary>
+    internal ConcessaoPostgreSql? Viva => Volatile.Read(ref _viva);
+
     /// <summary>Libera a concessão viva, no descarte do destino.</summary>
     /// <returns>A tarefa.</returns>
     internal ValueTask LiberarAsync() => Volatile.Read(ref _viva)?.DisposeAsync() ?? ValueTask.CompletedTask;
@@ -125,6 +128,7 @@ internal sealed class ConcessaoPostgreSql : ConcessaoBloqueio
     internal ConcessaoPostgreSql(NpgsqlConnection conexao, TimeSpan intervalo, Action aoLiberar)
     {
         _conexao = conexao;
+        Pid = conexao.ProcessID;
         _aoLiberar = aoLiberar;
         _conexao.StateChange += AoMudar;
         _temporizador = BaterAsync(intervalo);
@@ -132,6 +136,15 @@ internal sealed class ConcessaoPostgreSql : ConcessaoBloqueio
 
     /// <summary>A conexão dedicada, para os testes conferirem a sessão dela.</summary>
     internal NpgsqlConnection Conexao => _conexao;
+
+    /// <summary>O processo do servidor da conexão dedicada: o diário confere, na própria transação, que ele tem o lock.</summary>
+    internal int Pid { get; }
+
+    /// <summary>Se a concessão já se perdeu.</summary>
+    internal bool Perdida => Perdido.IsCancellationRequested;
+
+    /// <summary>Marca a perda, quando o diário não acha o lock com a sessão dedicada.</summary>
+    internal void MarcarPerda() => SinalizarPerda();
 
     protected override async Task ConferirAsyncCore(CancellationToken cancelamento)
     {

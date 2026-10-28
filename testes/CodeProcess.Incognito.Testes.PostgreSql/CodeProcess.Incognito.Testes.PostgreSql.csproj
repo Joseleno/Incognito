@@ -23,6 +23,7 @@
     <EmbeddedResource Include="guarda-de-posse.sql" LogicalName="guarda-de-posse.sql" />
     <EmbeddedResource Include="presenca-do-sentinela.sql" LogicalName="presenca-do-sentinela.sql" />
     <EmbeddedResource Include="estado-dos-objetos.sql" LogicalName="estado-dos-objetos.sql" />
+    <EmbeddedResource Include="diario-de-conformidade.sql" LogicalName="diario-de-conformidade.sql" />
     <None Include="imagens\*\Dockerfile" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
