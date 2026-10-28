@@ -51,8 +51,10 @@ public sealed class NuloNuncaAprovaTestes
         ["ColunaEsquema.RestritaPeloTipo"] = new(CpfTratado, nulo => new(Coerente(), TrocarColuna(Coerente(), "clientes", "cpf", (nameof(ColunaEsquema.RestritaPeloTipo), nulo ? null : false))), new("INC3540", "loja.clientes", "cpf", null)),
         ["ColunaEsquema.Tipo"] = new(CpfTratado, nulo => Mesmo(TrocarColuna(Coerente(), "clientes", "cpf", (nameof(ColunaEsquema.Tipo), nulo ? null : TipoColuna.Texto))), new("INC3041", "loja.clientes", "cpf", null)),
         ["ElementoIndice.Colacao"] = new(DocTratado, nulo => Mesmo(ComDoc(Texto("doc", 20), UnicoNoDoc(nulo ? null : Padrao))), new("INC3051", "loja.clientes", "doc", "uq_doc")),
+        ["ChaveEstrangeira.DesligadaSemRestauracao"] = new("", nulo => Mesmo(ComChaveRestauravel(nulo ? null : false)), new("INC3077", "loja.pedidos", null, "fk_pedidos_clientes")),
         ["EsquemaBanco.Acesso"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.Acesso), nulo ? null : Coerente().Acesso))), new("INC3062", null, null, null)),
-        ["EsquemaBanco.ObjetosNoEsquemaReservado"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.ObjetosNoEsquemaReservado), nulo ? null : Array.Empty<NomeObjeto>()))), new("INC3073", null, null, null)),
+        ["EsquemaBanco.ObjetosNoEsquemaReservado"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.ObjetosNoEsquemaReservado), nulo ? null : Array.Empty<ObjetoReservado>()))), new("INC3073", null, null, null)),
+        ["EsquemaBanco.TriggersDeEvento"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.TriggersDeEvento), nulo ? null : Array.Empty<string>()))), new("INC3585", null, null, null)),
         ["EsquemaBanco.Propriedades"] = new("", nulo => new(Coerente(), BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.Propriedades), nulo ? null : Coerente().Propriedades))), new("INC3082", null, null, null)),
         // O nulo na origem é o pior caso, um destino preparado; no destino, ele só avisa no planejar (INC3583).
         ["IdentidadeLida.Marcador"] = new("", nulo => new(Coerente(), Coerente(), Cifrado(true, true), MarcadorDaOrigemNulo: nulo), new("INC3602", null, null, null)),
@@ -79,7 +81,7 @@ public sealed class NuloNuncaAprovaTestes
     // (b) Isentos: sem consumidor no planejar, com o motivo e a tarefa dona.
     private static readonly Dictionary<string, string> _isentos = new(StringComparer.Ordinal)
     {
-        ["PermissoesBanco.PodeCriarEsquema"] = "só o preparar-destino cria o esquema do diário (INC-035 e INC-036)",
+        ["PermissoesBanco.PodeCriarEsquema"] = "só o preparar-destino cria o esquema do diário (decisão 96, D12): o planejar só avisa do diário ausente (INC3584)",
         ["PermissoesBanco.PodeMarcarBanco"] = "só o preparar-destino marca o banco (INC-035)",
         ["TabelaEsquema.Extensao"] = "só para mensagem: a tabela adotada por extensão é classificada e copiada como as outras (relatório, INC-041)",
         ["ColunaEsquema.TipoBase"] = "só para mensagem e relatório: a semântica da coluna já vem pelo fim da cadeia de domínios (relatório, INC-041)",
@@ -90,6 +92,7 @@ public sealed class NuloNuncaAprovaTestes
     {
         ["ColacaoEsquema.Esquema"] = "nulo onde ela não tem esquema",
         ["ElementoIndice.Coluna"] = "nula num elemento de expressão",
+        ["EntradaDiario.Nome"] = "nulo nas triggers",
         ["IndiceUnico.Predicado"] = "nulo se o índice não é parcial",
         ["IndiceUnico.ReferenciasDasExpressoes"] = "nulo se o índice não tem elemento de expressão",
         ["LimiteComprimento.Valor"] = "nulo se o tipo não declara limite",
@@ -202,9 +205,13 @@ public sealed class NuloNuncaAprovaTestes
     private static Cenario NoDestino(string tabela, string permissao, bool otimista, Item esperado) =>
         new("", nulo => new(Coerente(), ComPermissao(Coerente(), tabela, (permissao, nulo ? null : otimista))), esperado);
 
+    private static EsquemaBanco ComChaveRestauravel(bool? restauravel) => Trocar(Coerente(), "pedidos", tabela => BancoFalso.Clonar(
+        tabela,
+        (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { BancoFalso.Clonar(tabela.ChavesEstrangeiras[0], (nameof(ChaveEstrangeira.DesligadaSemRestauracao), restauravel)) })));
+
     private static EsquemaBanco ComChave(bool? imposta, bool? validada) => Trocar(Coerente(), "pedidos", tabela => BancoFalso.Clonar(
         tabela,
-        (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { new ChaveEstrangeira { Nome = "fk_pedidos_clientes", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = imposta, Validada = validada } })));
+        (nameof(TabelaEsquema.ChavesEstrangeiras), new[] { new ChaveEstrangeira { Nome = "fk_pedidos_clientes", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = imposta, Validada = validada, DesligadaSemRestauracao = false } })));
 
     // clientes com o doc no lugar do cpf, e os índices dados além do primário.
     private static EsquemaBanco ComDoc(ColunaEsquema doc, params IndiceUnico[] indices) => Trocar(Coerente(), "clientes", tabela => BancoFalso.Clonar(

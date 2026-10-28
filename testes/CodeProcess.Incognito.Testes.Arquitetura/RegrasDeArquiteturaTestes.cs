@@ -84,6 +84,10 @@ public sealed class RegrasDeArquiteturaTestes
             // O marcador: o comentário do banco só chega ao processo com o prefixo e o tamanho exato do formato, e só sai
             // classificado (o de quem administra o banco nunca).
             @"\(SELECT pg_catalog\.shobj_description\(d\.oid, 'pg_database'\) AS texto\)",
+
+            // O diário: a definição de uma chave estrangeira, que vai do catálogo ao diário dentro do servidor e é comparada lá
+            // (decisão 96, com a aprovação do dono); só no diário e só em consulta de chave estrangeira (fato abaixo).
+            @"\bpg_catalog\.pg_get_constraintdef\(k\.oid\)",
         }.Select(padrao => new Regex(padrao, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1))),
     ];
 
@@ -113,7 +117,12 @@ public sealed class RegrasDeArquiteturaTestes
         ["SequenceEsquema.Colunas"] = "nomes de coluna do catálogo",
         ["ObjetoResidual.Nome"] = "nome de catálogo",
         ["ObjetoResidual.DependeDe"] = "nomes de catálogo",
-        ["EsquemaBanco.ObjetosNoEsquemaReservado"] = "nomes de catálogo",
+        ["EsquemaBanco.TriggersDeEvento"] = "nomes de gatilho de evento do catálogo",
+        ["ObjetoReservado.Nome"] = "nome de catálogo",
+        ["EntradaDiario.Tabela"] = "nome de catálogo",
+        ["EntradaDiario.Nome"] = "nome de restrição do catálogo",
+        ["TriggerDoDiario.Tabela"] = "nome de catálogo",
+        ["TriggerDoDiario.Nome"] = "nome de trigger do catálogo",
         ["IndiceUnico.Nome"] = "nome de índice do catálogo",
         ["ElementoIndice.Coluna"] = "nome de coluna do catálogo",
         ["RestricaoCheck.Nome"] = "nome de restrição do catálogo",
@@ -413,6 +422,32 @@ public sealed class RegrasDeArquiteturaTestes
     }
 
     [Fact]
+    public void A_definicao_de_restricao_so_e_lida_pelo_diario_e_so_de_chave_estrangeira()
+    {
+        // A forma permitida do pg_get_constraintdef vale só no diário, e cada consulta que a usa se limita a chave estrangeira:
+        // a definição de um CHECK ou de um índice traz literais.
+        const string Diario = "DiarioPostgreSql.cs";
+        var arquivos = Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.cs");
+        var fora = arquivos
+            .Where(arquivo => !arquivo.EndsWith(Diario, StringComparison.Ordinal) && SemComentarios(File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))).Contains("pg_get_constraintdef", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var codigo = SemComentarios(File.ReadAllText(Path.Combine(Repositorio.Raiz(), Assert.Single(arquivos, arquivo => arquivo.EndsWith(Diario, StringComparison.Ordinal)))));
+        var usos = Regex.Matches(codigo, @"pg_get_constraintdef", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+        var semFiltro = usos
+            .Select(uso =>
+            {
+                var inicio = Math.Max(codigo.LastIndexOf("\"\"\"", uso.Index, StringComparison.Ordinal), codigo.LastIndexOf("(\"", uso.Index, StringComparison.Ordinal));
+                var fim = new[] { codigo.IndexOf("\"\"\"", uso.Index, StringComparison.Ordinal), codigo.IndexOf("\",", uso.Index, StringComparison.Ordinal) }.Where(posicao => posicao >= 0).Min();
+                return codigo[inicio..fim];
+            })
+            .Where(consulta => !consulta.Contains("k.contype = 'f'", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(fora.Length == 0, $"pg_get_constraintdef fora do diário: {string.Join(", ", fora)}.");
+        Assert.True(usos.Count > 0 && semFiltro.Length == 0, $"pg_get_constraintdef em consulta sem o filtro de chave estrangeira: {string.Join(" | ", semFiltro)}.");
+    }
+
+    [Fact]
     public void O_dialeto_PostgreSql_so_le_linhas_de_tabela_do_usuario_pelo_maior_valor_e_pela_existencia()
     {
         // As consultas do catálogo têm o FROM escrito; uma tabela do usuário só entra por um nome citado na hora (um FROM ou
@@ -632,10 +667,13 @@ public sealed class RegrasDeArquiteturaTestes
             .Concat(tipo.GetNestedTypes(Todos).SelectMany(TiposDaAssinatura));
     }
 
+    // O arquivo C# sem as linhas de comentário.
+    private static string SemComentarios(string fonte) => string.Join("\n", fonte.Split('\n').Where(linha => !linha.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+
     // Os trechos proibidos de um arquivo C#, sem as linhas de comentário e sem as formas permitidas.
     private static IEnumerable<string> TextoOpaco(string fonte)
     {
-        var codigo = string.Join("\n", fonte.Split('\n').Where(linha => !linha.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+        var codigo = SemComentarios(fonte);
         codigo = _formasPermitidas.Aggregate(codigo, (texto, forma) => forma.Replace(texto, " "));
         return _textoOpaco.SelectMany(padrao => padrao.Matches(codigo).Select(achado => achado.Value)).Distinct(StringComparer.Ordinal);
     }

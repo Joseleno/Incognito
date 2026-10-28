@@ -221,7 +221,8 @@ internal sealed partial class MontagemDoPlano
         }
 
         var arvore = TabelasNoDestino(unidade).ToList();
-        if (arvore.Any(tabela => tabela.Triggers.Any(trigger => trigger.Ligada)) && permissao?.PodeDesligarTriggers != true)
+        var desligada = arvore.Any(tabela => tabela.Triggers.Any(trigger => trigger.Ligada));
+        if (desligada && permissao?.PodeDesligarTriggers != true)
         {
             _coletor.Erro(new ErroPlano(
                 CodigosPlanejar.SemDesligarTriggers,
@@ -229,15 +230,16 @@ internal sealed partial class MontagemDoPlano
                 unidade.NomeTabela));
         }
 
-        // Cada partição com trigger ligada, também a cópia de uma trigger: o desligamento pela raiz só alcança as cópias das
-        // triggers da raiz, e não as de uma trigger própria de uma partição intermediária.
-        foreach (var particao in arvore.Where(tabela => !ReferenceEquals(tabela, raiz) && tabela.Triggers.Any(trigger => trigger.Ligada)))
+        // Com a árvore desligada, cada partição com trigger, ligada ou não: o diário desliga e religa cada tabela física
+        // sozinha (o desligamento pela raiz só alcança as cópias das triggers dela, e a restauração exata, uma trigger
+        // desligada numa partição e ligada na raiz, só se faz tabela por tabela), e só quem pode alterar a partição o faz.
+        foreach (var particao in arvore.Where(tabela => desligada && !ReferenceEquals(tabela, raiz) && tabela.Triggers.Count > 0))
         {
             if (permissoes.Tabelas.GetValueOrDefault(particao.Nome)?.PodeDesligarTriggers != true)
             {
                 _coletor.Erro(new ErroPlano(
                     CodigosPlanejar.SemDesligarTriggers,
-                    $"A partição {Exibir(particao.Nome)} do destino tem trigger ligada, e o login não pode desligar as triggers dela, ou o dialeto não informa: desligar as da raiz pode não alcançá-la. Copie com um login que possa desligá-las (no PostgreSQL, o dono da partição).",
+                    $"A partição {Exibir(particao.Nome)} do destino tem trigger, e o login não pode desligar e religar as triggers dela, ou o dialeto não informa: a cópia desliga e restaura cada tabela da árvore. Copie com um login que possa alterá-las (no PostgreSQL, o dono da partição).",
                     unidade.NomeTabela,
                     objeto: particao.Nome.Nome));
             }
@@ -270,11 +272,21 @@ internal sealed partial class MontagemDoPlano
         }
     }
 
-    // As chaves que o diário remove e recria: alterar as restrições no filho e referenciar o pai.
+    // As chaves que o diário remove e recria: alterar as restrições no filho e referenciar o pai, e um estado que a
+    // recriação devolva igual.
     private void ConferirChavesDoDiario(Permissoes permissoes)
     {
         foreach (var chave in _chavesDoDiario)
         {
+            if (chave.Chave.DesligadaSemRestauracao != false)
+            {
+                _coletor.Erro(new ErroPlano(
+                    CodigosPlanejar.ChaveSemRestauracao,
+                    $"A chave estrangeira {NomeTabela.Parte(chave.Chave.Nome)} do destino é removida e recriada na cópia, e a conferência dela está desligada de um jeito que o login não restaura (no PostgreSQL, triggers internas desligadas pelo superuser), ou o dialeto não informa: religue a conferência da chave antes de copiar.",
+                    chave.Filho.NomeTabela,
+                    objeto: chave.Chave.Nome));
+            }
+
             var faltam = new List<string>();
             if (permissoes.Tabelas.GetValueOrDefault(chave.Tabela.Nome)?.PodeAlterarRestricoes != true)
             {
@@ -399,6 +411,14 @@ internal sealed partial class MontagemDoPlano
     // A codificação, a versão e o transporte dos dois lados.
     private void ConferirBanco()
     {
+        if (_destino.Esquema.TriggersDeEvento is not { Count: 0 })
+        {
+            var quais = _destino.Esquema.TriggersDeEvento is { } nomes ? $"há ({string.Join(", ", nomes.Select(TextoSeguro.Nome))})" : "o dialeto não informa se há";
+            _coletor.Aviso(new Aviso(
+                CodigosPlanejar.TriggersDeEvento,
+                $"No destino, {quais} gatilhos de evento ligados: eles disparam quando a cópia remove e recria as chaves estrangeiras e desliga as triggers, e podem barrá-la; só quem administra o servidor os desliga."));
+        }
+
         var daOrigem = LerPropriedades(_origem.Esquema, "na origem");
         var doDestino = LerPropriedades(_destino.Esquema, "no destino");
         if (daOrigem is not null && doDestino is not null)

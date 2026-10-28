@@ -30,6 +30,7 @@ internal static class EsquemaSintetico
             Sequences = tabelas.Any(tabela => tabela.Nome.Equals(Nome("clientes"))) ? sequences : [],
             ObjetosResiduais = [],
             ObjetosNoEsquemaReservado = [],
+            TriggersDeEvento = [],
             Propriedades = new PropriedadesBanco
             {
                 Versao = new Version(18, 0),
@@ -77,7 +78,7 @@ internal static class EsquemaSintetico
         Colunas = [Inteiro("id", anulavel: false), Inteiro("cliente")],
         ChavePrimaria = ["id"],
         IndicesUnicos = [new IndiceUnico { Nome = "pk_pedidos", Primario = true, Elementos = [new ElementoIndice { Coluna = "id" }], NulosDistintos = true }],
-        ChavesEstrangeiras = [new ChaveEstrangeira { Nome = "fk_pedidos_clientes", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true }],
+        ChavesEstrangeiras = [new ChaveEstrangeira { Nome = "fk_pedidos_clientes", Colunas = ["cliente"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["id"], Imposta = true, Validada = true, DesligadaSemRestauracao = false }],
     };
 
     // A origem (loja) sem marcador e o destino com ele, em servidores e linhagens diferentes: nada a avisar.

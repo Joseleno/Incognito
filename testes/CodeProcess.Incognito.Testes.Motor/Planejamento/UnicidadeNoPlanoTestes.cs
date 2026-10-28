@@ -360,7 +360,7 @@ public sealed class UnicidadeNoPlanoTestes
         var esquema = Trocar(ComChave(), "pedidos", tabela => BancoFalso.Clonar(
             tabela,
             (nameof(TabelaEsquema.Colunas), new[] { Inteiro("id", anulavel: false), Inteiro("cliente"), Texto("doc", 20) }),
-            (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_doc", Colunas = ["doc"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["doc"], Imposta = true, Validada = true }).ToArray())));
+            (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_doc", Colunas = ["doc"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["doc"], Imposta = true, Validada = true, DesligadaSemRestauracao = false }).ToArray())));
 
         var erros = await RecusaAsync(Doc("{ transformador: exemplo.fixa@1 }"), esquema, Registro());
 
@@ -415,7 +415,7 @@ public sealed class UnicidadeNoPlanoTestes
         return Trocar(comDoc, "pedidos", tabela => BancoFalso.Clonar(
             tabela,
             (nameof(TabelaEsquema.Colunas), new[] { Inteiro("id", anulavel: false), Inteiro("cliente"), BancoFalso.Clonar(doc ?? Texto("doc", 20), (nameof(ColunaEsquema.Nome), "doc")) }),
-            (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_doc", Colunas = ["doc"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["doc"], Imposta = true, Validada = true }).ToArray())));
+            (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_doc", Colunas = ["doc"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["doc"], Imposta = true, Validada = true, DesligadaSemRestauracao = false }).ToArray())));
     }
 
     private static RegistroTransformadores Registro()

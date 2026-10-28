@@ -504,6 +504,7 @@ public sealed class PropagacaoNoPlanoTestes
         ColunasReferenciadas = referenciadas,
         Imposta = imposta,
         Validada = validada,
+        DesligadaSemRestauracao = false,
     };
 
     private static Task<Plano> PlanejarAsync(string yaml, EsquemaBanco origem, EsquemaBanco? destino = null) =>

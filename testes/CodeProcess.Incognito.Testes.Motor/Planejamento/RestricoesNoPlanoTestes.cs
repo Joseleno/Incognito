@@ -108,7 +108,7 @@ public sealed class RestricoesNoPlanoTestes
             tabela => BancoFalso.Clonar(
                 tabela,
                 (nameof(TabelaEsquema.Colunas), new[] { Inteiro("id", anulavel: false), Inteiro("cliente"), Texto("cliente_cpf", 14) }),
-                (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_cpf", Colunas = ["cliente_cpf"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["cpf"], Imposta = true, Validada = true }).ToArray()),
+                (nameof(TabelaEsquema.ChavesEstrangeiras), tabela.ChavesEstrangeiras.Append(new ChaveEstrangeira { Nome = "fk_cpf", Colunas = ["cliente_cpf"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["cpf"], Imposta = true, Validada = true, DesligadaSemRestauracao = false }).ToArray()),
                 (nameof(TabelaEsquema.RestricoesCheck), new[] { new RestricaoCheck { Nome = "ck_cliente_cpf", Referencias = new ReferenciasDaExpressao { Colunas = ["cliente_cpf"], Incompletas = false }, Imposta = true } })));
 
         var plano = await PlanejarAsync(CpfTratado, esquema, esquema);

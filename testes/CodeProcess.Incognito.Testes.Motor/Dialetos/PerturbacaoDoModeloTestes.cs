@@ -22,7 +22,7 @@ public sealed class PerturbacaoDoModeloTestes
         typeof(EsquemaBanco), typeof(TabelaEsquema), typeof(ColunaEsquema), typeof(ChaveEstrangeira), typeof(ChaveParticao), typeof(SequenceEsquema), typeof(ObjetoResidual),
         typeof(PropriedadesBanco), typeof(CodificacaoTexto), typeof(ColacaoEsquema), typeof(LimiteComprimento), typeof(FaixaInteira), typeof(ReferenciasDaExpressao),
         typeof(IndiceUnico), typeof(ElementoIndice), typeof(RestricaoCheck), typeof(RestricaoExclusao), typeof(TriggerEsquema),
-        typeof(AcessoLido), typeof(PermissoesBanco), typeof(PermissoesTabela), typeof(PermissoesResidual), typeof(PermissoesSequence),
+        typeof(AcessoLido), typeof(PermissoesBanco), typeof(PermissoesTabela), typeof(PermissoesResidual), typeof(PermissoesSequence), typeof(ObjetoReservado),
     ];
 
     // As permissões do login: conferidas pelo fato do acesso, não pelo inventário.
@@ -51,7 +51,7 @@ public sealed class PerturbacaoDoModeloTestes
     public void Todos_os_tipos_publicos_do_esquema_sao_perturbados()
     {
         // Os tipos com propriedades init do contrato (também aninhados, structs e em sub-namespaces), fora a identidade, o
-        // transporte e o marcador dela (que não são esquema, e têm fatos e defeitos próprios), as exceções (o HelpLink e o Source da
+        // transporte e o marcador dela, o diário (que não são esquema, e têm fatos e defeitos próprios), as exceções (o HelpLink e o Source da
         // Exception têm set) e o próprio contrato.
         var espaco = typeof(EsquemaBanco).Namespace!;
         var doModelo = typeof(EsquemaBanco).Assembly.GetTypes()
@@ -59,6 +59,7 @@ public sealed class PerturbacaoDoModeloTestes
                 && (tipo.Namespace == espaco || tipo.Namespace?.StartsWith(espaco + ".", StringComparison.Ordinal) == true)
                 && Alteraveis(tipo).Any())
             .Where(tipo => tipo != typeof(IdentidadeLida) && tipo != typeof(TransporteConexao) && tipo != typeof(MarcadorLido) && !typeof(Exception).IsAssignableFrom(tipo))
+            .Where(tipo => tipo != typeof(EstadoDiario) && tipo != typeof(ExecucaoLida) && tipo != typeof(EntradaDiario) && tipo != typeof(TriggerDoDiario))
             .Select(tipo => tipo.Name)
             .Order(StringComparer.Ordinal);
 
@@ -204,6 +205,7 @@ public sealed class PerturbacaoDoModeloTestes
             PermissoesTabela permissoes => permissoes.Tabela.ToString(),
             PermissoesResidual permissoes => permissoes.Nome.ToString(),
             PermissoesSequence permissoes => permissoes.Nome.ToString(),
+            ObjetoReservado reservado => reservado.Nome.ToString(),
             _ when _marcadores.TryGetValue(objeto.GetType(), out var marcador) => marcador,
             _ => dono,
         };
@@ -356,7 +358,11 @@ public sealed class PerturbacaoDoModeloTestes
             bool sim => (!sim, dono),
             string texto => (texto + "x", dono),
             NomeObjeto nome => (new NomeObjeto(nome.Esquema, nome.Nome + "x"), dono),
+            IReadOnlyList<string> nomes when propriedade.Name == nameof(EsquemaBanco.TriggersDeEvento) => (nomes.Count > 0 ? nomes.Take(nomes.Count - 1).ToArray() : new[] { "x" }, "gatilhos de evento"),
             IReadOnlyList<string> nomes => (nomes.Count > 0 ? nomes.Take(nomes.Count - 1).ToArray() : new[] { "x" }, dono),
+            IReadOnlyList<ObjetoReservado> objetos => (
+                objetos.Count > 0 ? objetos.Take(objetos.Count - 1).ToArray() : new[] { new ObjetoReservado { Nome = _inexistente, Tipo = TipoObjetoReservado.Tabela } },
+                dono.Length > 0 ? dono : (objetos.Count > 0 ? objetos[^1].Nome : _inexistente).ToString()),
             IReadOnlyList<NomeObjeto> nomes => (nomes.Count > 0 ? nomes.Take(nomes.Count - 1).ToArray() : new[] { _inexistente }, dono.Length > 0 ? dono : (nomes.Count > 0 ? nomes[^1] : _inexistente).ToString()),
             IReadOnlyList<ReferenciaColuna> colunas => (colunas.Count > 0 ? colunas.Take(colunas.Count - 1).ToArray() : new[] { new ReferenciaColuna(_inexistente, "x") }, dono),
             null when tipo == typeof(string) => ("x", dono),

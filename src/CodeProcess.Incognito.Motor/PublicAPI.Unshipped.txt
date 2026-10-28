@@ -155,7 +155,6 @@ static CodeProcess.Incognito.Configuracao.ConfiguracaoIncognito.LerYaml(string! 
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.EsquemaBanco() -> void
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosResiduais.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ObjetoResidual!>!
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosResiduais.init -> void
-[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosNoEsquemaReservado.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.NomeObjeto!>?
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosNoEsquemaReservado.init -> void
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Sequences.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.SequenceEsquema!>!
 [INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.Sequences.init -> void
@@ -519,3 +518,89 @@ CodeProcess.Incognito.Execucao.BloqueioDestinoException
 [INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoDestino.Marcador.get -> CodeProcess.Incognito.Dialetos.MarcadorDestino!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorDadosDestino.TemLinhasAsync(CodeProcess.Incognito.Dialetos.NomeObjeto! tabela, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<bool>!
 [INCX001]abstract CodeProcess.Incognito.Dialetos.MarcadorDestino.GravarAsync(System.Guid identificador, System.DateTimeOffset gravadoEm, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.DesligadaSemRestauracao.get -> bool?
+[INCX001]CodeProcess.Incognito.Dialetos.ChaveEstrangeira.DesligadaSemRestauracao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.DiarioExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.DiarioExecucao.DiarioExecucao() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.EntradaDiario() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Execucao.get -> System.Guid
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Execucao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Nome.get -> string?
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Situacao.get -> CodeProcess.Incognito.Dialetos.SituacaoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Situacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Tabela.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Tabela.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Tipo.get -> CodeProcess.Incognito.Dialetos.TipoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.EntradaDiario.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.ObjetosNoEsquemaReservado.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ObjetoReservado!>?
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.TriggersDeEvento.get -> System.Collections.Generic.IReadOnlyList<string!>?
+[INCX001]CodeProcess.Incognito.Dialetos.EsquemaBanco.TriggersDeEvento.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.EstadoDiario() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.Execucoes.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ExecucaoLida!>!
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.Execucoes.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.Existe.get -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.Existe.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.Pendentes.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.EntradaDiario!>!
+[INCX001]CodeProcess.Incognito.Dialetos.EstadoDiario.Pendentes.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.ExecucaoLida() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.Id.get -> System.Guid
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.Id.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.IniciadaEm.get -> System.DateTimeOffset
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.IniciadaEm.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.Marcador.get -> System.Guid
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.Marcador.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.Situacao.get -> CodeProcess.Incognito.Dialetos.SituacaoExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.ExecucaoLida.Situacao.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado.Equals(CodeProcess.Incognito.Dialetos.ObjetoReservado? other) -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado.Nome.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado.ObjetoReservado() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado.Tipo.get -> CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.ObjetoReservado.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoEntrada.Removida = 0 -> CodeProcess.Incognito.Dialetos.SituacaoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoEntrada.SemValidacao = 1 -> CodeProcess.Incognito.Dialetos.SituacaoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoExecucao.Concluida = 1 -> CodeProcess.Incognito.Dialetos.SituacaoExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoExecucao.EmAndamento = 0 -> CodeProcess.Incognito.Dialetos.SituacaoExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoExecucao.Falhou = 2 -> CodeProcess.Incognito.Dialetos.SituacaoExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.SituacaoExecucao.Interrompida = 3 -> CodeProcess.Incognito.Dialetos.SituacaoExecucao
+[INCX001]CodeProcess.Incognito.Dialetos.TipoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.TipoEntrada.ChaveEstrangeira = 0 -> CodeProcess.Incognito.Dialetos.TipoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.TipoEntrada.Triggers = 1 -> CodeProcess.Incognito.Dialetos.TipoEntrada
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoReservado.Indice = 1 -> CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoReservado.Outro = 4 -> CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoReservado.Restricao = 3 -> CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoReservado.Sequence = 2 -> CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.TipoObjetoReservado.Tabela = 0 -> CodeProcess.Incognito.Dialetos.TipoObjetoReservado
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerDoDiario
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerDoDiario.Nome.get -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerDoDiario.Nome.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerDoDiario.Tabela.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerDoDiario.Tabela.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.TriggerDoDiario.TriggerDoDiario() -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoDestino.Diario.get -> CodeProcess.Incognito.Dialetos.DiarioExecucao!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.CriarAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.DescartarAsync(CodeProcess.Incognito.Dialetos.EntradaDiario! entrada, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.DesligarTriggersAsync(System.Guid execucao, CodeProcess.Incognito.Dialetos.NomeObjeto! tabela, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.EncerrarAsync(System.Guid execucao, CodeProcess.Incognito.Dialetos.SituacaoExecucao situacao, System.DateTimeOffset encerradaEm, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.IniciarAsync(System.Guid execucao, System.Guid marcador, System.DateTimeOffset iniciadaEm, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.LerAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.EstadoDiario!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.ObjetosDoDiario.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ObjetoReservado!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.RecriarChaveAsync(CodeProcess.Incognito.Dialetos.EntradaDiario! entrada, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.SituacaoEntrada?>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.ReligarTriggersAsync(CodeProcess.Incognito.Dialetos.EntradaDiario! entrada, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.TriggerDoDiario!>!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.RemoverChaveAsync(System.Guid execucao, CodeProcess.Incognito.Dialetos.NomeObjeto! tabela, string! chave, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DiarioExecucao.ValidarChaveAsync(CodeProcess.Incognito.Dialetos.EntradaDiario! entrada, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.SituacaoEntrada?>!
+[INCX001]override CodeProcess.Incognito.Dialetos.ObjetoReservado.Equals(object? obj) -> bool
+[INCX001]override CodeProcess.Incognito.Dialetos.ObjetoReservado.GetHashCode() -> int
+[INCX001]override CodeProcess.Incognito.Dialetos.ObjetoReservado.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.EstadoDiario.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.ExecucaoLida.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.EntradaDiario.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.TriggerDoDiario.ToString() -> string!

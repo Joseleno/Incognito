@@ -151,7 +151,10 @@ internal static class CodigosPlanejar
     /// <summary>O login do destino não esvazia, não insere ou não grava a identidade numa tabela tocada (saída 2).</summary>
     internal const string SemGravacao = "INC3064";
 
-    /// <summary>O login do destino não desliga as triggers ligadas da tabela tocada ou de uma partição dela (saída 2).</summary>
+    /// <summary>
+    /// O login do destino não desliga as triggers ligadas da tabela tocada, ou não restaura as de uma tabela física dela
+    /// (a raiz ou uma partição com trigger), ou o dialeto não informa (saída 2).
+    /// </summary>
     internal const string SemDesligarTriggers = "INC3065";
 
     /// <summary>O login do destino não remove e recria uma chave estrangeira que o diário remove (saída 2).</summary>
@@ -183,6 +186,12 @@ internal static class CodigosPlanejar
 
     /// <summary>Tabela tocada do destino, ou uma partição dela, numa assinatura de replicação, ou o dialeto não informa (saída 2).</summary>
     internal const string TabelaAssinada = "INC3076";
+
+    /// <summary>
+    /// Chave estrangeira que o diário remove com a conferência desligada de um jeito que o login não restaura (triggers
+    /// internas desligadas pelo superuser), ou o dialeto não informa (saída 2).
+    /// </summary>
+    internal const string ChaveSemRestauracao = "INC3077";
 
     /// <summary>A origem guarda bytes sem codificação declarada, e o destino tem codificação (saída 2).</summary>
     internal const string OrigemSemCodificacao = "INC3080";
@@ -312,6 +321,12 @@ internal static class CodigosPlanejar
 
     /// <summary>Aviso: o destino ainda não tem o marcador do Incognito, no <c>planejar</c>.</summary>
     internal const string DestinoAindaSemMarcador = "INC3583";
+
+    /// <summary>Aviso: o destino ainda não tem o diário do Incognito, no <c>planejar</c>.</summary>
+    internal const string DestinoAindaSemDiario = "INC3584";
+
+    /// <summary>Aviso: o destino tem gatilhos de evento ligados, ou o dialeto não informa.</summary>
+    internal const string TriggersDeEvento = "INC3585";
 
     /// <summary>Aviso: há versão mais nova do transformador registrada.</summary>
     internal const string VersaoMaisNova = "INC3590";

@@ -30,6 +30,20 @@ public enum Operacao
     ObterDados,
     ObterMarcador,
     ObterBloqueio,
+    ObterDiario,
+    ObjetosDoDiario,
+
+    // O diário.
+    CriarDiario,
+    LerDiario,
+    IniciarExecucao,
+    RemoverChave,
+    DesligarTriggers,
+    ReligarTriggers,
+    RecriarChave,
+    ValidarChave,
+    DescartarEntrada,
+    EncerrarExecucao,
 }
 
 /// <summary>
@@ -99,6 +113,21 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
     internal EsquemaBanco Origem { get; } = origem ?? EsquemaSintetico.Coerente();
 
     internal EsquemaBanco Destino { get; } = destino ?? EsquemaSintetico.Coerente();
+
+    /// <summary>O que o diário do destino declara deixar no esquema reservado; vazio por padrão (nenhum objeto aceito).</summary>
+    internal IReadOnlyList<ObjetoReservado> ObjetosDoDiario { get; init; } = [];
+
+    /// <summary>O diário lido; sem diário por padrão.</summary>
+    internal EstadoDiario EstadoDoDiario { get; init; } = new() { Existe = false };
+
+    /// <summary>A situação que a recriação e a validação devolvem.</summary>
+    internal SituacaoEntrada? NaRestauracao { get; init; }
+
+    /// <summary>As triggers que a religação pula.</summary>
+    internal IReadOnlyList<TriggerDoDiario> Puladas { get; init; } = [];
+
+    /// <summary>O que o diário faz antes de cada operação, com o token que recebeu (esperar, perder o bloqueio).</summary>
+    internal Func<Operacao, CancellationToken, Task>? NoDiario { get; init; }
 
     public override Task<DialetoOrigem> ConectarOrigemAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
         Executar(Operacao.Conectar, destino: false, () => (DialetoOrigem)new OrigemDoPlanejar(this), cancelamento);
@@ -187,6 +216,7 @@ internal sealed class DestinoDoPlanejar(ProvedorDoPlanejar provedor) : DialetoDe
     private readonly BloqueioExecucao _bloqueio = new BloqueioDoPlanejar(provedor);
     private readonly MarcadorDestino _marcador = new MarcadorDoPlanejar(provedor);
     private readonly LeitorDadosDestino _dados = new DadosDestinoDoPlanejar(provedor);
+    private readonly DiarioExecucao _diario = new DiarioDoPlanejar(provedor);
 
     public override LeitorEsquema Esquema => provedor.Obter(Operacao.ObterEsquema, true, _esquema);
 
@@ -199,6 +229,8 @@ internal sealed class DestinoDoPlanejar(ProvedorDoPlanejar provedor) : DialetoDe
     public override MarcadorDestino Marcador => provedor.Obter(Operacao.ObterMarcador, true, _marcador);
 
     public override LeitorDadosDestino Dados => provedor.Obter(Operacao.ObterDados, true, _dados);
+
+    public override DiarioExecucao Diario => provedor.Obter(Operacao.ObterDiario, true, _diario);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
@@ -421,5 +453,48 @@ internal static class EsquemaDoFalso
         var provedor = new ProvedorFalso(completo, defeito, perturbar: null);
         await using var origem = await provedor.ConectarOrigemAsync(new SegredoConexao("origem"), CancellationToken.None);
         return await origem.Esquema.LerAsync(CancellationToken.None);
+    }
+}
+
+// O diário do planejar e do envoltório: cada operação entra nas chamadas, lança ou espera sob comando e devolve o que o
+// provedor manda.
+internal sealed class DiarioDoPlanejar(ProvedorDoPlanejar provedor) : DiarioExecucao
+{
+    public override IReadOnlyList<ObjetoReservado> ObjetosDoDiario => provedor.Obter(Operacao.ObjetosDoDiario, true, provedor.ObjetosDoDiario);
+
+    public override Task CriarAsync(CancellationToken cancelamento) => Fazer(Operacao.CriarDiario, () => true, cancelamento);
+
+    public override Task<EstadoDiario> LerAsync(CancellationToken cancelamento) => Fazer(Operacao.LerDiario, () => provedor.EstadoDoDiario, cancelamento);
+
+    public override Task IniciarAsync(Guid execucao, Guid marcador, DateTimeOffset iniciadaEm, CancellationToken cancelamento) => Fazer(Operacao.IniciarExecucao, () => true, cancelamento);
+
+    public override Task RemoverChaveAsync(Guid execucao, NomeObjeto tabela, string chave, CancellationToken cancelamento) => Fazer(Operacao.RemoverChave, () => true, cancelamento);
+
+    public override Task DesligarTriggersAsync(Guid execucao, NomeObjeto tabela, CancellationToken cancelamento) => Fazer(Operacao.DesligarTriggers, () => true, cancelamento);
+
+    public override Task<IReadOnlyList<TriggerDoDiario>> ReligarTriggersAsync(EntradaDiario entrada, CancellationToken cancelamento) => Fazer(Operacao.ReligarTriggers, () => provedor.Puladas, cancelamento);
+
+    public override Task<SituacaoEntrada?> RecriarChaveAsync(EntradaDiario entrada, CancellationToken cancelamento) => Fazer(Operacao.RecriarChave, () => provedor.NaRestauracao, cancelamento);
+
+    public override Task<SituacaoEntrada?> ValidarChaveAsync(EntradaDiario entrada, CancellationToken cancelamento) => Fazer(Operacao.ValidarChave, () => provedor.NaRestauracao, cancelamento);
+
+    public override Task DescartarAsync(EntradaDiario entrada, CancellationToken cancelamento) => Fazer(Operacao.DescartarEntrada, () => true, cancelamento);
+
+    public override Task EncerrarAsync(Guid execucao, SituacaoExecucao situacao, DateTimeOffset encerradaEm, CancellationToken cancelamento) => Fazer(Operacao.EncerrarExecucao, () => true, cancelamento);
+
+    public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
+
+    private async Task<T> Fazer<T>(Operacao operacao, Func<T> resultado, CancellationToken cancelamento)
+    {
+        if (provedor.NoDiario is { } antes)
+        {
+            await antes(operacao, cancelamento);
+        }
+
+        return await provedor.Executar(operacao, destino: true, resultado, cancelamento);
     }
 }

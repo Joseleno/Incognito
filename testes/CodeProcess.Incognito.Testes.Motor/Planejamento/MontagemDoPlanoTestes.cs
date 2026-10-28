@@ -424,7 +424,7 @@ public sealed class MontagemDoPlanoTestes
     [Fact]
     public async Task Objeto_no_esquema_reservado_ou_nao_informado_da_INC3073()
     {
-        var comObjeto = BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.ObjetosNoEsquemaReservado), new[] { new NomeObjeto("incognito", "execucao") }));
+        var comObjeto = BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.ObjetosNoEsquemaReservado), new[] { new ObjetoReservado { Nome = new NomeObjeto("incognito", "execucao"), Tipo = TipoObjetoReservado.Tabela } }));
         var naoInformado = BancoFalso.Clonar(Coerente(), (nameof(EsquemaBanco.ObjetosNoEsquemaReservado), null));
 
         var objeto = Assert.Single(await RecusaAsync("", comObjeto));
@@ -546,7 +546,7 @@ public sealed class MontagemDoPlanoTestes
         {
             Nome = Nome("notas"),
             Colunas = [Inteiro("id"), Texto("autor", 100)],
-            ChavesEstrangeiras = [new ChaveEstrangeira { Nome = "fk_notas_autor", Colunas = ["autor"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["nome"], Imposta = true, Validada = true }],
+            ChavesEstrangeiras = [new ChaveEstrangeira { Nome = "fk_notas_autor", Colunas = ["autor"], Referenciada = Nome("clientes"), ColunasReferenciadas = ["nome"], Imposta = true, Validada = true, DesligadaSemRestauracao = false }],
         };
         var contas = new TabelaEsquema
         {

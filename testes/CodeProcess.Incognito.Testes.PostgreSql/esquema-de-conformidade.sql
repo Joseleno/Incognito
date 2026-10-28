@@ -584,3 +584,10 @@ INSERT INTO loja.funcionario (id, matricula) VALUES (60, 1);
 
 -- A existência de linhas no destino, como a cópia lê: a mãe de herança múltipla (loja.contato) só tem a linha da herdeira.
 INSERT INTO loja.ficha (canal) VALUES ('ficha');
+
+-- Gatilhos de evento (só o administrador os cria): um ligado, lido, e um desligado, que fica de fora. A função não faz
+-- nada: o DDL dos testes nos bancos do par segue igual.
+CREATE FUNCTION loja.registrar_ddl() RETURNS event_trigger LANGUAGE plpgsql AS $$BEGIN END$$;
+CREATE EVENT TRIGGER et_conformidade ON ddl_command_end EXECUTE FUNCTION loja.registrar_ddl();
+CREATE EVENT TRIGGER et_desligado ON ddl_command_end EXECUTE FUNCTION loja.registrar_ddl();
+ALTER EVENT TRIGGER et_desligado DISABLE;

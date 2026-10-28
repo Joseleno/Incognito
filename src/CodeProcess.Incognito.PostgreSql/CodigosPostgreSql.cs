@@ -53,4 +53,31 @@ internal static class CodigosPostgreSql
 
     /// <summary>A existência de linhas não pôde ser lida: o login não lê a tabela, ou a segurança por linha vale para ele.</summary>
     internal const string LeituraDoDestinoRecusada = "INC3115";
+
+    /// <summary>
+    /// O diário do destino não é o esperado: outro dono, privilégio de escrita de outro papel, estrutura, versão ou conteúdo
+    /// inesperados, ou uma definição guardada fora da forma de uma chave estrangeira.
+    /// </summary>
+    internal const string DiarioInesperado = "INC3116";
+
+    /// <summary>
+    /// O diário não permite a operação: a chave não existe nem está no diário (ou é a cópia de uma chave da mãe), a tabela já
+    /// tem as triggers no diário, ou a execução não está em andamento (ou já há outra).
+    /// </summary>
+    internal const string EntradaIncoerente = "INC3117";
+
+    /// <summary>Há uma chave com o nome da que o diário guarda, com outra definição.</summary>
+    internal const string OutraDefinicao = "INC3118";
+
+    /// <summary>O destino não liberou a tabela a tempo (outra sessão a segurava): nada da operação ficou.</summary>
+    internal const string TempoDeBloqueio = "INC3119";
+
+    /// <summary>A chave recriada não ficou igual à definição guardada: nada da operação ficou.</summary>
+    internal const string RecriacaoNaoConfere = "INC3120";
+
+    /// <summary>O diário não existe no destino (o <c>preparar-destino</c> o cria).</summary>
+    internal const string SemDiario = "INC3121";
+
+    /// <summary>O login do destino não pode criar o esquema do diário (no PostgreSQL, <c>CREATE</c> no banco).</summary>
+    internal const string DiarioSemPrivilegio = "INC3122";
 }

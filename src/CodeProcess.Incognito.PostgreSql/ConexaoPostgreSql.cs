@@ -90,6 +90,11 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
             }
 
             var (versao, nomes) = await ConferirAsync(conexao, origem, cancelamento).ConfigureAwait(false);
+            if (!origem)
+            {
+                await VerificarClienteAsync(conexao, cancelamento).ConfigureAwait(false);
+            }
+
             return new ConexaoPostgreSql(fonte, conexao, origem, versao, nomes, construtor.SslMode, construtor.Host!);
         }
         catch
@@ -178,6 +183,11 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         try
         {
             await ConferirAsync(outra, _origem, cancelamento).ConfigureAwait(false);
+            if (!_origem)
+            {
+                await VerificarClienteAsync(outra, cancelamento).ConfigureAwait(false);
+            }
+
             var (desta, primaria) = await ImpressaoAsync(_conexao, cancelamento).ConfigureAwait(false);
             var (daOutra, outraPrimaria) = await ImpressaoAsync(outra, cancelamento).ConfigureAwait(false);
             if (desta != daOutra || !primaria || !outraPrimaria)
@@ -193,6 +203,21 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         {
             await outra.DisposeAsync().ConfigureAwait(false);
             throw;
+        }
+    }
+
+    // No destino, o servidor confere de segundo em segundo, durante um comando longo, se o cliente ainda está lá: a
+    // validação de uma chave ou o lock de um processo que morreu não seguram as tabelas por minutos. Onde o servidor não
+    // oferece a conferência (fora de Linux, macOS e BSD), recusa o valor e fica como estava.
+    private static async Task VerificarClienteAsync(NpgsqlConnection conexao, CancellationToken cancelamento)
+    {
+        try
+        {
+            await using var comando = new NpgsqlCommand("SET client_connection_check_interval = '1s'", conexao);
+            await comando.ExecuteNonQueryAsync(cancelamento).ConfigureAwait(false);
+        }
+        catch (PostgresException erro) when (erro.SqlState == PostgresErrorCodes.InvalidParameterValue)
+        {
         }
     }
 

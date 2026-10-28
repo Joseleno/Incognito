@@ -10,8 +10,8 @@ namespace CodeProcess.Incognito.Dialetos;
 /// <para>
 /// As partes de metadados (<see cref="Esquema"/>, <see cref="Identidade"/>), a leitura agregada da origem
 /// (<see cref="DialetoOrigem.Dados"/>), a gravação do marcador e a leitura de existência do destino
-/// (<see cref="DialetoDestino.Marcador"/>, <see cref="DialetoDestino.Dados"/>) usam a conexão de controle e não são
-/// chamadas em paralelo; o bloqueio de execução (<see cref="DialetoDestino.Bloqueio"/>) vive numa conexão dedicada; as
+/// (<see cref="DialetoDestino.Marcador"/>, <see cref="DialetoDestino.Dados"/>) e o diário (<see cref="DialetoDestino.Diario"/>)
+/// usam a conexão de controle e não são chamadas em paralelo; o bloqueio de execução (<see cref="DialetoDestino.Bloqueio"/>) vive numa conexão dedicada; as
 /// operações que leem ou gravam linhas, quando entrarem no contrato, abrem as próprias conexões.
 /// </para>
 /// <para>
@@ -73,8 +73,9 @@ public abstract class DialetoOrigem : DialetoBanco
 }
 
 /// <summary>
-/// O destino: esvaziado e gravado. Além das partes comuns, o bloqueio de execução, a gravação do marcador e a leitura de
-/// existência de linhas; o diário, as restrições e a gravação entram no contrato com o INC que os implementa.
+/// O destino: esvaziado e gravado. Além das partes comuns, o bloqueio de execução, a gravação do marcador, a leitura de
+/// existência de linhas e o diário (com as restrições e as triggers); a gravação entra no contrato com o INC que a
+/// implementa.
 /// </summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class DialetoDestino : DialetoBanco
@@ -87,4 +88,7 @@ public abstract class DialetoDestino : DialetoBanco
 
     /// <summary>Se uma tabela do destino tem linhas, sem ler valor.</summary>
     public abstract LeitorDadosDestino Dados { get; }
+
+    /// <summary>O diário de execução, por onde passa toda alteração do esquema do destino.</summary>
+    public abstract DiarioExecucao Diario { get; }
 }

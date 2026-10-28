@@ -220,7 +220,9 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     // O estado de cada chave estrangeira, pela família dela: a original e as cópias que o banco cria nas partições (dos dois
     // lados). Imposta se nenhuma trigger de integridade da família está desabilitada ou só de réplica (e, no 18, se nenhuma
-    // está NOT ENFORCED, que não tem trigger); validada se todas foram validadas.
+    // está NOT ENFORCED, que não tem trigger); validada se todas foram validadas; desligada sem restauração se alguma trigger
+    // de integridade da família saiu do estado de origem (O), inclusive para sempre (A): só o superuser a muda, e a chave
+    // recriada pelo dono volta com todas em O.
     private const string ConsultaEstadoDasChavesInicio = TabelasERecursiva + """
         familia AS (
             SELECT k.oid, k.oid AS raiz
@@ -241,7 +243,11 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     private const string ConsultaEstadoDasChavesFim = """
          AS imposta,
-               pg_catalog.bool_and(c.convalidated) AS validada
+               pg_catalog.bool_and(c.convalidated) AS validada,
+               EXISTS (SELECT 1
+                       FROM familia g
+                       JOIN pg_catalog.pg_trigger t ON t.tgconstraint = g.oid
+                       WHERE g.raiz = f.raiz AND t.tgenabled <> 'O') AS sem_restauracao
         FROM familia f
         JOIN pg_catalog.pg_constraint c ON c.oid = f.oid
         GROUP BY f.raiz
@@ -390,9 +396,9 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         """;
 
     // Os objetos do esquema do diário que guardam ou descrevem dado: tabelas (também a particionada e a estrangeira), views,
-    // materialized views, índices e sequences. Só os nomes; o esquema que não existe não tem nenhum.
+    // materialized views, índices e sequences. Os nomes e o tipo; o esquema que não existe não tem nenhum.
     private const string ConsultaEsquemaReservado = """
-        SELECT n.nspname, c.relname
+        SELECT n.nspname, c.relname, c.relkind = 'r', c.relkind = 'i', c.relkind = 'S'
         FROM pg_catalog.pg_class c
         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'incognito' AND c.relkind IN ('r', 'p', 'f', 'v', 'm', 'i', 'I', 'S')
@@ -539,6 +545,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
             var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
             var reservado = await LerEsquemaReservadoAsync(cancelamento).ConfigureAwait(false);
+            var triggersDeEvento = await LerTriggersDeEventoAsync(cancelamento).ConfigureAwait(false);
             var acesso = await LerAcessoAsync(conexao.Conexao, conexao.Versao, cancelamento).ConfigureAwait(false);
             var nomes = tabelas.Values.Select(tabela => tabela.Nome).OrderBy(nome => nome, OrdemDeNomes.Instancia).ToArray();
 
@@ -570,6 +577,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                 Sequences = sequences,
                 ObjetosResiduais = residuais,
                 ObjetosNoEsquemaReservado = reservado,
+                TriggersDeEvento = triggersDeEvento,
                 Propriedades = banco.Propriedades,
 
                 // Um objeto que a leitura das permissões não achou (não deveria: as duas veem o mesmo catálogo) fica com tudo
@@ -1186,14 +1194,16 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
     private async Task<Dictionary<uint, List<ChaveEstrangeira>>> LerChavesEstrangeirasAsync(CancellationToken cancelamento)
     {
-        var estados = new Dictionary<uint, (bool Imposta, bool Validada)>();
+        var estados = new Dictionary<uint, (bool Imposta, bool Validada, bool SemRestauracao)>();
         var dezoito = conexao.Versao / 10000 >= 18;
         await using (var comando = new NpgsqlCommand(ConsultaEstadoDasChavesInicio + (dezoito ? EstadoDasChavesImposta18 : "") + ConsultaEstadoDasChavesFim, conexao.Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
             {
-                estados.Add(leitor.GetFieldValue<uint>(leitor.GetOrdinal("restricao")), (leitor.GetBoolean(leitor.GetOrdinal("imposta")), leitor.GetBoolean(leitor.GetOrdinal("validada"))));
+                estados.Add(
+                    leitor.GetFieldValue<uint>(leitor.GetOrdinal("restricao")),
+                    (leitor.GetBoolean(leitor.GetOrdinal("imposta")), leitor.GetBoolean(leitor.GetOrdinal("validada")), leitor.GetBoolean(leitor.GetOrdinal("sem_restauracao"))));
             }
         }
 
@@ -1227,6 +1237,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
                     ColunasReferenciadas = restricao.Select(lida => lida.ColunaReferenciada).ToArray(),
                     Imposta = estados.TryGetValue(restricao.Key.Restricao, out var estado) ? estado.Imposta : null,
                     Validada = estados.TryGetValue(restricao.Key.Restricao, out var validacao) ? validacao.Validada : null,
+                    DesligadaSemRestauracao = estados.TryGetValue(restricao.Key.Restricao, out var restauracao) ? restauracao.SemRestauracao : null,
                 }).ToList());
     }
 
@@ -1289,17 +1300,37 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             .ToArray();
     }
 
-    private async Task<NomeObjeto[]> LerEsquemaReservadoAsync(CancellationToken cancelamento)
+    // O tipo pelo relkind: a tabela comum, o índice dela e a sequence; o resto (particionada, estrangeira, view,
+    // materialized view, índice de particionada) é outro, que nunca passa por objeto do diário.
+    private async Task<ObjetoReservado[]> LerEsquemaReservadoAsync(CancellationToken cancelamento)
     {
-        var nomes = new List<NomeObjeto>();
+        var objetos = new List<ObjetoReservado>();
         await using var comando = new NpgsqlCommand(ConsultaEsquemaReservado, conexao.Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
-            nomes.Add(new NomeObjeto(leitor.GetString(0), leitor.GetString(1)));
+            var tipo = leitor.GetBoolean(2) ? TipoObjetoReservado.Tabela
+                : leitor.GetBoolean(3) ? TipoObjetoReservado.Indice
+                : leitor.GetBoolean(4) ? TipoObjetoReservado.Sequence
+                : TipoObjetoReservado.Outro;
+            objetos.Add(new ObjetoReservado { Nome = new NomeObjeto(leitor.GetString(0), leitor.GetString(1)), Tipo = tipo });
         }
 
-        return [.. nomes.Order(OrdemDeNomes.Instancia)];
+        return [.. objetos.OrderBy(objeto => objeto.Nome, OrdemDeNomes.Instancia)];
+    }
+
+    // Os gatilhos de evento ligados, pelo nome (só o nome: a função e as tags não saem).
+    private async Task<string[]> LerTriggersDeEventoAsync(CancellationToken cancelamento)
+    {
+        var nomes = new List<string>();
+        await using var comando = new NpgsqlCommand("SELECT e.evtname FROM pg_catalog.pg_event_trigger e WHERE e.evtenabled <> 'D'", conexao.Conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+        while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+        {
+            nomes.Add(leitor.GetString(0));
+        }
+
+        return [.. nomes.Order(StringComparer.Ordinal)];
     }
 
     private async Task<ObjetoResidual[]> LerResiduaisAsync(CancellationToken cancelamento)
