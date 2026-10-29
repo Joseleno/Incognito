@@ -23,7 +23,8 @@ internal sealed record ResumoDoDestino(string Servidor, string Banco, IReadOnlyL
 /// (o bloqueio já foi liberado e nada foi escrito).
 /// </param>
 /// <param name="Avisos">Os avisos da conferência, para o relatório.</param>
-internal sealed record ResultadoDaProtecao(DialetoProtegido.ConcessaoProtegida? Concessao, IReadOnlyList<Aviso> Avisos)
+/// <param name="Marcador">O identificador do marcador do destino, a que a execução fica amarrada no diário.</param>
+internal sealed record ResultadoDaProtecao(DialetoProtegido.ConcessaoProtegida? Concessao, IReadOnlyList<Aviso> Avisos, Guid Marcador)
 {
     /// <summary>Os avisos, copiados.</summary>
     public IReadOnlyList<Aviso> Avisos { get; } = [.. Avisos];
@@ -34,8 +35,8 @@ internal sealed record ResultadoDaProtecao(DialetoProtegido.ConcessaoProtegida? 
 
 /// <summary>
 /// A proteção do destino antes da primeira escrita (o passo 3 da execução): adquire o bloqueio, lê a identidade dos dois
-/// lados pelo próprio dialeto (sem depender do plano), confere o marcador, o <c>bancoEsperado</c> e as tabelas ignoradas
-/// com linhas, avisa a linhagem e pede a confirmação. Em qualquer falha, e na confirmação negada, o bloqueio é liberado
+/// lados pelo próprio dialeto (sem depender do plano), confere o marcador, o <c>bancoEsperado</c>, o diário de execução e
+/// as tabelas ignoradas com linhas, avisa a linhagem e pede a confirmação. Em qualquer falha, e na confirmação negada, o bloqueio é liberado
 /// antes de sair; nada é escrito no destino.
 /// </summary>
 internal static class ProtecaoDoDestino
@@ -53,7 +54,9 @@ internal static class ProtecaoDoDestino
     /// <param name="cancelamento">Cancela a conferência.</param>
     /// <returns>O bloqueio e os avisos, ou só os avisos com a confirmação negada.</returns>
     /// <exception cref="BloqueioDestinoException">Outra execução tem o bloqueio (<c>INC3004</c>).</exception>
-    /// <exception cref="PlanoRecusadoException">O destino não está protegido (<c>INC360x</c>), ou o dialeto recusou uma leitura.</exception>
+    /// <exception cref="PlanoRecusadoException">
+    /// O destino não está protegido (<c>INC360x</c>; sem o diário, <c>INC3607</c>), ou o dialeto recusou uma leitura.
+    /// </exception>
     /// <exception cref="FalhaDialetoException">O dialeto falhou.</exception>
     /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
     internal static async Task<ResultadoDaProtecao> ConferirAsync(
@@ -79,6 +82,14 @@ internal static class ProtecaoDoDestino
             var coletor = new ColetorDoPlano();
             ConferenciaDoDestino.Conferir(daOrigem, doDestino, bancoEsperado, exigirMarcador: true, coletor);
 
+            // O diário só se lê no destino marcado e com o nome esperado; sem ele, nada que a execução altera se repara.
+            if (!coletor.TemErros && !(await destino.LerDiarioAsync(concessao, cancelamento).ConfigureAwait(false)).Existe)
+            {
+                coletor.Erro(new ErroPlano(
+                    CodigosPlanejar.DestinoSemDiario,
+                    "O destino não tem o diário de execução do Incognito, onde a execução registra o que altera para repará-lo depois de uma queda: rode o preparar-destino antes de executar."));
+            }
+
             // As linhas só se leem no destino marcado e com o nome esperado: num banco que não é o destino, nem isso.
             if (!coletor.TemErros && !aceitarDadosExistentes)
             {
@@ -99,10 +110,10 @@ internal static class ProtecaoDoDestino
             if (!await confirmar(new ResumoDoDestino(TextoSeguro.Nome(doDestino.Servidor), TextoSeguro.Nome(doDestino.Banco), avisos), cancelamento).ConfigureAwait(false))
             {
                 await concessao.DisposeAsync().ConfigureAwait(false);
-                return new ResultadoDaProtecao(null, avisos);
+                return new ResultadoDaProtecao(null, avisos, doDestino.Marcador!.Identificador!.Value);
             }
 
-            return new ResultadoDaProtecao(concessao, avisos);
+            return new ResultadoDaProtecao(concessao, avisos, doDestino.Marcador!.Identificador!.Value);
         }
         catch
         {

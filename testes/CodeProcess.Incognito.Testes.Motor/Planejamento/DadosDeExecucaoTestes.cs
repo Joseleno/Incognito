@@ -142,5 +142,6 @@ internal static class CargaSintetica
         new LeituraDoBanco(EsquemaSintetico.Coerente(), EsquemaSintetico.Identidade("loja_homolog")),
         [.. tabelas.Select(tabela => new UnidadeDeCopia(tabela.Nome, tabela.Acao, SoAPropria: false, AdmiteFreeze: true, [], []))],
         [],
+        [],
         []);
 }

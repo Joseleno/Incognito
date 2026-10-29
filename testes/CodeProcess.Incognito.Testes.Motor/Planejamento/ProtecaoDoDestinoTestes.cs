@@ -112,10 +112,41 @@ public sealed class ProtecaoDoDestinoTestes
             await resultado.Concessao!.DisposeAsync();
 
             Assert.Equal(
-                ["AdquirirBloqueio:destino", "LerIdentidade:origem", "LerIdentidade:destino", "TemLinhas:destino", "LiberarBloqueio:destino"],
+                ["AdquirirBloqueio:destino", "LerIdentidade:origem", "LerIdentidade:destino", "LerDiario:destino", "TemLinhas:destino", "LiberarBloqueio:destino"],
                 provedor.Chamadas.Skip(antes));
             Assert.Empty(resultado.Avisos);
         }
+    }
+
+    [Fact]
+    public async Task O_destino_sem_o_diario_e_recusado_sem_perguntar_nem_ler_as_linhas()
+    {
+        var provedor = new ProvedorDoPlanejar { EstadoDoDiario = new() { Existe = false }, Linhas = _ => true };
+        var confirmacoes = 0;
+
+        var recusa = await Assert.ThrowsAsync<PlanoRecusadoException>(() => ConferirAsync(provedor, [_historico], confirmar: (_, _) =>
+        {
+            confirmacoes++;
+            return Task.FromResult(true);
+        }));
+
+        var erro = Assert.Single(recusa.Erros);
+        Assert.Equal("INC3607", erro.Codigo);
+        Assert.Contains("preparar-destino", erro.Mensagem, StringComparison.Ordinal);
+        Assert.Equal(2, ClassificadorDeSaida.De(recusa));
+        Assert.Equal(0, confirmacoes);
+        Assert.DoesNotContain(provedor.Chamadas, chamada => chamada.StartsWith("TemLinhas", StringComparison.Ordinal));
+        Assert.True(Assert.Single(provedor.Concessoes).Liberada);
+        SemEscrita(provedor);
+    }
+
+    [Fact]
+    public async Task A_protecao_devolve_o_marcador_do_destino()
+    {
+        var resultado = await ConferirAsync(new ProvedorDoPlanejar(), []);
+        await resultado.Concessao!.DisposeAsync();
+
+        Assert.Equal(Marcado.Identificador, resultado.Marcador);
     }
 
     [Fact]
@@ -228,7 +259,7 @@ public sealed class ProtecaoDoDestinoTestes
 
     // Grava nada: nem o marcador nem o que o executor gravará.
     internal static void SemEscrita(ProvedorDoPlanejar provedor) =>
-        Assert.DoesNotContain(provedor.Chamadas, chamada => chamada.StartsWith("GravarMarcador", StringComparison.Ordinal));
+        Assert.DoesNotContain(provedor.Chamadas, chamada => chamada.StartsWith("GravarMarcador", StringComparison.Ordinal) || chamada.StartsWith("CriarDiario", StringComparison.Ordinal));
 
     internal static async Task<(DialetoProtegido Origem, DialetoProtegido Destino)> ConectarAsync(ProvedorDoPlanejar provedor)
     {

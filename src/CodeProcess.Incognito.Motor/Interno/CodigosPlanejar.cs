@@ -241,6 +241,12 @@ internal static class CodigosPlanejar
     /// <summary>O <c>preparar-destino</c> num destino que é o próprio banco da origem (saída 2).</summary>
     internal const string DestinoIgualAOrigem = "INC3606";
 
+    /// <summary>O destino não tem o diário de execução do Incognito (saída 2): rode o <c>preparar-destino</c>.</summary>
+    internal const string DestinoSemDiario = "INC3607";
+
+    /// <summary>O diário do destino tem execução de outro marcador (saída 2): o diário não é deste destino.</summary>
+    internal const string DiarioDeOutroMarcador = "INC3608";
+
     /// <summary>Aviso: outro objeto difere de um nome resolvido só pela caixa.</summary>
     internal const string NomeQuaseIgual = "INC3510";
 

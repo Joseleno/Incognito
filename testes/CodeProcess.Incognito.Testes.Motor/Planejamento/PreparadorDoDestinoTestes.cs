@@ -33,9 +33,11 @@ public sealed class PreparadorDoDestinoTestes
             Assert.Equal(4, identificador.Version);
             Assert.True(Assert.Single(provedor.Concessoes).Liberada);
 
-            // O batimento vem depois da confirmação e antes da gravação.
+            // O batimento vem depois da confirmação e antes da gravação; o diário, depois do marcador e de outro batimento.
             var chamadas = provedor.Chamadas;
             Assert.True(chamadas.IndexOf("ConferirBloqueio:destino") < chamadas.IndexOf("GravarMarcador:destino"));
+            Assert.True(chamadas.IndexOf("GravarMarcador:destino") < chamadas.LastIndexOf("ConferirBloqueio:destino"));
+            Assert.True(chamadas.LastIndexOf("ConferirBloqueio:destino") < chamadas.IndexOf("CriarDiario:destino"));
             identificadores.Add(identificador);
         }
 
@@ -69,6 +71,50 @@ public sealed class PreparadorDoDestinoTestes
         Assert.Equal((SituacaoDoPreparo.JaPreparado, Marcado.Identificador), (resultado.Situacao, resultado.Identificador));
         Assert.Equal(0, perguntas);
         SemEscrita(provedor);
+        Assert.True(Assert.Single(provedor.Concessoes).Liberada);
+    }
+
+    [Fact]
+    public async Task Com_o_marcador_valido_sem_o_diario_so_cria_o_diario_depois_da_confirmacao()
+    {
+        var negando = new ProvedorDoPlanejar { EstadoDoDiario = new() { Existe = false } };
+        var provedor = new ProvedorDoPlanejar { EstadoDoDiario = new() { Existe = false } };
+
+        var negado = await PrepararAsync(negando, confirmar: (_, _) => Task.FromResult(false));
+        var resultado = await PrepararAsync(provedor);
+
+        Assert.Equal((SituacaoDoPreparo.Negado, Marcado.Identificador), (negado.Situacao, negado.Identificador));
+        SemEscrita(negando);
+        Assert.Equal((SituacaoDoPreparo.DiarioCriado, Marcado.Identificador), (resultado.Situacao, resultado.Identificador));
+        Assert.Empty(provedor.Gravados);
+        Assert.Single(provedor.Chamadas, chamada => chamada == "CriarDiario:destino");
+        Assert.True(provedor.Chamadas.LastIndexOf("ConferirBloqueio:destino") < provedor.Chamadas.IndexOf("CriarDiario:destino"));
+        Assert.True(Assert.Single(provedor.Concessoes).Liberada);
+    }
+
+    [Fact]
+    public async Task O_diario_que_a_releitura_nao_confirma_e_falha()
+    {
+        ProvedorDoPlanejar? provedor = null;
+        provedor = new ProvedorDoPlanejar
+        {
+            EstadoDoDiario = new() { Existe = false },
+            NoDiario = (operacao, _) =>
+            {
+                // A criação passa, mas o diário some antes da releitura.
+                if (operacao == Operacao.LerDiario)
+                {
+                    provedor!.DiarioCriado = false;
+                }
+
+                return Task.CompletedTask;
+            },
+        };
+
+        var falha = await Assert.ThrowsAsync<FalhaDialetoException>(() => PrepararAsync(provedor));
+
+        Assert.Equal("INC3002", falha.Codigo);
+        Assert.Equal(1, ClassificadorDeSaida.De(falha));
         Assert.True(Assert.Single(provedor.Concessoes).Liberada);
     }
 

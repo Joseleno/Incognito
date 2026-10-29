@@ -1527,6 +1527,18 @@ internal sealed class EstadoDoBancoFalso
         }
     }
 
+    /// <summary>Se ninguém tem o bloqueio.</summary>
+    internal bool Livre
+    {
+        get
+        {
+            lock (_trava)
+            {
+                return _dono is null;
+            }
+        }
+    }
+
     /// <summary>A queda da conexão do bloqueio: o bloqueio fica livre.</summary>
     internal void Soltar()
     {
