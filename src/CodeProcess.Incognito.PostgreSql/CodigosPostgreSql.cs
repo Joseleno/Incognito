@@ -80,4 +80,37 @@ internal static class CodigosPostgreSql
 
     /// <summary>O login do destino não pode criar o esquema do diário (no PostgreSQL, <c>CREATE</c> no banco).</summary>
     internal const string DiarioSemPrivilegio = "INC3122";
+
+    /// <summary>
+    /// A leitura na réplica foi interrompida pela reprodução (conflito com a recuperação) ou perdeu a conexão: uma réplica
+    /// dedicada com <c>max_standby_streaming_delay = -1</c>, ou um clone, evita.
+    /// </summary>
+    internal const string ConflitoNaReplica = "INC3123";
+
+    /// <summary>Uma tabela travada não foi liberada a tempo na abertura da leitura (outra sessão a segurava).</summary>
+    internal const string TravaNaoObtida = "INC3124";
+
+    /// <summary>A tabela de travas do servidor se esgotou (<c>max_locks_per_transaction</c>).</summary>
+    internal const string TravasDemais = "INC3125";
+
+    /// <summary>O servidor recusou mais conexões (<c>max_connections</c> ou o limite do login).</summary>
+    internal const string ConexoesDemais = "INC3126";
+
+    /// <summary>Uma conexão da sessão de leitura chegou a outro servidor ou banco que a de controle, ou não importou o instante.</summary>
+    internal const string LeituraEmOutroBanco = "INC3127";
+
+    /// <summary>A leitura falhou: o login não lê a tabela, ou a segurança por linha vale para ele (nunca filtra em silêncio).</summary>
+    internal const string LeituraRecusada = "INC3128";
+
+    /// <summary>
+    /// A tabela mudou depois do início da leitura (esvaziada, reescrita, trocada ou com partição anexada ou destacada), ou tem
+    /// uma alteração pendente que faria a leitura esperar.
+    /// </summary>
+    internal const string TabelaMudou = "INC3129";
+
+    /// <summary>O instante da leitura ficou antigo demais para o servidor (<c>old_snapshot_threshold</c>, até o 16).</summary>
+    internal const string InstanteAntigo = "INC3130";
+
+    /// <summary>Uma tabela a travar não existe, não é tabela comum ou particionada, ou o login não tem <c>SELECT</c> nela.</summary>
+    internal const string TravadaInvalida = "INC3131";
 }

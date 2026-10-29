@@ -108,6 +108,38 @@ public sealed class EsquemaDeConformidade
 
     /// <summary>Os casos do banco do diário (<see cref="FixtureDialeto.CriarBancoDoDiarioAsync"/>).</summary>
     public required CasosDoDiario Diario { get; init; }
+
+    /// <summary>
+    /// A sessão de leitura (<see cref="SessaoLeitura"/>): a consistência que o banco dá, como ele protege uma tabela travada,
+    /// se mede a idade do instante, e uma coluna inteira de uma tabela da origem com a segurança por linha para o login.
+    /// </summary>
+    public required SessaoEsperada Sessao { get; init; }
+}
+
+/// <summary>Como o banco protege uma tabela travada da sessão de leitura contra o esvaziamento.</summary>
+public enum ProtecaoDaTravada
+{
+    /// <summary>O banco impede o esvaziamento enquanto a sessão vive (no PostgreSQL, a trava).</summary>
+    Impede = 1,
+
+    /// <summary>O banco deixa esvaziar, e a leitura seguinte falha (no SQL Server com o isolamento por snapshot).</summary>
+    FalhaALeitura = 2,
+}
+
+/// <summary>Os casos da sessão de leitura (<see cref="EsquemaDeConformidade.Sessao"/>).</summary>
+public sealed class SessaoEsperada
+{
+    /// <summary>A consistência que o banco dá (o modo exigir abre nela, ou é recusado).</summary>
+    public required ConsistenciaObtida Consistencia { get; init; }
+
+    /// <summary>Como uma tabela travada fica protegida.</summary>
+    public required ProtecaoDaTravada Travada { get; init; }
+
+    /// <summary>Se o banco mede a idade do instante.</summary>
+    public required bool MedeIdade { get; init; }
+
+    /// <summary>Uma coluna inteira de uma tabela da origem com a segurança por linha para o login de leitura.</summary>
+    public required Caso<ReferenciaColuna> SegurancaPorLinha { get; init; }
 }
 
 /// <summary>

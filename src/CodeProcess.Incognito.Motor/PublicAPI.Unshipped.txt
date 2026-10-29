@@ -604,3 +604,37 @@ CodeProcess.Incognito.Execucao.BloqueioDestinoException
 [INCX001]override CodeProcess.Incognito.Dialetos.ExecucaoLida.ToString() -> string!
 [INCX001]override CodeProcess.Incognito.Dialetos.EntradaDiario.ToString() -> string!
 [INCX001]override CodeProcess.Incognito.Dialetos.TriggerDoDiario.ToString() -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ConsistenciaObtida
+[INCX001]CodeProcess.Incognito.Dialetos.ConsistenciaObtida.Indefinida = 0 -> CodeProcess.Incognito.Dialetos.ConsistenciaObtida
+[INCX001]CodeProcess.Incognito.Dialetos.ConsistenciaObtida.Instantaneo = 1 -> CodeProcess.Incognito.Dialetos.ConsistenciaObtida
+[INCX001]CodeProcess.Incognito.Dialetos.ConsistenciaObtida.PorTabela = 2 -> CodeProcess.Incognito.Dialetos.ConsistenciaObtida
+[INCX001]CodeProcess.Incognito.Dialetos.DialetoBanco.AbrirLeituraAsync(CodeProcess.Incognito.Dialetos.PedidoLeitura! pedido, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.SessaoLeitura!>!
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorDaSessao
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorDaSessao.LeitorDaSessao() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorDaSessao.LerMaiorValorAsync(CodeProcess.Incognito.Dialetos.ReferenciaColuna! coluna, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<long?>!
+[INCX001]CodeProcess.Incognito.Dialetos.ModoConsistencia
+[INCX001]CodeProcess.Incognito.Dialetos.ModoConsistencia.Exigir = 1 -> CodeProcess.Incognito.Dialetos.ModoConsistencia
+[INCX001]CodeProcess.Incognito.Dialetos.ModoConsistencia.MelhorEsforco = 0 -> CodeProcess.Incognito.Dialetos.ModoConsistencia
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.Leitores.get -> int
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.Leitores.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.Modo.get -> CodeProcess.Incognito.Dialetos.ModoConsistencia
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.Modo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.PedidoLeitura() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.Travadas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.NomeObjeto!>!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeitura.Travadas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura.DisposeAsync() -> System.Threading.Tasks.ValueTask
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura.LancarSeDescartado() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura.Leitores.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.LeitorDaSessao!>!
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura.LerEsquemaAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.EsquemaBanco!>!
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura.LerIdadeAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<long?>!
+[INCX001]CodeProcess.Incognito.Dialetos.SessaoLeitura.SessaoLeitura(System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.LeitorDaSessao!>! leitores) -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoBanco.AbrirLeituraAsyncCore(CodeProcess.Incognito.Dialetos.PedidoLeitura! pedido, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.SessaoLeitura!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorDaSessao.LerMaiorValorAsyncCore(CodeProcess.Incognito.Dialetos.ReferenciaColuna! coluna, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<long?>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.SessaoLeitura.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
+[INCX001]abstract CodeProcess.Incognito.Dialetos.SessaoLeitura.LerEsquemaAsyncCore(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.EsquemaBanco!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.SessaoLeitura.LerIdadeAsyncCore(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<long?>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.SessaoLeitura.Obtida.get -> CodeProcess.Incognito.Dialetos.ConsistenciaObtida
+[INCX001]const CodeProcess.Incognito.Dialetos.PedidoLeitura.MaximoDeLeitores = 64 -> int
+[INCX001]override CodeProcess.Incognito.Dialetos.PedidoLeitura.ToString() -> string!

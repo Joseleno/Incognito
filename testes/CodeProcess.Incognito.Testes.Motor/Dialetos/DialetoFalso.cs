@@ -218,6 +218,30 @@ public enum Defeito
     RecriacaoNaoIdempotente,
     SobrescreveOutraDefinicao,
     AdulteracaoAceita,
+
+    // A sessão de leitura: a consistência trocada, o modo exigir recusado, o leitor e o esquema fora do instante, o esquema
+    // relido diferente, sem trava (nem guarda), sem soltar a trava, a partição anexada lida, a segurança por linha filtrada,
+    // o leitor inutilizado depois de uma falha, os leitores numa conexão só, o descarte e o dialeto que não fecham, a sessão
+    // derrubada que ainda lê, a idade nula, a travada inexistente aceita, o sentinela na recusa dela e a particionada lida
+    // só pela raiz na sessão.
+    ConsistenciaTrocada,
+    ExigirRecusado,
+    LeitorForaDoInstante,
+    EsquemaForaDoInstante,
+    EsquemaRelidoDiferente,
+    TravaAusente,
+    TravaNaoSolta,
+    ParticaoAnexadaAceita,
+    SessaoFiltrada,
+    LeitorMortoDepoisDaFalha,
+    LeitoresNumaConexaoSo,
+    DescarteNaoFecha,
+    DialetoNaoFechaSessao,
+    SessaoDerrubadaLe,
+    IdadeNula,
+    TravadaInexistenteAceita,
+    SentinelaNaRecusaDaTravada,
+    SessaoSoDaRaiz,
 }
 
 /// <summary>
@@ -639,6 +663,13 @@ internal static class BancoFalso
             ComOutraDefinicao = new(Nome("compras"), "fk_compras_lojas", SituacaoEntrada.SemValidacao),
             ComTriggers = [Nome("disparos"), Nome("pedidos"), Nome("pessoa")],
         },
+        Sessao = new()
+        {
+            Consistencia = ConsistenciaObtida.Instantaneo,
+            Travada = ProtecaoDaTravada.Impede,
+            MedeIdade = true,
+            SegurancaPorLinha = completo ? Caso.Presente(Coluna("segredos", "id")) : Caso.Inexistente<ReferenciaColuna>("banco falso sem segurança por linha"),
+        },
     };
 
     /// <summary>Os gatilhos de evento ligados do banco falso, em ordem ordinal.</summary>
@@ -647,6 +678,11 @@ internal static class BancoFalso
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EstadoDoBancoFalso> _bancos = new(StringComparer.Ordinal);
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EstadoDoDiarioFalso> _diarios = new(StringComparer.Ordinal);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DadosDoBancoFalso> _dados = new(StringComparer.Ordinal);
+
+    /// <summary>Os dados de um banco falso que mudam durante o teste, divididos como o estado do banco.</summary>
+    internal static DadosDoBancoFalso Dados(string banco) => _dados.GetOrAdd(banco, _ => new DadosDoBancoFalso());
 
     /// <summary>O estado de um banco falso que as instâncias conectadas a ele dividem (o comentário e o bloqueio).</summary>
     internal static EstadoDoBancoFalso Estado(string banco) => _bancos.GetOrAdd(banco, _ => new EstadoDoBancoFalso());
@@ -659,6 +695,7 @@ internal static class BancoFalso
     {
         _bancos.TryRemove(banco, out _);
         _diarios.TryRemove(banco, out _);
+        _dados.TryRemove(banco, out _);
     }
 
     /// <summary>A existência de linhas do destino falso, como a cópia lê, com os defeitos.</summary>
@@ -908,7 +945,9 @@ internal sealed class ProvedorFalso(bool completo, Defeito defeito, Func<Esquema
 
 internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool completo, Defeito defeito, bool privilegiado = false) : DialetoOrigem
 {
-    public override LeitorEsquema Esquema { get; } = leitor;
+    private readonly SessoesFalsas _sessoes = new(defeito);
+
+    public override LeitorEsquema Esquema { get; } = new LeitorComCriadas(leitor, BancoFalso.Dados(banco));
 
     // Só no par comum: o sentinela, por extenso, na identidade da origem.
     public override IdentidadeBanco Identidade { get; } =
@@ -916,11 +955,20 @@ internal sealed class OrigemFalsa(string banco, LeitorEsquema leitor, bool compl
 
     public override DialetoSql Sql { get; } = new SqlFalso(defeito is Defeito.CitacaoSemEscape, defeito);
 
-    public override LeitorDadosOrigem Dados { get; } = new DadosFalsos(defeito);
+    public override LeitorDadosOrigem Dados { get; } = new DadosFalsos(defeito, BancoFalso.Dados(banco));
+
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) =>
+        SessaoFalsa.AbrirAsync(BancoFalso.Dados(banco), pedido, completo, defeito, Esquema, _sessoes.Abriu, _sessoes.Fechou, cancelamento);
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        await _sessoes.FecharAsync();
+        await base.DisposeAsyncCore();
+    }
 }
 
-// O maior valor em memória; a coluna de texto é recusada (com o sentinela das linhas, no defeito).
-internal sealed class DadosFalsos(Defeito defeito) : LeitorDadosOrigem
+// O maior valor em memória, com o que o teste mudou; a coluna de texto é recusada (com o sentinela das linhas, no defeito).
+internal sealed class DadosFalsos(Defeito defeito, DadosDoBancoFalso dados) : LeitorDadosOrigem
 {
     public override Task<long?> LerMaiorValorAsync(ReferenciaColuna coluna, CancellationToken cancelamento)
     {
@@ -928,6 +976,13 @@ internal sealed class DadosFalsos(Defeito defeito) : LeitorDadosOrigem
         {
             var mensagem = "O maior valor só se lê de coluna inteira" + (defeito == Defeito.MaiorValorComTextoNaRecusa ? ": " + BancoFalso.Sentinela : ".");
             return Task.FromException<long?>(new DialetoRecusouException("INC3399", mensagem));
+        }
+
+        // A coluna que o teste mudou é lida sem os defeitos do maior valor, que têm os fatos deles.
+        var agora = dados.Agora();
+        if (DadosDoBancoFalso.Mudou(agora, coluna))
+        {
+            return Task.FromResult(DadosDoBancoFalso.Maior(agora, coluna, Defeito.Nenhum));
         }
 
         return Task.FromResult(defeito == Defeito.MaiorValorSempreNulo ? null : BancoFalso.MaiorValor(coluna, defeito));
@@ -955,8 +1010,14 @@ internal sealed class DestinoFalso(string banco, LeitorEsquema? leitor, bool com
 
     public override DiarioExecucao Diario => _diario ??= new DiarioFalso(BancoFalso.Diario(banco), _bloqueio, defeito);
 
+    private readonly SessoesFalsas _sessoes = new(defeito);
+
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) =>
+        SessaoFalsa.AbrirAsync(BancoFalso.Dados(banco), pedido, completo, defeito, Esquema, _sessoes.Abriu, _sessoes.Fechou, cancelamento);
+
     protected override async ValueTask DisposeAsyncCore()
     {
+        await _sessoes.FecharAsync();
         if (defeito != Defeito.DescarteNaoLibera)
         {
             await _bloqueio.LiberarAsync();
@@ -1663,6 +1724,9 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
 
     public override ProvedorDialeto Provedor => _provedor;
 
+    // As conexões do falso fecham na hora.
+    public override TimeSpan PrazoDasConexoes => TimeSpan.Zero;
+
     public override SegredoConexao ConexaoRecusada(string sentinela) => new(ProvedorFalso.Inaceitavel + "senha=" + sentinela);
 
     public override Task<DialetoDestino> ConectarOutroDestinoAsync(ParDeBancos par, CancellationToken cancelamento) =>
@@ -1683,6 +1747,38 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
     public override Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento)
     {
         BancoFalso.Estado(par.BancoDestino).Soltar();
+        return Task.CompletedTask;
+    }
+
+    // O maior valor comum vai de 31 a 1031.
+    public override Task<long> AumentarMaiorValorAsync(ParDeBancos par, bool destino, CancellationToken cancelamento)
+    {
+        BancoFalso.Dados(destino ? par.BancoDestino : par.BancoOrigem).DefinirMaior(Esperado.MaioresValores.Comum.Coluna, 1031);
+        return Task.FromResult(1031L);
+    }
+
+    public override Task<NomeObjeto> CriarTabelaAsync(ParDeBancos par, CancellationToken cancelamento)
+    {
+        var criada = BancoFalso.Nome("criada_depois");
+        BancoFalso.Dados(par.BancoOrigem).Criar(criada);
+        return Task.FromResult(criada);
+    }
+
+    public override Task<bool> TentarEsvaziarAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento) =>
+        Task.FromResult(BancoFalso.Dados(par.BancoOrigem).TentarEsvaziar(tabela));
+
+    public override Task<long> AnexarParticaoAsync(ParDeBancos par, CancellationToken cancelamento)
+    {
+        BancoFalso.Dados(par.BancoOrigem).Anexar();
+        return Task.FromResult(DadosDoBancoFalso.ValorAnexado);
+    }
+
+    public override Task<int> ContarConexoesDeLeituraAsync(ParDeBancos par, bool destino, CancellationToken cancelamento) =>
+        Task.FromResult(BancoFalso.Dados(destino ? par.BancoDestino : par.BancoOrigem).Conexoes);
+
+    public override Task DerrubarSessoesAsync(ParDeBancos par, bool destino, CancellationToken cancelamento)
+    {
+        BancoFalso.Dados(destino ? par.BancoDestino : par.BancoOrigem).Derrubar();
         return Task.CompletedTask;
     }
 

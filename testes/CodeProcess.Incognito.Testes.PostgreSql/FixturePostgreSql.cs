@@ -87,6 +87,74 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             cancelamento);
 
     /// <inheritdoc/>
+    // A coluna comum é loja.lojas.id: uma loja nova, mil acima da maior.
+    public override async Task<long> AumentarMaiorValorAsync(ParDeBancos par, bool destino, CancellationToken cancelamento)
+    {
+        var comum = Esperado.MaioresValores.Comum;
+        var novo = comum.Valor!.Value + 1000;
+        await servidor.ExecutarAsync(
+            destino ? par.BancoDestino : par.BancoOrigem,
+            string.Create(System.Globalization.CultureInfo.InvariantCulture, $"INSERT INTO {Citado(comum.Coluna.Tabela)} ({CitacaoPostgreSql.Citar(comum.Coluna.Coluna)}) VALUES ({novo})"),
+            cancelamento);
+        return novo;
+    }
+
+    /// <inheritdoc/>
+    public override async Task<NomeObjeto> CriarTabelaAsync(ParDeBancos par, CancellationToken cancelamento)
+    {
+        var criada = Nome("criada_depois");
+        await servidor.ExecutarAsync(par.BancoOrigem, $"CREATE TABLE {Citado(criada)} (id integer)", cancelamento);
+        return criada;
+    }
+
+    /// <inheritdoc/>
+    // TRUNCATE com CASCADE (a tabela comum é referenciada), desistindo em 1 s.
+    public override async Task<bool> TentarEsvaziarAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        try
+        {
+            await servidor.ExecutarAsync(par.BancoOrigem, $"SET lock_timeout = '1s'; TRUNCATE {Citado(tabela)} CASCADE", cancelamento);
+            return true;
+        }
+        catch (PostgresException erro) when (erro.SqlState == PostgresErrorCodes.LockNotAvailable)
+        {
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    // Uma partição nova de loja.pedidos, com a loja dela, e uma linha de id 9999.
+    public override async Task<long> AnexarParticaoAsync(ParDeBancos par, CancellationToken cancelamento)
+    {
+        await servidor.ExecutarAsync(
+            par.BancoOrigem,
+            """
+            INSERT INTO loja.lojas (id) VALUES (77);
+            CREATE TABLE loja.pedidos_anexada (loja integer NOT NULL, id bigint NOT NULL, numero bigint);
+            INSERT INTO loja.pedidos_anexada (loja, id) VALUES (77, 9999);
+            SET lock_timeout = '5s';
+            ALTER TABLE loja.pedidos ATTACH PARTITION loja.pedidos_anexada FOR VALUES IN (77);
+            """,
+            cancelamento);
+        return 9999;
+    }
+
+    /// <inheritdoc/>
+    public override async Task<int> ContarConexoesDeLeituraAsync(ParDeBancos par, bool destino, CancellationToken cancelamento) =>
+        (int)(long)(await servidor.ConsultarAsync(
+            destino ? par.BancoDestino : par.BancoOrigem,
+            $"SELECT pg_catalog.count(*) FROM pg_catalog.pg_stat_activity a WHERE a.datname = pg_catalog.current_database() AND a.application_name = '{ConexaoPostgreSql.NomeDaLeitura}'",
+            cancelamento))!;
+
+    /// <inheritdoc/>
+    // Espera o fim de cada sessão (o segundo argumento): a leitura seguinte acha a conexão já fechada.
+    public override Task DerrubarSessoesAsync(ParDeBancos par, bool destino, CancellationToken cancelamento) =>
+        servidor.ExecutarAsync(
+            destino ? par.BancoDestino : par.BancoOrigem,
+            $"SELECT pg_catalog.pg_terminate_backend(a.pid, 5000) FROM pg_catalog.pg_stat_activity a WHERE a.datname = pg_catalog.current_database() AND a.application_name = '{ConexaoPostgreSql.NomeDaLeitura}'",
+            cancelamento);
+
+    /// <inheritdoc/>
     public override async ValueTask<BancoDoDiario> CriarBancoDoDiarioAsync(CancellationToken cancelamento)
     {
         var banco = await servidor.CriarBancoDoDiarioAsync(cancelamento);
@@ -349,6 +417,16 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 ComOrfao = new(Nome("vendas"), "fk_vendas_codigo", SituacaoEntrada.SemValidacao),
                 ComOutraDefinicao = new(Nome("compras"), "fk_compras_lojas", SituacaoEntrada.SemValidacao),
                 ComTriggers = [Nome("disparos"), Nome("pedidos"), Nome("pessoa")],
+            },
+
+            // O instante exportado em todas as conexões, a trava que impede o TRUNCATE, a idade do xmin, e loja.segredos com
+            // a política que vale para o leitor.
+            Sessao = new()
+            {
+                Consistencia = ConsistenciaObtida.Instantaneo,
+                Travada = ProtecaoDaTravada.Impede,
+                MedeIdade = true,
+                SegurancaPorLinha = Caso.Presente(Coluna("segredos", "id")),
             },
         };
     }

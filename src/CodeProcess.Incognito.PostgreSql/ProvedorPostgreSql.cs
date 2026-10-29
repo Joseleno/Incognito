@@ -40,7 +40,11 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
         Identidade = new IdentidadePostgreSql(conexao, LancarSeDescartado);
         Sql = new DialetoSqlPostgreSql(conexao.Nomes);
         Dados = new LeitorDadosOrigemPostgreSql(conexao, LancarSeDescartado);
+        Sessoes = new SessoesVivas(conexao);
     }
+
+    /// <summary>As sessões de leitura vivas (e o gancho dos testes).</summary>
+    internal SessoesVivas Sessoes { get; }
 
     public override LeitorEsquema Esquema { get; }
 
@@ -50,10 +54,14 @@ internal sealed class OrigemPostgreSql : DialetoOrigem
 
     public override LeitorDadosOrigem Dados { get; }
 
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => Sessoes.AbrirAsync(pedido, cancelamento);
+
+    // As sessões de leitura vivas são fechadas antes da fonte de que as conexões delas saíram.
     protected override async ValueTask DisposeAsyncCore()
     {
         try
         {
+            await Sessoes.FecharAsync().ConfigureAwait(false);
             await _conexao.DisposeAsync().ConfigureAwait(false);
         }
         finally
@@ -78,7 +86,11 @@ internal sealed class DestinoPostgreSql : DialetoDestino
         Marcador = new MarcadorDestinoPostgreSql(conexao, LancarSeDescartado);
         Dados = new LeitorDadosDestinoPostgreSql(conexao, LancarSeDescartado);
         Diario = new DiarioPostgreSql(conexao, _bloqueio, LancarSeDescartado);
+        Sessoes = new SessoesVivas(conexao);
     }
+
+    /// <summary>As sessões de leitura vivas (e o gancho dos testes).</summary>
+    internal SessoesVivas Sessoes { get; }
 
     private readonly BloqueioPostgreSql _bloqueio;
 
@@ -96,11 +108,14 @@ internal sealed class DestinoPostgreSql : DialetoDestino
 
     public override DiarioExecucao Diario { get; }
 
-    // A concessão viva é liberada antes de fechar a fonte de que a conexão dela saiu.
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => Sessoes.AbrirAsync(pedido, cancelamento);
+
+    // A concessão viva e as sessões de leitura vivas são fechadas antes da fonte de que as conexões delas saíram.
     protected override async ValueTask DisposeAsyncCore()
     {
         try
         {
+            await Sessoes.FecharAsync().ConfigureAwait(false);
             await _bloqueio.LiberarAsync().ConfigureAwait(false);
         }
         finally

@@ -22,6 +22,9 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     internal const int VersaoMinima = 150000;
 
     private const string NomeDaAplicacao = "Incognito";
+
+    /// <summary>O nome das conexões da sessão de leitura no <c>pg_stat_activity</c>, para quem administra as achar.</summary>
+    internal const string NomeDaLeitura = "Incognito leitura";
     private const string CaminhoDeBusca = "pg_catalog";
     private const string Utf8 = "UTF8";
 
@@ -195,6 +198,65 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 throw new IncognitoException(
                     CodigosPostgreSql.BloqueioEmOutroBanco,
                     "A conexão do bloqueio não chegou ao mesmo banco da conexão de controle, ou o banco é uma réplica: o bloqueio não protegeria o destino.");
+            }
+
+            return outra;
+        }
+        catch
+        {
+            await outra.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Abre uma conexão da sessão de leitura pela mesma fonte (sem pool, com as mesmas opções impostas), conferida como a de
+    /// controle, no mesmo banco dela (o mesmo cluster, oid, endereço e porta); a primária só é exigida no destino (a leitura
+    /// da origem numa réplica é o caso recomendado). Ajusta a sessão para durar a cópia inteira: keepalives TCP em minutos e,
+    /// do 17 em diante, sem <c>transaction_timeout</c> (que não existe no 15 e no 16, e no pacote de início derrubaria a
+    /// conexão); e a nomeia (<see cref="NomeDaLeitura"/>). Conferências e ajustes antes de qualquer transação. O chamador a
+    /// descarta.
+    /// </summary>
+    /// <param name="cancelamento">Cancela a abertura.</param>
+    /// <returns>A conexão aberta.</returns>
+    /// <exception cref="IncognitoException">Sessão divergente, outro banco ou servidor, ou réplica no destino.</exception>
+    internal async Task<NpgsqlConnection> AbrirParaLeituraAsync(CancellationToken cancelamento)
+    {
+        var outra = await _fonte.OpenConnectionAsync(cancelamento).ConfigureAwait(false);
+        try
+        {
+            await ConferirAsync(outra, _origem, cancelamento).ConfigureAwait(false);
+            if (!_origem)
+            {
+                await VerificarClienteAsync(outra, cancelamento).ConfigureAwait(false);
+            }
+
+            var (desta, primaria) = await ImpressaoAsync(_conexao, cancelamento).ConfigureAwait(false);
+            var (daOutra, outraPrimaria) = await ImpressaoAsync(outra, cancelamento).ConfigureAwait(false);
+            if (desta != daOutra || (!_origem && (!primaria || !outraPrimaria)))
+            {
+                throw new IncognitoException(
+                    CodigosPostgreSql.LeituraEmOutroBanco,
+                    "Uma conexão da sessão de leitura não chegou ao mesmo banco da conexão de controle (ou, no destino, o banco é uma réplica).");
+            }
+
+            await using (var ajustar = new NpgsqlCommand(
+                $"SET application_name = '{NomeDaLeitura}'; SET tcp_keepalives_idle = 60; SET tcp_keepalives_interval = 10; SET tcp_keepalives_count = 6"
+                    + (Versao >= 170000 ? "; SET transaction_timeout = 0" : ""),
+                outra))
+            {
+                await ajustar.ExecuteNonQueryAsync(cancelamento).ConfigureAwait(false);
+            }
+
+            if (Versao >= 170000)
+            {
+                await using var conferir = new NpgsqlCommand("SELECT pg_catalog.current_setting('transaction_timeout') = '0'", outra);
+                if (await conferir.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is not true)
+                {
+                    throw new IncognitoException(
+                        CodigosPostgreSql.SessaoDivergente,
+                        "A sessão de leitura do PostgreSQL não ficou sem o transaction_timeout, que a derrubaria no meio da cópia.");
+                }
             }
 
             return outra;

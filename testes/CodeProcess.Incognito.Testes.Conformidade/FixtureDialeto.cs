@@ -78,6 +78,58 @@ public abstract class FixtureDialeto
     public abstract Task DerrubarBloqueioAsync(ParDeBancos par, CancellationToken cancelamento);
 
     /// <summary>
+    /// Como administrador, sem passar pelo dialeto e confirmado na hora: aumenta o maior valor da coluna comum
+    /// (<see cref="MaioresValoresEsperados.Comum"/>) num banco do par.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="destino">Se é o banco do destino; senão, o da origem.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>O novo maior valor.</returns>
+    public abstract Task<long> AumentarMaiorValorAsync(ParDeBancos par, bool destino, CancellationToken cancelamento);
+
+    /// <summary>Como administrador, confirmado na hora: cria uma tabela nova na origem do par.</summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>O nome da tabela criada, como o catálogo o guarda.</returns>
+    public abstract Task<NomeObjeto> CriarTabelaAsync(ParDeBancos par, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Como administrador: tenta esvaziar uma tabela da origem do par por um meio que não respeita o instante da leitura (no
+    /// PostgreSQL, <c>TRUNCATE</c>), desistindo em cerca de um segundo se ela estiver presa.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="tabela">A tabela.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>Se esvaziou.</returns>
+    public abstract Task<bool> TentarEsvaziarAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Como administrador, confirmado na hora: anexa à particionada da origem do par
+    /// (<see cref="MaioresValoresEsperados.Particionada"/>) uma partição nova com uma linha de valor maior que o declarado.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>O valor da linha da partição anexada.</returns>
+    public abstract Task<long> AnexarParticaoAsync(ParDeBancos par, CancellationToken cancelamento);
+
+    /// <summary>Quanto esperar, no máximo, que as conexões fechadas saiam do servidor (a saída é assíncrona). Padrão: 10 s.</summary>
+    public virtual TimeSpan PrazoDasConexoes => TimeSpan.FromSeconds(10);
+
+    /// <summary>Quantas conexões das sessões de leitura estão abertas num banco do par, lido como administrador.</summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="destino">Se é o banco do destino; senão, o da origem.</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>O número de conexões.</returns>
+    public abstract Task<int> ContarConexoesDeLeituraAsync(ParDeBancos par, bool destino, CancellationToken cancelamento);
+
+    /// <summary>Derruba, como administrador, as conexões das sessões de leitura num banco do par.</summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="destino">Se é o banco do destino; senão, o da origem.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>A tarefa.</returns>
+    public abstract Task DerrubarSessoesAsync(ParDeBancos par, bool destino, CancellationToken cancelamento);
+
+    /// <summary>
     /// Cria um banco do diário novo (os casos de <see cref="CasosDoDiario"/>, sem o esquema do diário), de outro dono, com os
     /// objetos e o direito de criar esquema dados ao login do destino, e o conecta com esse login. Nome único.
     /// </summary>

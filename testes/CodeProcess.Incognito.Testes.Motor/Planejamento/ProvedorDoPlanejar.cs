@@ -192,6 +192,9 @@ internal sealed class OrigemDoPlanejar(ProvedorDoPlanejar provedor) : DialetoOri
 
     public override LeitorDadosOrigem Dados => provedor.Obter(Operacao.ObterDados, false, _dados);
 
+    // O planejar não lê em sessão.
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => throw new NotSupportedException();
+
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
     public override bool Equals(object? obj) => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
@@ -234,6 +237,9 @@ internal sealed class DestinoDoPlanejar(ProvedorDoPlanejar provedor) : DialetoDe
     public override LeitorDadosDestino Dados => provedor.Obter(Operacao.ObterDados, true, _dados);
 
     public override DiarioExecucao Diario => provedor.Obter(Operacao.ObterDiario, true, _diario);
+
+    // O planejar não lê em sessão.
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => throw new NotSupportedException();
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

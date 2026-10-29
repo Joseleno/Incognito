@@ -271,3 +271,25 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   enquanto o destino trabalha, queda percebida, liberado no descarte do destino) e para a existência de linhas, cada um
   derrubado por um defeito do falso; a fixture ganha os ganchos para reconectar o destino, comentar o banco como
   administrador e derrubar a conexão do bloqueio.
+- 2026-10-29: a leitura consistente entra no contrato, na base comum (`DialetoBanco.AbrirLeituraAsync`, origem e
+  destino): um `PedidoLeitura` (leitores, `ModoConsistencia`, tabelas a travar) abre uma `SessaoLeitura`, abstrata, com o
+  ciclo de vida na base como a concessão do bloqueio, dona de um coordenador e de N leitores (`LeitorDaSessao`, cada um
+  numa conexão, explícitos para quem copia em paralelo dar um leitor a cada trabalhador). A sessão relê o esquema no
+  instante (a comparação com a carga do plano é do executor) e mede a idade do instante.
+
+  **Mudança do item 5:** a sessão abre N + 1 conexões próprias, do mesmo banco e servidor da conexão de controle,
+  conferidas como ela; na origem, sem exigir primária (a réplica é o caso recomendado). No PostgreSQL, o coordenador
+  segura o instante exportado e as travas `ACCESS SHARE` das tabelas copiadas, tomadas antes do instante: sem elas, um
+  `TRUNCATE` ou uma reescrita confirmada depois do instante deixaria a leitura vazia, sem erro (eles não respeitam o
+  instante). Cada leitura trava a sua tabela no leitor sem esperar e confere, pelo instante e pelo catálogo atual, o oid e
+  os arquivos da tabela e das partições: um DDL na fila derruba a leitura na hora em vez de prendê-la, e a queda do
+  coordenador, que solta as travas, nunca deixa uma leitura vazia em silêncio. A leitura roda num ponto de salvamento: a
+  falha não inutiliza o leitor. O maior valor pelo leitor da sessão é a terceira consulta permitida sobre tabela do
+  usuário (teste de arquitetura), com as regras do da origem; a idade do xmin, só do próprio processo, é a forma
+  permitida do `pg_stat_activity`. O motor traduz as leituras dos leitores só com o código. Na suíte, fatos para o mesmo
+  instante (na origem e no destino), o modo exigir, as travadas nunca lidas vazias em silêncio, a partição anexada depois
+  da abertura, a leitura que falha sem filtrar nem inutilizar o leitor, o fechamento das conexões (também pelo descarte do
+  dialeto), a sessão derrubada, a idade, a travada inexistente e o esquema relido, cada um derrubado por um defeito do
+  falso; a fixture ganha operações de administrador para aumentar um valor, criar uma tabela, tentar esvaziar, anexar uma
+  partição, contar e derrubar as conexões da sessão. A trava na primária tem custo (um DDL numa tabela copiada espera a
+  cópia), e a documentação do guia o explica.

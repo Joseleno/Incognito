@@ -19,7 +19,7 @@ namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 /// colação não determinística é medido no servidor com textos sintéticos, nunca deduzido do locale. As permissões do login
 /// saem só como marcas, pelas funções de privilégio (que leem o catálogo atual, não o instante da transação), sempre por oid.
 /// </remarks>
-internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorEsquema
+internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado, NpgsqlConnection? coordenador = null) : LeitorEsquema
 {
     // Os esquemas lidos: fora os do sistema (pg_catalog, pg_toast e os temporários começam com pg_, que o usuário não pode
     // criar; as tabelas temporárias ficam de fora por eles), o information_schema e o do diário do Incognito. Pelo prefixo,
@@ -515,90 +515,143 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     // Um objeto só para os large objects do banco inteiro.
     private static readonly NomeObjeto _objetosGrandes = new("pg_catalog", "pg_largeobject");
 
+    // A conexão das consultas: a de controle ou, na sessão de leitura, a do coordenador.
+    private NpgsqlConnection Conexao => coordenador ?? conexao.Conexao;
+
     public override async Task<EsquemaBanco> LerAsync(CancellationToken cancelamento)
     {
         lancarSeDescartado();
-        var transacao = await TransacaoDeLeitura.AbrirAsync(conexao.Conexao, cancelamento).ConfigureAwait(false);
+        if (coordenador is not null)
+        {
+            // Na transação do coordenador, que segura o instante e as travas: uma falha volta ao ponto e as preserva.
+            return await NoPontoAsync(coordenador, "esquema", LerNaTransacaoAsync, cancelamento).ConfigureAwait(false);
+        }
+
+        var transacao = await TransacaoDeLeitura.AbrirAsync(Conexao, cancelamento).ConfigureAwait(false);
         await using (transacao.ConfigureAwait(false))
         {
-            var banco = await LerBancoAsync(cancelamento).ConfigureAwait(false);
-            var tabelas = await LerTabelasAsync(cancelamento).ConfigureAwait(false);
-            var outrosPais = await LerOutrosPaisAsync(cancelamento).ConfigureAwait(false);
-            var brutas = await LerColunasBrutasAsync(cancelamento).ConfigureAwait(false);
-            var indices = await LerIndicesBrutosAsync(cancelamento).ConfigureAwait(false);
-
-            // As colações das colunas e dos elementos dos índices, lidas e medidas uma vez.
-            var colacoes = await LerColacoesAsync(
-                [.. brutas.Select(bruta => bruta.Colacao).Concat(indices.SelectMany(indice => indice.Colacoes)).Where(oid => oid != 0).Distinct()],
-                banco,
-                cancelamento).ConfigureAwait(false);
-            var colunas = await MontarColunasAsync(brutas, tabelas, banco, colacoes, cancelamento).ConfigureAwait(false);
-            var chavesDeParticao = await LerChavesDeParticaoAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
-            var chavesPrimarias = await LerChavesPrimariasAsync(cancelamento).ConfigureAwait(false);
-            var chavesEstrangeiras = await LerChavesEstrangeirasAsync(cancelamento).ConfigureAwait(false);
-            var indicesUnicos = MontarIndices(indices, colunas, colacoes);
-            var checks = await LerChecksAsync(colunas, cancelamento).ConfigureAwait(false);
-            var exclusoes = await LerExclusoesAsync(colunas, cancelamento).ConfigureAwait(false);
-            var triggers = await LerTriggersAsync(cancelamento).ConfigureAwait(false);
-            var publicadas = await LerPublicacoesAsync(cancelamento).ConfigureAwait(false);
-            var assinadas = await LerAssinaturasAsync(cancelamento).ConfigureAwait(false);
-            var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
-            var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
-            var reservado = await LerEsquemaReservadoAsync(cancelamento).ConfigureAwait(false);
-            var triggersDeEvento = await LerTriggersDeEventoAsync(cancelamento).ConfigureAwait(false);
-            var acesso = await LerAcessoAsync(conexao.Conexao, conexao.Versao, cancelamento).ConfigureAwait(false);
-            var nomes = tabelas.Values.Select(tabela => tabela.Nome).OrderBy(nome => nome, OrdemDeNomes.Instancia).ToArray();
-
-            return new EsquemaBanco
-            {
-                Tabelas = tabelas.Values
-                    .Select(tabela => new TabelaEsquema
-                    {
-                        Nome = tabela.Nome,
-                        Tipo = tabela.Tipo,
-                        Pai = tabela.Pai,
-                        OutrosPais = outrosPais.TryGetValue(tabela.Oid, out var maes) ? maes : [],
-                        ChaveParticao = chavesDeParticao.GetValueOrDefault(tabela.Oid),
-                        Estrangeira = tabela.Estrangeira,
-                        Extensao = tabela.Extensao,
-                        Colunas = colunas.TryGetValue(tabela.Oid, out var dela) ? dela.Select(coluna => coluna.Modelo).ToArray() : [],
-                        ChavePrimaria = chavesPrimarias.TryGetValue(tabela.Oid, out var chave) ? chave : [],
-                        ChavesEstrangeiras = chavesEstrangeiras.TryGetValue(tabela.Oid, out var estrangeiras) ? estrangeiras : [],
-                        SegurancaDeLinha = tabela.SegurancaDeLinha,
-                        Publicada = publicadas.TryGetValue(tabela.Oid, out var publicada) ? publicada : null,
-                        Assinada = assinadas.TryGetValue(tabela.Oid, out var assinada) ? assinada : null,
-                        IndicesUnicos = Ordenados(indicesUnicos[tabela.Oid], indice => indice.Nome),
-                        RestricoesCheck = Ordenados(checks[tabela.Oid], check => check.Nome),
-                        RestricoesExclusao = Ordenados(exclusoes[tabela.Oid], exclusao => exclusao.Nome),
-                        Triggers = Ordenados(triggers[tabela.Oid], trigger => trigger.Nome),
-                    })
-                    .OrderBy(tabela => tabela.Nome, OrdemDeNomes.Instancia)
-                    .ToArray(),
-                Sequences = sequences,
-                ObjetosResiduais = residuais,
-                ObjetosNoEsquemaReservado = reservado,
-                TriggersDeEvento = triggersDeEvento,
-                Propriedades = banco.Propriedades,
-
-                // Um objeto que a leitura das permissões não achou (não deveria: as duas veem o mesmo catálogo) fica com tudo
-                // nulo, o pior caso.
-                Acesso = new AcessoLido
-                {
-                    Banco = acesso.Banco,
-                    Tabelas = [.. nomes.Select(nome => acesso.Tabelas.GetValueOrDefault(nome) ?? new PermissoesTabela { Tabela = nome })],
-                    Residuais =
-                    [
-                        .. residuais.Select(residual => new PermissoesResidual
-                        {
-                            Nome = residual.Nome,
-                            Tipo = residual.Tipo,
-                            PodeLimpar = residual.Tipo == TipoObjetoResidual.ObjetosGrandes ? acesso.LimparObjetosGrandes : acesso.Objetos.GetValueOrDefault((residual.Nome, false)),
-                        }),
-                    ],
-                    Sequences = [.. sequences.Select(sequence => new PermissoesSequence { Nome = sequence.Nome, PodeAjustar = acesso.Objetos.GetValueOrDefault((sequence.Nome, true)) })],
-                },
-            };
+            return await LerNaTransacaoAsync(cancelamento).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Roda uma leitura num ponto de salvamento da transação aberta: a falha volta ao ponto (a transação, o instante e as
+    /// travas tomadas antes ficam) e sai como veio.
+    /// </summary>
+    internal static async Task<T> NoPontoAsync<T>(NpgsqlConnection conexao, string ponto, Func<CancellationToken, Task<T>> leitura, CancellationToken cancelamento)
+    {
+        await using (var marcar = new NpgsqlCommand($"SAVEPOINT {ponto}", conexao))
+        {
+            await marcar.ExecuteNonQueryAsync(cancelamento).ConfigureAwait(false);
+        }
+
+        T resultado;
+        try
+        {
+            resultado = await leitura(cancelamento).ConfigureAwait(false);
+        }
+        catch
+        {
+            try
+            {
+                await using var voltar = new NpgsqlCommand($"ROLLBACK TO SAVEPOINT {ponto}; RELEASE SAVEPOINT {ponto}", conexao);
+                await voltar.ExecuteNonQueryAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception erro) when (erro is NpgsqlException or InvalidOperationException)
+            {
+                // A conexão caiu: a falha da leitura é a que sai, e a próxima chamada falha pela conexão.
+            }
+
+            throw;
+        }
+
+        await using (var liberar = new NpgsqlCommand($"RELEASE SAVEPOINT {ponto}", conexao))
+        {
+            await liberar.ExecuteNonQueryAsync(cancelamento).ConfigureAwait(false);
+        }
+
+        return resultado;
+    }
+
+    private async Task<EsquemaBanco> LerNaTransacaoAsync(CancellationToken cancelamento)
+    {
+        var banco = await LerBancoAsync(cancelamento).ConfigureAwait(false);
+        var tabelas = await LerTabelasAsync(cancelamento).ConfigureAwait(false);
+        var outrosPais = await LerOutrosPaisAsync(cancelamento).ConfigureAwait(false);
+        var brutas = await LerColunasBrutasAsync(cancelamento).ConfigureAwait(false);
+        var indices = await LerIndicesBrutosAsync(cancelamento).ConfigureAwait(false);
+
+        // As colações das colunas e dos elementos dos índices, lidas e medidas uma vez.
+        var colacoes = await LerColacoesAsync(
+            [.. brutas.Select(bruta => bruta.Colacao).Concat(indices.SelectMany(indice => indice.Colacoes)).Where(oid => oid != 0).Distinct()],
+            banco,
+            cancelamento).ConfigureAwait(false);
+        var colunas = await MontarColunasAsync(brutas, tabelas, banco, colacoes, cancelamento).ConfigureAwait(false);
+        var chavesDeParticao = await LerChavesDeParticaoAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
+        var chavesPrimarias = await LerChavesPrimariasAsync(cancelamento).ConfigureAwait(false);
+        var chavesEstrangeiras = await LerChavesEstrangeirasAsync(cancelamento).ConfigureAwait(false);
+        var indicesUnicos = MontarIndices(indices, colunas, colacoes);
+        var checks = await LerChecksAsync(colunas, cancelamento).ConfigureAwait(false);
+        var exclusoes = await LerExclusoesAsync(colunas, cancelamento).ConfigureAwait(false);
+        var triggers = await LerTriggersAsync(cancelamento).ConfigureAwait(false);
+        var publicadas = await LerPublicacoesAsync(cancelamento).ConfigureAwait(false);
+        var assinadas = await LerAssinaturasAsync(cancelamento).ConfigureAwait(false);
+        var sequences = await LerSequencesAsync(tabelas, colunas, cancelamento).ConfigureAwait(false);
+        var residuais = await LerResiduaisAsync(cancelamento).ConfigureAwait(false);
+        var reservado = await LerEsquemaReservadoAsync(cancelamento).ConfigureAwait(false);
+        var triggersDeEvento = await LerTriggersDeEventoAsync(cancelamento).ConfigureAwait(false);
+        var acesso = await LerAcessoAsync(Conexao, conexao.Versao, cancelamento).ConfigureAwait(false);
+        var nomes = tabelas.Values.Select(tabela => tabela.Nome).OrderBy(nome => nome, OrdemDeNomes.Instancia).ToArray();
+
+        return new EsquemaBanco
+        {
+            Tabelas = tabelas.Values
+                .Select(tabela => new TabelaEsquema
+                {
+                    Nome = tabela.Nome,
+                    Tipo = tabela.Tipo,
+                    Pai = tabela.Pai,
+                    OutrosPais = outrosPais.TryGetValue(tabela.Oid, out var maes) ? maes : [],
+                    ChaveParticao = chavesDeParticao.GetValueOrDefault(tabela.Oid),
+                    Estrangeira = tabela.Estrangeira,
+                    Extensao = tabela.Extensao,
+                    Colunas = colunas.TryGetValue(tabela.Oid, out var dela) ? dela.Select(coluna => coluna.Modelo).ToArray() : [],
+                    ChavePrimaria = chavesPrimarias.TryGetValue(tabela.Oid, out var chave) ? chave : [],
+                    ChavesEstrangeiras = chavesEstrangeiras.TryGetValue(tabela.Oid, out var estrangeiras) ? estrangeiras : [],
+                    SegurancaDeLinha = tabela.SegurancaDeLinha,
+                    Publicada = publicadas.TryGetValue(tabela.Oid, out var publicada) ? publicada : null,
+                    Assinada = assinadas.TryGetValue(tabela.Oid, out var assinada) ? assinada : null,
+                    IndicesUnicos = Ordenados(indicesUnicos[tabela.Oid], indice => indice.Nome),
+                    RestricoesCheck = Ordenados(checks[tabela.Oid], check => check.Nome),
+                    RestricoesExclusao = Ordenados(exclusoes[tabela.Oid], exclusao => exclusao.Nome),
+                    Triggers = Ordenados(triggers[tabela.Oid], trigger => trigger.Nome),
+                })
+                .OrderBy(tabela => tabela.Nome, OrdemDeNomes.Instancia)
+                .ToArray(),
+            Sequences = sequences,
+            ObjetosResiduais = residuais,
+            ObjetosNoEsquemaReservado = reservado,
+            TriggersDeEvento = triggersDeEvento,
+            Propriedades = banco.Propriedades,
+
+            // Um objeto que a leitura das permissões não achou (não deveria: as duas veem o mesmo catálogo) fica com tudo
+            // nulo, o pior caso.
+            Acesso = new AcessoLido
+            {
+                Banco = acesso.Banco,
+                Tabelas = [.. nomes.Select(nome => acesso.Tabelas.GetValueOrDefault(nome) ?? new PermissoesTabela { Tabela = nome })],
+                Residuais =
+                [
+                    .. residuais.Select(residual => new PermissoesResidual
+                    {
+                        Nome = residual.Nome,
+                        Tipo = residual.Tipo,
+                        PodeLimpar = residual.Tipo == TipoObjetoResidual.ObjetosGrandes ? acesso.LimparObjetosGrandes : acesso.Objetos.GetValueOrDefault((residual.Nome, false)),
+                    }),
+                ],
+                Sequences = [.. sequences.Select(sequence => new PermissoesSequence { Nome = sequence.Nome, PodeAjustar = acesso.Objetos.GetValueOrDefault((sequence.Nome, true)) })],
+            },
+        };
     }
 
     /// <summary>
@@ -678,7 +731,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<BancoLido> LerBancoAsync(CancellationToken cancelamento)
     {
         var dezesseis = conexao.Versao / 10000 >= 16;
-        await using var comando = new NpgsqlCommand(ConsultaBancoInicio + (dezesseis ? BancoRegras16 : BancoRegras15) + ConsultaBancoFim, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaBancoInicio + (dezesseis ? BancoRegras16 : BancoRegras15) + ConsultaBancoFim, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         await leitor.ReadAsync(cancelamento).ConfigureAwait(false);
         var numero = leitor.GetInt32(leitor.GetOrdinal("numero"));
@@ -717,7 +770,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<Dictionary<uint, TabelaLida>> LerTabelasAsync(CancellationToken cancelamento)
     {
         var tabelas = new Dictionary<uint, TabelaLida>();
-        await using var comando = new NpgsqlCommand(ConsultaTabelas, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaTabelas, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -751,7 +804,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<Dictionary<uint, List<NomeObjeto>>> LerOutrosPaisAsync(CancellationToken cancelamento)
     {
         var outrosPais = new Dictionary<uint, List<NomeObjeto>>();
-        await using var comando = new NpgsqlCommand(ConsultaOutrosPais, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaOutrosPais, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -774,7 +827,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         Dictionary<uint, TabelaLida> tabelas, Dictionary<uint, List<ColunaLida>> colunas, CancellationToken cancelamento)
     {
         var citadas = new List<(uint Tabela, int Coluna, int? Ordem)>();
-        await using (var comando = new NpgsqlCommand(ConsultaChavesDeParticao, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaChavesDeParticao, Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
@@ -806,7 +859,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<List<ColunaBruta>> LerColunasBrutasAsync(CancellationToken cancelamento)
     {
         var brutas = new List<ColunaBruta>();
-        await using var comando = new NpgsqlCommand(ConsultaColunasInicio + ColunaNaoNuloInvalido + ConsultaColunasFim, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaColunasInicio + ColunaNaoNuloInvalido + ConsultaColunasFim, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         var campos = new CamposDaColuna(leitor);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
@@ -893,7 +946,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<ILookup<(uint Tabela, short Coluna), short>> LerReferenciasDaGeracaoAsync(CancellationToken cancelamento)
     {
         var lidas = new List<(uint Tabela, short Coluna, short Citada)>();
-        await using var comando = new NpgsqlCommand(ConsultaReferenciasDaGeracao, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaReferenciasDaGeracao, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -911,7 +964,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     {
         var lidas = new List<(uint Oid, string Nome, string Esquema, char Provedor, bool Deterministica, bool Acesso, bool TemRegras)>();
         var dezesseis = conexao.Versao / 10000 >= 16;
-        await using (var comando = new NpgsqlCommand(ConsultaColacoesInicio + (dezesseis ? ColacaoRegras16 : ColacaoRegras15) + ConsultaColacoesFim, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaColacoesInicio + (dezesseis ? ColacaoRegras16 : ColacaoRegras15) + ConsultaColacoesFim, Conexao))
         {
             comando.Parameters.Add(new NpgsqlParameter { Value = oids, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Oid });
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
@@ -969,7 +1022,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         {
             var citada = CitacaoPostgreSql.Citar(new NomeObjeto(esquema, nome));
             var medida = $"SELECT 'a' = 'A' COLLATE {citada}, 'a' = 'á' COLLATE {citada}, 'a-b.c' = 'abc' COLLATE {citada}, pg_catalog.to_regcollation($1)::pg_catalog.oid = $2";
-            await using var comando = new NpgsqlCommand(medida, conexao.Conexao);
+            await using var comando = new NpgsqlCommand(medida, Conexao);
             comando.Parameters.Add(new NpgsqlParameter { Value = citada, NpgsqlDbType = NpgsqlDbType.Text });
             comando.Parameters.Add(new NpgsqlParameter { Value = oid, NpgsqlDbType = NpgsqlDbType.Oid });
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
@@ -1018,7 +1071,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<List<IndiceBruto>> LerIndicesBrutosAsync(CancellationToken cancelamento)
     {
         var indices = new List<IndiceBruto>();
-        await using var comando = new NpgsqlCommand(ConsultaIndicesUnicos, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaIndicesUnicos, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1066,7 +1119,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     {
         var dezoito = conexao.Versao / 10000 >= 18;
         var checks = new List<(uint Tabela, RestricaoCheck Check)>();
-        await using var comando = new NpgsqlCommand(ConsultaChecksInicio + (dezoito ? ChecksImposto18 : ChecksImposto15) + ConsultaChecksFim, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaChecksInicio + (dezoito ? ChecksImposto18 : ChecksImposto15) + ConsultaChecksFim, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1088,7 +1141,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     {
         var dezoito = conexao.Versao / 10000 >= 18;
         var exclusoes = new List<(uint Tabela, RestricaoExclusao Exclusao)>();
-        await using var comando = new NpgsqlCommand(ConsultaExclusoesInicio + (dezoito ? ExclusoesTipo18 : ExclusoesTipo15), conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaExclusoesInicio + (dezoito ? ExclusoesTipo18 : ExclusoesTipo15), Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1107,7 +1160,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<ILookup<uint, TriggerEsquema>> LerTriggersAsync(CancellationToken cancelamento)
     {
         var triggers = new List<(uint Tabela, TriggerEsquema Trigger)>();
-        await using var comando = new NpgsqlCommand(ConsultaTriggers, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaTriggers, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1131,7 +1184,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<Dictionary<uint, bool>> LerPublicacoesAsync(CancellationToken cancelamento)
     {
         var publicadas = new Dictionary<uint, bool>();
-        await using var comando = new NpgsqlCommand(ConsultaPublicacoes, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaPublicacoes, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1145,7 +1198,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<Dictionary<uint, bool>> LerAssinaturasAsync(CancellationToken cancelamento)
     {
         var assinadas = new Dictionary<uint, bool>();
-        await using (var legiveis = new NpgsqlCommand(ConsultaAssinaturasLegiveis, conexao.Conexao))
+        await using (var legiveis = new NpgsqlCommand(ConsultaAssinaturasLegiveis, Conexao))
         {
             if (await legiveis.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is not true)
             {
@@ -1153,7 +1206,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
             }
         }
 
-        await using var comando = new NpgsqlCommand(ConsultaAssinaturas, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaAssinaturas, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1176,7 +1229,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<Dictionary<uint, List<string>>> LerChavesPrimariasAsync(CancellationToken cancelamento)
     {
         var chaves = new Dictionary<uint, List<string>>();
-        await using var comando = new NpgsqlCommand(ConsultaChavesPrimarias, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaChavesPrimarias, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1196,7 +1249,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     {
         var estados = new Dictionary<uint, (bool Imposta, bool Validada, bool SemRestauracao)>();
         var dezoito = conexao.Versao / 10000 >= 18;
-        await using (var comando = new NpgsqlCommand(ConsultaEstadoDasChavesInicio + (dezoito ? EstadoDasChavesImposta18 : "") + ConsultaEstadoDasChavesFim, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaEstadoDasChavesInicio + (dezoito ? EstadoDasChavesImposta18 : "") + ConsultaEstadoDasChavesFim, Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
@@ -1208,7 +1261,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         }
 
         var lidas = new List<(uint Tabela, uint Restricao, string Nome, string Coluna, NomeObjeto Referenciada, string ColunaReferenciada)>();
-        await using (var comando = new NpgsqlCommand(ConsultaChavesEstrangeiras, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaChavesEstrangeiras, Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
@@ -1247,7 +1300,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
         // As colunas que usam cada sequence, antes de tirar as das partições; só colunas das tabelas lidas.
         var nomes = new Dictionary<uint, NomeObjeto>();
         var usos = new HashSet<(uint Sequence, uint Tabela, string Coluna)>();
-        await using (var comando = new NpgsqlCommand(ConsultaSequences, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaSequences, Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
@@ -1305,7 +1358,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<ObjetoReservado[]> LerEsquemaReservadoAsync(CancellationToken cancelamento)
     {
         var objetos = new List<ObjetoReservado>();
-        await using var comando = new NpgsqlCommand(ConsultaEsquemaReservado, conexao.Conexao);
+        await using var comando = new NpgsqlCommand(ConsultaEsquemaReservado, Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1323,7 +1376,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     private async Task<string[]> LerTriggersDeEventoAsync(CancellationToken cancelamento)
     {
         var nomes = new List<string>();
-        await using var comando = new NpgsqlCommand("SELECT e.evtname FROM pg_catalog.pg_event_trigger e WHERE e.evtenabled <> 'D'", conexao.Conexao);
+        await using var comando = new NpgsqlCommand("SELECT e.evtname FROM pg_catalog.pg_event_trigger e WHERE e.evtenabled <> 'D'", Conexao);
         await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
         while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
         {
@@ -1337,7 +1390,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
     {
         var visoes = new Dictionary<uint, (NomeObjeto Nome, bool Populada)>();
         bool objetosGrandes;
-        await using (var comando = new NpgsqlCommand(ConsultaResiduais, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaResiduais, Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
@@ -1352,7 +1405,7 @@ internal sealed class LeitorEsquemaPostgreSql(ConexaoPostgreSql conexao, Action 
 
         // As lidas fora dos esquemas lidos (o do diário) ficam de fora: o Incognito não as atualiza.
         var dependencias = new List<(uint Visao, bool Funcao, uint? Lida)>();
-        await using (var comando = new NpgsqlCommand(ConsultaDependenciasDosResiduais, conexao.Conexao))
+        await using (var comando = new NpgsqlCommand(ConsultaDependenciasDosResiduais, Conexao))
         {
             await using var leitor = await comando.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
             while (await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
