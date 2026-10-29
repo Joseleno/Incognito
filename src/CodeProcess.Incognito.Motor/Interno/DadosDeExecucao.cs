@@ -23,13 +23,19 @@ namespace CodeProcess.Incognito.Interno;
 /// As chaves estrangeiras do destino que o diário remove antes de esvaziar e recria depois da carga: as do filho copiado, e
 /// as do pai copiado ou esvaziado, em ordem de tabela e chave.
 /// </param>
+/// <param name="TriggersDesligadas">
+/// As tabelas do destino cujas triggers o diário desliga antes de esvaziar e religa depois da carga: a raiz copiada ou
+/// esvaziada com trigger ligada nela ou numa partição, como o catálogo do destino a guarda, em ordem de nome. Calculadas da
+/// leitura do destino, porque só o plano sabe que tabela do destino corresponde a cada unidade.
+/// </param>
 internal sealed record DadosDeExecucao(
     ConfiguracaoDaExecucao Configuracao,
     LeituraDoBanco Origem,
     LeituraDoBanco Destino,
     IReadOnlyList<UnidadeDeCopia> Unidades,
     IReadOnlyList<DefinicaoDominio> Dominios,
-    IReadOnlyList<ChaveRemovida> ChavesRemovidas)
+    IReadOnlyList<ChaveRemovida> ChavesRemovidas,
+    IReadOnlyList<NomeObjeto> TriggersDesligadas)
 {
     /// <summary>As unidades de cópia, copiadas.</summary>
     public IReadOnlyList<UnidadeDeCopia> Unidades { get; } = [.. Unidades];
@@ -39,6 +45,9 @@ internal sealed record DadosDeExecucao(
 
     /// <summary>As chaves que o diário remove, copiadas.</summary>
     public IReadOnlyList<ChaveRemovida> ChavesRemovidas { get; } = [.. ChavesRemovidas];
+
+    /// <summary>As tabelas cujas triggers o diário desliga, copiadas.</summary>
+    public IReadOnlyList<NomeObjeto> TriggersDesligadas { get; } = [.. TriggersDesligadas];
 
     /// <inheritdoc/>
     public override string ToString() => $"{nameof(DadosDeExecucao)} ({Unidades.Count} unidades, {Dominios.Count} domínios)";

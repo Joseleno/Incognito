@@ -28,7 +28,7 @@ public sealed class ProtecaoPostgreSqlTestes(ServidorPostgreSql servidor)
         {
             await servidor.ExecutarAsync(
                 destino,
-                $"CREATE TABLE public.ignorada (id integer); INSERT INTO public.ignorada VALUES (1); ALTER TABLE public.ignorada OWNER TO {ServidorPostgreSql.Dono};",
+                $"CREATE TABLE public.ignorada (id integer); INSERT INTO public.ignorada VALUES (1); ALTER TABLE public.ignorada OWNER TO {ServidorPostgreSql.Dono}; DROP SCHEMA incognito CASCADE;",
                 cancelamento);
             var ignorada = new NomeObjeto("public", "ignorada");
 
@@ -39,7 +39,7 @@ public sealed class ProtecaoPostgreSqlTestes(ServidorPostgreSql servidor)
             var semMarcador = await Assert.ThrowsAsync<PlanoRecusadoException>(() => ProtecaoDoDestino.ConferirAsync(daOrigem, doDestino, destino, [ignorada], false, Confirmar, cancelamento));
             Assert.Equal(["INC3600"], semMarcador.Erros.Select(erro => erro.Codigo));
 
-            // O preparo grava uma vez; a segunda é idempotente.
+            // O preparo grava o marcador e cria o diário uma vez; a segunda é idempotente.
             var preparo = await PreparadorDoDestino.PrepararAsync(doDestino, daOrigem, destino, Confirmar, TimeProvider.System, cancelamento);
             Assert.Equal(SituacaoDoPreparo.Gravado, preparo.Situacao);
             Assert.Equal("INC3582", Assert.Single(preparo.Avisos).Codigo);
@@ -73,6 +73,47 @@ public sealed class ProtecaoPostgreSqlTestes(ServidorPostgreSql servidor)
             await using var trocadoDestino = await ConectarAsync(origem, LadoBanco.Destino, ServidorPostgreSql.Leitor, servidor.SenhaLeitor);
             var trocadas = await Assert.ThrowsAsync<PlanoRecusadoException>(() => ProtecaoDoDestino.ConferirAsync(trocadaOrigem, trocadoDestino, origem, [], false, Confirmar, cancelamento));
             Assert.Equal(["INC3600", "INC3602"], trocadas.Erros.Select(erro => erro.Codigo));
+        }
+        finally
+        {
+            await servidor.ApagarAsync(origem);
+            await servidor.ApagarAsync(destino);
+        }
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public async Task O_esquema_incognito_de_outro_dono_deixa_o_destino_marcado_sem_o_diario_ate_ser_apagado()
+    {
+        // O clone do esquema de conformidade traz um esquema incognito do administrador: o diário nunca o usa.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var origem = await servidor.ClonarModeloAsync(cancelamento);
+        var destino = await servidor.CriarDestinoAsync(cancelamento);
+        try
+        {
+            await using var daOrigem = await ConectarAsync(origem, LadoBanco.Origem, ServidorPostgreSql.Leitor, servidor.SenhaLeitor);
+            await using var doDestino = await ConectarAsync(destino, LadoBanco.Destino, ServidorPostgreSql.Dono, servidor.SenhaDono);
+
+            var alheio = await Assert.ThrowsAsync<FalhaDialetoException>(() => PreparadorDoDestino.PrepararAsync(doDestino, daOrigem, destino, Confirmar, TimeProvider.System, cancelamento));
+            Assert.Equal(("INC3116", 1), (alheio.Codigo, ClassificadorDeSaida.De(alheio)));
+            var marcador = (await doDestino.LerIdentidadeAsync(cancelamento)).Marcador;
+            Assert.Equal(SituacaoMarcador.Valido, marcador?.Situacao);
+
+            // Com o esquema alheio, a proteção também falha; apagado ele, sem o diário, recusa; e o preparo seguinte só cria
+            // o diário.
+            var comAlheio = await Assert.ThrowsAsync<FalhaDialetoException>(() => ProtecaoDoDestino.ConferirAsync(daOrigem, doDestino, destino, [], false, Confirmar, cancelamento));
+            Assert.Equal("INC3116", comAlheio.Codigo);
+            await servidor.ExecutarAsync(destino, "DROP SCHEMA incognito CASCADE", cancelamento);
+            var semDiario = await Assert.ThrowsAsync<PlanoRecusadoException>(() => ProtecaoDoDestino.ConferirAsync(daOrigem, doDestino, destino, [], false, Confirmar, cancelamento));
+            Assert.Equal(["INC3607"], semDiario.Erros.Select(erro => erro.Codigo));
+            var preparo = await PreparadorDoDestino.PrepararAsync(doDestino, daOrigem, destino, Confirmar, TimeProvider.System, cancelamento);
+
+            Assert.Equal((SituacaoDoPreparo.DiarioCriado, marcador!.Identificador), (preparo.Situacao, preparo.Identificador));
+            var protecao = await ProtecaoDoDestino.ConferirAsync(daOrigem, doDestino, destino, [], false, Confirmar, cancelamento);
+            await using (protecao.Concessao)
+            {
+                Assert.Equal(marcador.Identificador, protecao.Marcador);
+            }
         }
         finally
         {

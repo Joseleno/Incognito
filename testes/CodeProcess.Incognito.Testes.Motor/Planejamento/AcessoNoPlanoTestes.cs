@@ -507,6 +507,24 @@ public sealed class AcessoNoPlanoTestes
     }
 
     [Fact]
+    public async Task A_carga_leva_a_raiz_copiada_ou_esvaziada_com_trigger_ligada_na_arvore()
+    {
+        var ligada = new TriggerEsquema { Nome = "tg", Ligada = true, Herdada = false };
+        var desligada = new TriggerEsquema { Nome = "tg", Ligada = false, Herdada = true };
+        var pedidos = Trocar(Coerente(), "pedidos", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Triggers), new[] { ligada })));
+
+        var soNaParticao = await PlanejarAsync("", Coerente(), ComParticao([], [ligada]));
+        var soDesligada = await PlanejarAsync("", Coerente(), ComParticao([], [desligada]));
+        var esvaziada = await PlanejarAsync("tabelas:\n  loja.pedidos: { acao: esvaziar }\n", Coerente(), pedidos);
+        var ignorada = await PlanejarAsync("tabelas:\n  loja.pedidos: { acao: ignorar }\n", Coerente(), pedidos);
+
+        Assert.Equal(["loja.clientes"], soNaParticao!.Execucao.TriggersDesligadas.Select(nome => $"{nome.Esquema}.{nome.Nome}"));
+        Assert.Empty(soDesligada!.Execucao.TriggersDesligadas);
+        Assert.Equal(["loja.pedidos"], esvaziada!.Execucao.TriggersDesligadas.Select(nome => $"{nome.Esquema}.{nome.Nome}"));
+        Assert.Empty(ignorada!.Execucao.TriggersDesligadas);
+    }
+
+    [Fact]
     public async Task As_listas_das_mensagens_saem_juntas_e_em_ordem()
     {
         var semNada = ComPermissao(ComPermissao(Coerente(), "pedidos", (nameof(PermissoesTabela.PodeAlterarRestricoes), false)), "clientes", (nameof(PermissoesTabela.PodeReferenciar), false));

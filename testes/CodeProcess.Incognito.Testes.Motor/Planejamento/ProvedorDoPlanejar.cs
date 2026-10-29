@@ -117,8 +117,11 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
     /// <summary>O que o diário do destino declara deixar no esquema reservado; vazio por padrão (nenhum objeto aceito).</summary>
     internal IReadOnlyList<ObjetoReservado> ObjetosDoDiario { get; init; } = [];
 
-    /// <summary>O diário lido; sem diário por padrão.</summary>
-    internal EstadoDiario EstadoDoDiario { get; init; } = new() { Existe = false };
+    /// <summary>O diário lido; um diário vazio por padrão (o destino preparado).</summary>
+    internal EstadoDiario EstadoDoDiario { get; init; } = new() { Existe = true };
+
+    /// <summary>Se a criação do diário passou: a leitura seguinte o vê, mesmo com <see cref="EstadoDoDiario"/> sem diário.</summary>
+    internal bool DiarioCriado { get; set; }
 
     /// <summary>A situação que a recriação e a validação devolvem.</summary>
     internal SituacaoEntrada? NaRestauracao { get; init; }
@@ -462,9 +465,10 @@ internal sealed class DiarioDoPlanejar(ProvedorDoPlanejar provedor) : DiarioExec
 {
     public override IReadOnlyList<ObjetoReservado> ObjetosDoDiario => provedor.Obter(Operacao.ObjetosDoDiario, true, provedor.ObjetosDoDiario);
 
-    public override Task CriarAsync(CancellationToken cancelamento) => Fazer(Operacao.CriarDiario, () => true, cancelamento);
+    public override Task CriarAsync(CancellationToken cancelamento) => Fazer(Operacao.CriarDiario, () => provedor.DiarioCriado = true, cancelamento);
 
-    public override Task<EstadoDiario> LerAsync(CancellationToken cancelamento) => Fazer(Operacao.LerDiario, () => provedor.EstadoDoDiario, cancelamento);
+    public override Task<EstadoDiario> LerAsync(CancellationToken cancelamento) =>
+        Fazer(Operacao.LerDiario, () => provedor.DiarioCriado && !provedor.EstadoDoDiario.Existe ? new EstadoDiario { Existe = true } : provedor.EstadoDoDiario, cancelamento);
 
     public override Task IniciarAsync(Guid execucao, Guid marcador, DateTimeOffset iniciadaEm, CancellationToken cancelamento) => Fazer(Operacao.IniciarExecucao, () => true, cancelamento);
 

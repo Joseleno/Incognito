@@ -78,6 +78,34 @@ internal sealed class EstadoDoDiarioFalso
     internal HashSet<NomeObjeto> Seguradas { get; } = [];
 
     internal HashSet<Adulteracao> Adulteracoes { get; } = [];
+
+    /// <summary>A escrita em que o processo cai, contando de 1; nula nunca cai.</summary>
+    internal int? QuedaNaEscrita { get; set; }
+
+    /// <summary>Se a escrita da queda chega a valer (o processo morre depois do commit, antes da resposta).</summary>
+    internal bool QuedaDepoisDoCommit { get; set; }
+
+    /// <summary>As escritas feitas no diário (criar, registrar, remover, desligar, restaurar, descartar, encerrar).</summary>
+    internal int Escritas { get; set; }
+
+    /// <summary>
+    /// Se o processo caiu: toda operação, de qualquer instância, lança sem efeito (um processo morto não escreve no
+    /// <c>catch</c> nem no <c>finally</c>) até o teste o reviver.
+    /// </summary>
+    internal bool Caido { get; set; }
+
+    /// <summary>As chaves e as triggers, para comparar o banco antes e depois.</summary>
+    internal string Retrato()
+    {
+        lock (Trava)
+        {
+            var chaves = Chaves.OrderBy(chave => chave.Key.Tabela.Nome, StringComparer.Ordinal).ThenBy(chave => chave.Key.Nome, StringComparer.Ordinal)
+                .Select(chave => $"{chave.Key.Tabela.Nome}.{chave.Key.Nome}={chave.Value}");
+            var triggers = Triggers.OrderBy(trigger => trigger.Key.Tabela.Nome, StringComparer.Ordinal).ThenBy(trigger => trigger.Key.Nome, StringComparer.Ordinal)
+                .Select(trigger => $"{trigger.Key.Tabela.Nome}.{trigger.Key.Nome}={trigger.Value}");
+            return string.Join("; ", chaves.Concat(triggers));
+        }
+    }
 }
 
 /// <summary>O diário falso, com os defeitos de cada regra do contrato.</summary>
@@ -109,7 +137,7 @@ internal sealed class DiarioFalso(EstadoDoDiarioFalso estado, BloqueioFalso bloq
         }
     });
 
-    public override Task<EstadoDiario> LerAsync(CancellationToken cancelamento) => Fazer(exigeDiario: false, () =>
+    public override Task<EstadoDiario> LerAsync(CancellationToken cancelamento) => Fazer(exigeDiario: false, escreve: false, () =>
     {
         if (!Criado)
         {
@@ -341,12 +369,19 @@ internal sealed class DiarioFalso(EstadoDoDiarioFalso estado, BloqueioFalso bloq
 
     // Uma operação do diário: só com a concessão viva (que se perde se o banco não a reconhece mais), e, quando precisa
     // dele, com o diário criado e não adulterado.
-    private Task<T> Fazer<T>(bool exigeDiario, Func<T> operacao)
+    private Task<T> Fazer<T>(bool exigeDiario, Func<T> operacao) => Fazer(exigeDiario, escreve: true, operacao);
+
+    private Task<T> Fazer<T>(bool exigeDiario, bool escreve, Func<T> operacao)
     {
         try
         {
             lock (estado.Trava)
             {
+                if (estado.Caido)
+                {
+                    throw new IncognitoException("INC3399", "O processo caiu.");
+                }
+
                 if (defeito != Defeito.DiarioSemConcessao)
                 {
                     var concessao = bloqueio.Viva ?? throw new InvalidOperationException("O diário só trabalha com a concessão viva.");
@@ -365,6 +400,17 @@ internal sealed class DiarioFalso(EstadoDoDiarioFalso estado, BloqueioFalso bloq
                 if (exigeDiario && !Criado)
                 {
                     throw Recusa("O diário não existe.");
+                }
+
+                if (escreve && ++estado.Escritas == estado.QuedaNaEscrita)
+                {
+                    estado.Caido = true;
+                    if (estado.QuedaDepoisDoCommit)
+                    {
+                        operacao();
+                    }
+
+                    throw new IncognitoException("INC3399", "O processo caiu.");
                 }
 
                 return Task.FromResult(operacao());

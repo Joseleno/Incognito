@@ -993,7 +993,14 @@ internal sealed partial class MontagemDoPlano
             .OrderBy(chave => chave.Tabela, Comparer<NomeTabela>.Create(ColetorDoPlano.CompararTabelas))
             .ThenBy(chave => chave.Chave, StringComparer.Ordinal)
             .ToArray();
-        var carga = new DadosDeExecucao(ConfiguracaoDaExecucao.De(_configuracao), _origem, _destino, unidades, _regras.Dominios, chaves);
+        // A raiz copiada ou esvaziada com trigger ligada na árvore: o diário desliga e religa cada tabela física dela.
+        var triggers = _unidades
+            .Where(unidade => unidade.Destino is not null && _acoes[unidade].Acao != AcaoTabela.Ignorar)
+            .Where(unidade => TabelasNoDestino(unidade).Any(tabela => tabela.Triggers.Any(trigger => trigger.Ligada)))
+            .Select(unidade => unidade.Destino!.Nome)
+            .OrderBy(nome => new NomeTabela(nome.Esquema, nome.Nome), Comparer<NomeTabela>.Create(ColetorDoPlano.CompararTabelas))
+            .ToArray();
+        var carga = new DadosDeExecucao(ConfiguracaoDaExecucao.De(_configuracao), _origem, _destino, unidades, _regras.Dominios, chaves, triggers);
         return new PlanoMontado(tabelas, _coletor.Avisos(), carga);
     }
 
