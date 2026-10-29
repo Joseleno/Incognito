@@ -242,11 +242,23 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     /// <returns>O contêiner, ainda parado.</returns>
     internal static PostgreSqlContainer Conteiner(int versao, string senha) => Conteiner(Imagem(versao), senha);
 
+    /// <summary>
+    /// Sobe um contêiner da versão com a porta da réplica em espera (<see cref="PortaDaReplica"/>) publicada também, para o
+    /// teste lento que a cria dentro dele; o chamador o descarta.
+    /// </summary>
+    /// <param name="versao">A versão principal.</param>
+    /// <param name="senha">A senha do administrador.</param>
+    /// <returns>O contêiner, ainda parado.</returns>
+    internal static PostgreSqlContainer ConteinerComReplica(int versao, string senha) => Conteiner(Imagem(versao), senha, PortaDaReplica);
+
+    /// <summary>A porta da réplica em espera dentro do contêiner.</summary>
+    internal const int PortaDaReplica = 5433;
+
     /// <summary>Uma senha aleatória com o sentinela.</summary>
     /// <returns>A senha.</returns>
     internal static string NovaSenha() => Sentinela + Guid.NewGuid().ToString("N");
 
-    private static PostgreSqlContainer Conteiner(string imagem, string senha) => new PostgreSqlBuilder(imagem)
+    private static PostgreSqlContainer Conteiner(string imagem, string senha, int? outraPorta = null) => (outraPorta is { } porta ? new PostgreSqlBuilder(imagem).WithPortBinding(porta, true) : new PostgreSqlBuilder(imagem))
         .WithPassword(senha)
 
         // Clones e DDL mais rápidos: o banco é descartável.

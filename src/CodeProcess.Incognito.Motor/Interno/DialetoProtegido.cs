@@ -45,7 +45,7 @@ internal enum LadoBanco
 /// O nome do provedor nas mensagens é o da configuração, nunca o que o dialeto diz.
 /// </para>
 /// </remarks>
-internal sealed class DialetoProtegido : IAsyncDisposable
+internal sealed partial class DialetoProtegido : IAsyncDisposable
 {
     private readonly DialetoBanco _banco;
     private readonly string _provedor;

@@ -103,7 +103,10 @@ jobs:
           cache-dependency-path: testes/CodeProcess.Incognito.Testes.PostgreSql/packages.lock.json
       - run: dotnet restore testes/CodeProcess.Incognito.Testes.PostgreSql --locked-mode
       # O projeto ignora o código 8 (no job sem banco ele roda zero testes); aqui, zero testes sai com 9.
-      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --filter-trait "Categoria=Integracao" --minimum-expected-tests 1
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --filter-trait "Categoria=Integracao" --filter-not-trait "Categoria=Lento" --minimum-expected-tests 1
+      # Lento, só no push (fora do pull request): a leitura numa réplica em espera de verdade, criada no contêiner do teste.
+      - if: github.event_name == 'push'
+        run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --filter-trait "Categoria=Lento" --minimum-expected-tests 1
 
   # Um nome estável, qualquer que seja a matriz, para o Ruleset exigir quando a integração passar a ser obrigatória:
   # verde só se todas as versões passaram (falha também se a matriz for cancelada ou pulada).
