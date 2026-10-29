@@ -11,8 +11,8 @@ namespace CodeProcess.Incognito.Dialetos;
 /// As partes de metadados (<see cref="Esquema"/>, <see cref="Identidade"/>), a leitura agregada da origem
 /// (<see cref="DialetoOrigem.Dados"/>), a gravação do marcador e a leitura de existência do destino
 /// (<see cref="DialetoDestino.Marcador"/>, <see cref="DialetoDestino.Dados"/>) e o diário (<see cref="DialetoDestino.Diario"/>)
-/// usam a conexão de controle e não são chamadas em paralelo; o bloqueio de execução (<see cref="DialetoDestino.Bloqueio"/>) vive numa conexão dedicada; as
-/// operações que leem ou gravam linhas, quando entrarem no contrato, abrem as próprias conexões.
+/// usam a conexão de controle e não são chamadas em paralelo; o bloqueio de execução (<see cref="DialetoDestino.Bloqueio"/>) vive numa conexão dedicada; a
+/// sessão de leitura (<see cref="AbrirLeituraAsync"/>) abre as próprias conexões, e a gravação, quando entrar no contrato, também.
 /// </para>
 /// <para>
 /// O motor traduz toda exceção do dialeto: uma <see cref="DialetoRecusouException"/> vira erro do plano (saída 2); uma
@@ -52,6 +52,38 @@ public abstract class DialetoBanco : IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Abre a sessão de leitura consistente (<see cref="SessaoLeitura"/>): o coordenador e os leitores, cada um numa conexão
+    /// própria, nenhuma delas a de controle, todas no mesmo banco e servidor dela. As travadas ficam protegidas antes do
+    /// instante. Na origem e no destino; no destino, sem travadas. Descartar o dialeto com a sessão viva a fecha.
+    /// </summary>
+    /// <param name="pedido">Os leitores, o modo e as travadas.</param>
+    /// <param name="cancelamento">Cancela a abertura.</param>
+    /// <returns>A sessão, que o chamador descarta. Se a abertura falhar, o dialeto fecha o que já abriu.</returns>
+    /// <exception cref="ArgumentNullException">Pedido nulo.</exception>
+    /// <exception cref="ArgumentException">Travadas no destino.</exception>
+    /// <exception cref="ObjectDisposedException">Dialeto descartado.</exception>
+    /// <exception cref="DialetoRecusouException">
+    /// O banco não cumpre o modo <see cref="ModoConsistencia.Exigir"/>, ou uma travada não existe ou o login não a lê.
+    /// </exception>
+    public Task<SessaoLeitura> AbrirLeituraAsync(PedidoLeitura pedido, CancellationToken cancelamento)
+    {
+        ArgumentNullException.ThrowIfNull(pedido);
+        LancarSeDescartado();
+        if (this is DialetoDestino && pedido.Travadas.Count > 0)
+        {
+            throw new ArgumentException("A sessão de leitura do destino não trava tabelas: o próprio esvaziamento esperaria por ela.", nameof(pedido));
+        }
+
+        return AbrirLeituraAsyncCore(pedido, cancelamento);
+    }
+
+    /// <summary>A abertura da sessão de leitura, com o pedido já conferido.</summary>
+    /// <param name="pedido">O pedido.</param>
+    /// <param name="cancelamento">Cancela a abertura.</param>
+    /// <returns>A sessão aberta.</returns>
+    protected abstract Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento);
+
     /// <summary>O descarte do dialeto, chamado uma vez só. Padrão: nada.</summary>
     /// <returns>A tarefa do descarte.</returns>
     protected virtual ValueTask DisposeAsyncCore() => ValueTask.CompletedTask;
@@ -63,7 +95,7 @@ public abstract class DialetoBanco : IAsyncDisposable
 
 /// <summary>
 /// A origem: lida, nunca alterada. Além das partes comuns, a leitura agregada que o <c>planejar</c> precisa
-/// (<see cref="Dados"/>); a leitura consistente das linhas entra no contrato com o INC da leitura.
+/// (<see cref="Dados"/>), fora de sessão.
 /// </summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class DialetoOrigem : DialetoBanco

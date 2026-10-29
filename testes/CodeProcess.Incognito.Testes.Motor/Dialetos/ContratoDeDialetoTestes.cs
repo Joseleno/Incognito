@@ -271,6 +271,8 @@ public sealed class ContratoDeDialetoTestes
 
         public override LeitorDadosOrigem Dados => throw new NotSupportedException();
 
+        protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => throw new NotSupportedException();
+
         protected override async ValueTask DisposeAsyncCore()
         {
             Descartes++;

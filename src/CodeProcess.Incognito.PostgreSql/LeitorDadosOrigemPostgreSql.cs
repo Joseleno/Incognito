@@ -17,10 +17,10 @@ namespace CodeProcess.Incognito.Dialetos.PostgreSql;
 /// </remarks>
 internal sealed class LeitorDadosOrigemPostgreSql(ConexaoPostgreSql conexao, Action lancarSeDescartado) : LeitorDadosOrigem
 {
-    // O tipo base pela cadeia de domínios, e a forma da tabela; nada se lê se a tabela ou a coluna não existem.
-    private const string ConsultaColuna = """
+    // O tipo base pela cadeia de domínios, a forma da tabela e o oid; nada se lê se a tabela ou a coluna não existem.
+    internal const string ConsultaColuna = """
         WITH RECURSIVE coluna AS (
-            SELECT c.relkind, a.atttypid
+            SELECT c.oid, c.relkind, a.atttypid
             FROM pg_catalog.pg_class c
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
@@ -34,7 +34,7 @@ internal sealed class LeitorDadosOrigemPostgreSql(ConexaoPostgreSql conexao, Act
             SELECT t.oid, t.typbasetype
             FROM pg_catalog.pg_type t
             JOIN cadeia ON t.oid = cadeia.typbasetype)
-        SELECT coluna.relkind = 'p', (SELECT cadeia.oid FROM cadeia WHERE cadeia.typbasetype = 0) IN (20, 21, 23)
+        SELECT coluna.relkind = 'p', (SELECT cadeia.oid FROM cadeia WHERE cadeia.typbasetype = 0) IN (20, 21, 23), coluna.oid
         FROM coluna
         """;
 

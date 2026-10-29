@@ -51,7 +51,7 @@ public sealed class PerturbacaoDoModeloTestes
     public void Todos_os_tipos_publicos_do_esquema_sao_perturbados()
     {
         // Os tipos com propriedades init do contrato (também aninhados, structs e em sub-namespaces), fora a identidade, o
-        // transporte e o marcador dela, o diário (que não são esquema, e têm fatos e defeitos próprios), as exceções (o HelpLink e o Source da
+        // transporte e o marcador dela, o diário e o pedido de leitura (que não são esquema, e têm fatos e defeitos próprios), as exceções (o HelpLink e o Source da
         // Exception têm set) e o próprio contrato.
         var espaco = typeof(EsquemaBanco).Namespace!;
         var doModelo = typeof(EsquemaBanco).Assembly.GetTypes()
@@ -59,7 +59,7 @@ public sealed class PerturbacaoDoModeloTestes
                 && (tipo.Namespace == espaco || tipo.Namespace?.StartsWith(espaco + ".", StringComparison.Ordinal) == true)
                 && Alteraveis(tipo).Any())
             .Where(tipo => tipo != typeof(IdentidadeLida) && tipo != typeof(TransporteConexao) && tipo != typeof(MarcadorLido) && !typeof(Exception).IsAssignableFrom(tipo))
-            .Where(tipo => tipo != typeof(EstadoDiario) && tipo != typeof(ExecucaoLida) && tipo != typeof(EntradaDiario) && tipo != typeof(TriggerDoDiario))
+            .Where(tipo => tipo != typeof(EstadoDiario) && tipo != typeof(ExecucaoLida) && tipo != typeof(EntradaDiario) && tipo != typeof(TriggerDoDiario) && tipo != typeof(PedidoLeitura))
             .Select(tipo => tipo.Name)
             .Order(StringComparer.Ordinal);
 
