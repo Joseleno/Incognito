@@ -144,11 +144,13 @@ public sealed class ProjetosDeTesteTestes
     }
 
     [Fact]
-    public void Categoria_Lento_so_no_nucleo()
+    public void Categoria_Lento_so_no_nucleo_e_nos_dialetos()
     {
-        var achados = Ocorrencias(_lento, projeto => projeto == Nucleo);
+        // O job lentos roda o núcleo; a integração de cada dialeto roda os lentos dele no push, e os testes do projeto do
+        // dialeto levam também a categoria de banco (o fato acima), fora do job sem banco.
+        var achados = Ocorrencias(_lento, projeto => projeto == Nucleo || _dialetos.Contains(projeto));
 
-        Assert.True(achados.Count == 0, $"\"Lento\" fora do projeto de testes do núcleo (o job lentos só roda o núcleo): {string.Join(", ", achados)}.");
+        Assert.True(achados.Count == 0, $"\"Lento\" fora dos projetos de testes do núcleo e dos dialetos (só eles têm job para os lentos): {string.Join(", ", achados)}.");
     }
 
     [Fact]
