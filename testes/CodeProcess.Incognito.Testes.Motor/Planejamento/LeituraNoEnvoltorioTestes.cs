@@ -297,5 +297,8 @@ public sealed class LeituraNoEnvoltorioTestes
     {
         protected override Task<long?> LerMaiorValorAsyncCore(ReferenciaColuna coluna, CancellationToken cancelamento) =>
             comportamento.AoLer is { } falha ? Task.FromException<long?>(falha) : comportamento.Segurar ?? Task.FromResult<long?>(31);
+
+        protected override Task<LeituraTabela> AbrirTabelaAsyncCore(PedidoLeituraTabela pedido, CancellationToken cancelamento) =>
+            throw new NotSupportedException("O leitor do envoltório só lê o maior valor.");
     }
 }

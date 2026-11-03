@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Text.RegularExpressions;
@@ -77,11 +78,12 @@ internal sealed partial class SessaoLeituraPostgreSql : SessaoLeitura
     /// <param name="controle">A conexão de controle do dialeto.</param>
     /// <param name="pedido">O pedido.</param>
     /// <param name="depoisDoExport">Gancho dos testes, entre o export e a primeira importação.</param>
+    /// <param name="antesDaConclusao">Gancho dos testes, entre o fim do COPY de uma leitura das linhas e a conferência da sessão.</param>
     /// <param name="aoDescartar">Chamado no descarte da sessão.</param>
     /// <param name="cancelamento">Cancela a abertura.</param>
     /// <returns>A sessão aberta.</returns>
     internal static async Task<SessaoLeituraPostgreSql> AbrirAsync(
-        ConexaoPostgreSql controle, PedidoLeitura pedido, Func<CancellationToken, Task>? depoisDoExport, Action<SessaoLeituraPostgreSql> aoDescartar, CancellationToken cancelamento)
+        ConexaoPostgreSql controle, PedidoLeitura pedido, Func<CancellationToken, Task>? depoisDoExport, Func<NpgsqlConnection, CancellationToken, Task>? antesDaConclusao, Action<SessaoLeituraPostgreSql> aoDescartar, CancellationToken cancelamento)
     {
         var travadas = await ClassificarAsync(controle, pedido.Travadas, cancelamento).ConfigureAwait(false);
         var abertas = new List<NpgsqlConnection>();
@@ -110,13 +112,16 @@ internal sealed partial class SessaoLeituraPostgreSql : SessaoLeitura
                 await depoisDoExport(cancelamento).ConfigureAwait(false);
             }
 
+            // Um pool só da sessão para os bytes das linhas: limpo a cada devolução, e nunca o do processo, que outro código
+            // alugaria com os valores ainda dentro.
+            var pool = ArrayPool<byte>.Create(maxArrayLength: 4 * CortadorDeLinhas.BytesPorLote, maxArraysPerBucket: (4 * pedido.Leitores) + 4);
             var leitores = new List<LeitorDaSessaoPostgreSql>(pedido.Leitores);
             for (var i = 0; i < pedido.Leitores; i++)
             {
                 var conexao = await controle.AbrirParaLeituraAsync(cancelamento).ConfigureAwait(false);
                 abertas.Add(conexao);
                 await ImportarAsync(conexao, instante, cancelamento).ConfigureAwait(false);
-                leitores.Add(new LeitorDaSessaoPostgreSql(conexao, emReplica));
+                leitores.Add(new LeitorDaSessaoPostgreSql(conexao, emReplica, pool, antesDaConclusao));
             }
 
             return new SessaoLeituraPostgreSql(controle, coordenador, leitores, emReplica, aoDescartar);
@@ -171,6 +176,12 @@ internal sealed partial class SessaoLeituraPostgreSql : SessaoLeitura
     {
         _aoDescartar(this);
         await Descarte.DepoisDaFalhaAsync([.. _leitores.Select(leitor => leitor.Conexao).Reverse(), _coordenador]).ConfigureAwait(false);
+
+        // Com as conexões fechadas, a leitura das linhas viva termina logo, e o resto entre lotes some da memória.
+        foreach (var leitor in _leitores)
+        {
+            await leitor.DescartarLeituraVivaAsync().ConfigureAwait(false);
+        }
     }
 
     // Cada travada pela conexão de controle, antes do coordenador: a forma decide o ONLY (a particionada trava com as
@@ -267,8 +278,30 @@ internal sealed partial class SessaoLeituraPostgreSql : SessaoLeitura
 }
 
 /// <summary>Um leitor da sessão do PostgreSQL: uma conexão no instante da sessão.</summary>
-internal sealed class LeitorDaSessaoPostgreSql(NpgsqlConnection conexao, bool emReplica) : LeitorDaSessao
+internal sealed class LeitorDaSessaoPostgreSql(
+    NpgsqlConnection conexao, bool emReplica, ArrayPool<byte> pool, Func<NpgsqlConnection, CancellationToken, Task>? antesDaConclusao) : LeitorDaSessao
 {
+    // A leitura das linhas aberta e ainda não descartada, que o descarte da sessão descarta.
+    private LeituraTabelaPostgreSql? _viva;
+
+    /// <summary>
+    /// A sessão das linhas ainda como aberta: só de leitura, com a segurança por linha desligada e com o texto do <c>COPY</c>
+    /// como imposto; conferida antes e depois de cada leitura das linhas.
+    /// </summary>
+    internal const string SessaoIntacta = Sessao + " AND " + ConexaoPostgreSql.ConferenciaDoTexto;
+
+    // O ponto de salvamento da leitura das linhas, que dura o COPY inteiro.
+    private const string PontoDasLinhas = "linhas";
+
+    // A tabela pelo nome, para a trava, a guarda e o ONLY: a particionada é lida com as partições; as outras, sem as
+    // herdeiras.
+    private const string FormaDaTabela = """
+        SELECT c.oid, c.relkind = 'p'
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = $1 AND c.relname = $2 AND c.relkind IN ('r', 'p')
+        """;
+
     // A sessão ainda como aberta: código do usuário (a função de saída de um tipo) pode trocar os dois dentro da transação.
     private const string Sessao = """
         SELECT pg_catalog.current_setting('row_security') = 'off' AND pg_catalog.current_setting('transaction_read_only') = 'on'
@@ -303,13 +336,122 @@ internal sealed class LeitorDaSessaoPostgreSql(NpgsqlConnection conexao, bool em
 
     protected override async Task<long?> LerMaiorValorAsyncCore(ReferenciaColuna coluna, CancellationToken cancelamento)
     {
+        ConferirConexao();
         try
         {
             return await LeitorEsquemaPostgreSql.NoPontoAsync(conexao, "leitura", ct => LerNoPontoAsync(coluna, ct), cancelamento).ConfigureAwait(false);
         }
-        catch (Exception erro) when (ErrosDaLeitura.Traduzir(erro, emReplica, naAbertura: false) is { } traduzida)
+        catch (Exception erro) when ((ErrosDaLeitura.Traduzir(erro, emReplica, naAbertura: false) ?? SemConexao()) is { } traduzida)
         {
             throw traduzida;
+        }
+    }
+
+    // A conexão que caiu, ou que o descarte de uma leitura interrompida fechou, não lê mais: a falha sai do dialeto, e não
+    // como a do Npgsql.
+    private void ConferirConexao()
+    {
+        if (SemConexao() is { } falha)
+        {
+            throw falha;
+        }
+    }
+
+    private IncognitoException? SemConexao() => conexao.FullState == ConnectionState.Open ? null : ErrosDaLeitura.LeitorSemConexao();
+
+    protected override async Task<LeituraTabela> AbrirTabelaAsyncCore(PedidoLeituraTabela pedido, CancellationToken cancelamento)
+    {
+        // O ponto dura o COPY inteiro: a leitura o solta no fim, ou volta a ele no descarte. Criado dentro do try: a falha
+        // dele também sai traduzida, e só se volta a um ponto que existe.
+        ConferirConexao();
+        var ponto = false;
+        try
+        {
+            await SessaoLeituraPostgreSql.ExecutarAsync(conexao, $"SAVEPOINT {PontoDasLinhas}", cancelamento).ConfigureAwait(false);
+            ponto = true;
+            await using (var sessao = new NpgsqlCommand(SessaoIntacta, conexao))
+            {
+                if (await sessao.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is not true)
+                {
+                    throw ErrosDaLeitura.TextoTrocado();
+                }
+            }
+
+            uint oid;
+            bool particionada;
+            await using (var forma = new NpgsqlCommand(FormaDaTabela, conexao))
+            {
+                forma.Parameters.Add(new NpgsqlParameter { Value = pedido.Tabela.Esquema, NpgsqlDbType = NpgsqlDbType.Text });
+                forma.Parameters.Add(new NpgsqlParameter { Value = pedido.Tabela.Nome, NpgsqlDbType = NpgsqlDbType.Text });
+                await using var leitor = await forma.ExecuteReaderAsync(cancelamento).ConfigureAwait(false);
+                if (!await leitor.ReadAsync(cancelamento).ConfigureAwait(false))
+                {
+                    throw new DialetoRecusouException(
+                        CodigosPostgreSql.TabelaInexistente,
+                        $"A tabela {pedido.Tabela} não existe, ou não é uma tabela comum ou particionada: as linhas não foram lidas.");
+                }
+
+                oid = leitor.GetFieldValue<uint>(0);
+                particionada = leitor.GetBoolean(1);
+            }
+
+            var tabela = (particionada ? "" : "ONLY ") + CitacaoPostgreSql.Citar(pedido.Tabela);
+            await SessaoLeituraPostgreSql.ExecutarAsync(conexao, $"LOCK TABLE {tabela} IN ACCESS SHARE MODE NOWAIT", cancelamento).ConfigureAwait(false);
+            await ConferirGuardaAsync(oid, particionada, pedido.Tabela, cancelamento).ConfigureAwait(false);
+
+            // O início do COPY vai sem o token: o cancelamento antes da primeira resposta deixaria a conexão inutilizável.
+            cancelamento.ThrowIfCancellationRequested();
+            var colunas = string.Join(", ", pedido.Colunas.Select(CitacaoPostgreSql.Citar));
+            var exportacao = await conexao.BeginTextExportAsync($"COPY (SELECT {colunas} FROM {tabela}) TO STDOUT", CancellationToken.None).ConfigureAwait(false);
+            var leitura = new LeituraTabelaPostgreSql(
+                conexao, exportacao, pool, emReplica, PontoDasLinhas, pedido.Tabela.ToString(), antesDaConclusao, terminada => Interlocked.CompareExchange(ref _viva, null, terminada));
+            Volatile.Write(ref _viva, leitura);
+            return leitura;
+        }
+        catch (Exception erro)
+        {
+            if (ponto)
+            {
+                try
+                {
+                    await SessaoLeituraPostgreSql.ExecutarAsync(conexao, $"ROLLBACK TO SAVEPOINT {PontoDasLinhas}; RELEASE SAVEPOINT {PontoDasLinhas}", CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception volta) when (volta is NpgsqlException or InvalidOperationException)
+                {
+                    // A conexão caiu: a falha da abertura é a que sai, e a próxima leitura falha pela conexão.
+                }
+            }
+
+            if (erro is IncognitoException)
+            {
+                throw;
+            }
+
+            if (cancelamento.IsCancellationRequested && erro is OperationCanceledException or NpgsqlException)
+            {
+                throw new OperationCanceledException(cancelamento);
+            }
+
+            throw ErrosDaLeitura.Traduzir(erro, emReplica, naAbertura: false) ?? SemConexao() ?? ErrosDaLeitura.LinhasNaoLidas(pedido.Tabela.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Descarta a leitura das linhas ainda viva neste leitor (o descarte da sessão, depois de fechar as conexões): o resto
+    /// entre lotes some da memória.
+    /// </summary>
+    /// <returns>A tarefa.</returns>
+    internal ValueTask DescartarLeituraVivaAsync() => Volatile.Read(ref _viva) is { } viva ? viva.DisposeAsync() : ValueTask.CompletedTask;
+
+    private async Task ConferirGuardaAsync(uint oid, bool particionada, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        await using var guarda = new NpgsqlCommand(Guarda, conexao);
+        guarda.Parameters.Add(new NpgsqlParameter { Value = oid, NpgsqlDbType = NpgsqlDbType.Oid });
+        guarda.Parameters.Add(new NpgsqlParameter { Value = particionada, NpgsqlDbType = NpgsqlDbType.Boolean });
+        guarda.Parameters.Add(new NpgsqlParameter { Value = CitacaoPostgreSql.Citar(tabela), NpgsqlDbType = NpgsqlDbType.Text });
+        if (await guarda.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is not true)
+        {
+            throw ErrosDaLeitura.TabelaMudou();
         }
     }
 
@@ -346,16 +488,7 @@ internal sealed class LeitorDaSessaoPostgreSql(NpgsqlConnection conexao, bool em
 
         var tabela = (particionada ? "" : "ONLY ") + CitacaoPostgreSql.Citar(coluna.Tabela);
         await SessaoLeituraPostgreSql.ExecutarAsync(conexao, $"LOCK TABLE {tabela} IN ACCESS SHARE MODE NOWAIT", cancelamento).ConfigureAwait(false);
-        await using (var guarda = new NpgsqlCommand(Guarda, conexao))
-        {
-            guarda.Parameters.Add(new NpgsqlParameter { Value = oid, NpgsqlDbType = NpgsqlDbType.Oid });
-            guarda.Parameters.Add(new NpgsqlParameter { Value = particionada, NpgsqlDbType = NpgsqlDbType.Boolean });
-            guarda.Parameters.Add(new NpgsqlParameter { Value = CitacaoPostgreSql.Citar(coluna.Tabela), NpgsqlDbType = NpgsqlDbType.Text });
-            if (await guarda.ExecuteScalarAsync(cancelamento).ConfigureAwait(false) is not true)
-            {
-                throw ErrosDaLeitura.TabelaMudou();
-            }
-        }
+        await ConferirGuardaAsync(oid, particionada, coluna.Tabela, cancelamento).ConfigureAwait(false);
 
         var citada = CitacaoPostgreSql.Citar(coluna.Coluna);
         await using var comando = new NpgsqlCommand($"SELECT pg_catalog.max({citada})::pg_catalog.int8 FROM {tabela}", conexao);
@@ -378,7 +511,7 @@ internal static class ErrosDaLeitura
     {
         PostgresException { SqlState: PostgresErrorCodes.OutOfMemory } => new IncognitoException(
             CodigosPostgreSql.TravasDemais,
-            "A tabela de travas do servidor PostgreSQL se esgotou: aumente max_locks_per_transaction (vale também para a réplica), ou copie menos tabelas por vez."),
+            "O servidor PostgreSQL ficou sem memória compartilhada: a tabela de travas se esgotou (aumente max_locks_per_transaction, que vale também para a réplica, ou copie menos tabelas por vez), ou faltou memória para ler um valor grande."),
         PostgresException { SqlState: PostgresErrorCodes.TooManyConnections } => new IncognitoException(
             CodigosPostgreSql.ConexoesDemais,
             "O servidor PostgreSQL recusou mais conexões: a leitura usa uma conexão por leitor e mais uma; reduza o paralelismo ou aumente o limite."),
@@ -394,6 +527,22 @@ internal static class ErrosDaLeitura
         NpgsqlException when emReplica => ConflitoNaReplica(),
         _ => null,
     };
+
+    /// <summary>Um parâmetro do texto do COPY, o caminho de busca ou o papel foram trocados dentro da transação.</summary>
+    internal static IncognitoException TextoTrocado() => new(
+        CodigosPostgreSql.TextoTrocado,
+        "Um parâmetro que muda o texto do COPY (DateStyle, IntervalStyle, TimeZone, extra_float_digits, bytea_output, array_nulls, xmloption, lc_monetary), o caminho de busca ou o papel foram trocados por código do banco no meio da transação: o que foi lido ou gravado com eles não vale.");
+
+    /// <summary>A conexão do leitor caiu, ou foi fechada por uma leitura das linhas interrompida sem resposta.</summary>
+    internal static IncognitoException LeitorSemConexao() => new(
+        CodigosPostgreSql.LeitorSemConexao,
+        "A conexão de um leitor da sessão de leitura caiu, ou foi fechada porque o servidor PostgreSQL não parou a tempo uma leitura das linhas interrompida: o leitor não lê mais; abra outra sessão.");
+
+    /// <summary>A leitura das linhas falhou por um motivo que o dialeto não reconhece, sem a exceção do servidor.</summary>
+    /// <param name="tabela">A tabela, como o catálogo a guarda.</param>
+    internal static IncognitoException LinhasNaoLidas(string tabela) => new(
+        CodigosPostgreSql.LinhasNaoLidas,
+        $"A leitura das linhas da tabela {tabela} falhou no servidor PostgreSQL, ou a conexão caiu no meio dela.");
 
     /// <summary>A tabela mudou depois do início da leitura, ou tem uma alteração pendente.</summary>
     internal static IncognitoException TabelaMudou() => new(
@@ -414,10 +563,13 @@ internal sealed class SessoesVivas(ConexaoPostgreSql controle)
     /// <summary>Gancho dos testes do dialeto, entre o export do instante e a primeira importação.</summary>
     internal Func<CancellationToken, Task>? DepoisDoExport { get; set; }
 
+    /// <summary>Gancho dos testes do dialeto, entre o fim do COPY de uma leitura das linhas e a conferência da sessão.</summary>
+    internal Func<NpgsqlConnection, CancellationToken, Task>? AntesDaConclusao { get; set; }
+
     /// <summary>Abre uma sessão e a registra.</summary>
     internal async Task<SessaoLeitura> AbrirAsync(PedidoLeitura pedido, CancellationToken cancelamento)
     {
-        var sessao = await SessaoLeituraPostgreSql.AbrirAsync(controle, pedido, DepoisDoExport, viva => _vivas.TryRemove(viva, out _), cancelamento).ConfigureAwait(false);
+        var sessao = await SessaoLeituraPostgreSql.AbrirAsync(controle, pedido, DepoisDoExport, AntesDaConclusao, viva => _vivas.TryRemove(viva, out _), cancelamento).ConfigureAwait(false);
         _vivas[sessao] = 0;
         if (Volatile.Read(ref _fechadas) != 0)
         {

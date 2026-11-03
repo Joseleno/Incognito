@@ -113,4 +113,22 @@ internal static class CodigosPostgreSql
 
     /// <summary>Uma tabela a travar não existe, não é tabela comum ou particionada, ou o login não tem <c>SELECT</c> nela.</summary>
     internal const string TravadaInvalida = "INC3131";
+
+    /// <summary>
+    /// Um parâmetro que muda o texto do <c>COPY</c> (ou o caminho de busca, ou o papel) foi trocado por código do banco no
+    /// meio de uma transação: o que foi lido ou gravado com ele não vale.
+    /// </summary>
+    internal const string TextoTrocado = "INC3132";
+
+    /// <summary>A leitura das linhas de uma tabela falhou no servidor, ou a conexão caiu no meio dela.</summary>
+    internal const string LinhasNaoLidas = "INC3133";
+
+    /// <summary>A tabela das linhas pedidas não existe, ou não é uma tabela comum ou particionada.</summary>
+    internal const string TabelaInexistente = "INC3134";
+
+    /// <summary>
+    /// A conexão de um leitor da sessão caiu, ou foi fechada pelo descarte de uma leitura das linhas que o servidor não deixou
+    /// parar a tempo: o leitor não lê mais.
+    /// </summary>
+    internal const string LeitorSemConexao = "INC3135";
 }

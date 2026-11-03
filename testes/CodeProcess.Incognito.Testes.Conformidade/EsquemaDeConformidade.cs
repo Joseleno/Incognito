@@ -114,6 +114,69 @@ public sealed class EsquemaDeConformidade
     /// se mede a idade do instante, e uma coluna inteira de uma tabela da origem com a segurança por linha para o login.
     /// </summary>
     public required SessaoEsperada Sessao { get; init; }
+
+    /// <summary>
+    /// A leitura das linhas pela sessão (<see cref="LeitorDaSessao.AbrirTabelaAsync"/>): os valores da coluna comum do maior
+    /// valor, os de uma particionada (com as partições) e os de uma mãe de herança (sem as herdeiras), uma tabela com uma
+    /// coluna de cada tipo canônico e as linhas esperadas, e uma célula sem representação na forma canônica.
+    /// </summary>
+    public required LinhasLidasEsperadas LeituraDasLinhas { get; init; }
+}
+
+/// <summary>Os casos da leitura das linhas (<see cref="EsquemaDeConformidade.LeituraDasLinhas"/>).</summary>
+public sealed class LinhasLidasEsperadas
+{
+    /// <summary>Os valores, em qualquer ordem, da coluna comum do maior valor (<see cref="MaioresValoresEsperados.Comum"/>).</summary>
+    public required IReadOnlyList<long> ValoresDaComum { get; init; }
+
+    /// <summary>Os valores de uma coluna inteira da raiz de uma particionada: os das partições.</summary>
+    public required Caso<ValoresEsperados> Particionada { get; init; }
+
+    /// <summary>Os valores de uma coluna inteira de uma mãe de herança clássica: sem os das herdeiras.</summary>
+    public required Caso<ValoresEsperados> MaeDeHeranca { get; init; }
+
+    /// <summary>A tabela com uma coluna de cada tipo canônico e as linhas esperadas.</summary>
+    public required TabelaCanonica Canonica { get; init; }
+
+    /// <summary>As células da <see cref="Canonica"/> com um valor sem representação na forma canônica; vazia se o banco não tem.</summary>
+    public required IReadOnlyList<CelulaSemForma> SemForma { get; init; }
+}
+
+/// <summary>Os valores de uma coluna inteira, em qualquer ordem.</summary>
+/// <param name="Coluna">A coluna.</param>
+/// <param name="Valores">Os valores.</param>
+public sealed record ValoresEsperados(ReferenciaColuna Coluna, IReadOnlyList<long> Valores);
+
+/// <summary>Uma coluna lida na forma canônica.</summary>
+/// <param name="Nome">O nome, como o catálogo o guarda.</param>
+/// <param name="Tipo">O tipo canônico.</param>
+public sealed record ColunaCanonica(string Nome, TipoColuna Tipo);
+
+/// <summary>Uma linha esperada da <see cref="TabelaCanonica"/>.</summary>
+/// <param name="Chave">O valor da chave inteira da linha.</param>
+/// <param name="Valores">Os valores, na ordem de <see cref="TabelaCanonica.Colunas"/>, na forma canônica; nulo para NULL.</param>
+public sealed record LinhaCanonica(long Chave, IReadOnlyList<object?> Valores);
+
+/// <summary>Uma célula sem representação na forma canônica, numa linha da <see cref="TabelaCanonica"/>.</summary>
+/// <param name="Coluna">A coluna.</param>
+/// <param name="Tipo">O tipo canônico em que ela é lida.</param>
+/// <param name="Chave">O valor da chave da linha.</param>
+public sealed record CelulaSemForma(string Coluna, TipoColuna Tipo, long Chave);
+
+/// <summary>A tabela com uma coluna de cada tipo canônico.</summary>
+public sealed class TabelaCanonica
+{
+    /// <summary>A tabela.</summary>
+    public required NomeObjeto Tabela { get; init; }
+
+    /// <summary>A coluna inteira que identifica as linhas.</summary>
+    public required string Chave { get; init; }
+
+    /// <summary>As colunas lidas na forma canônica.</summary>
+    public required IReadOnlyList<ColunaCanonica> Colunas { get; init; }
+
+    /// <summary>As linhas esperadas, cada uma com um valor de cada coluna; a tabela pode ter outras.</summary>
+    public required IReadOnlyList<LinhaCanonica> Linhas { get; init; }
 }
 
 /// <summary>Como o banco protege uma tabela travada da sessão de leitura contra o esvaziamento.</summary>

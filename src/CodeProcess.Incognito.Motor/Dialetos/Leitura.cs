@@ -267,14 +267,69 @@ public abstract class LeitorDaSessao
         }
     }
 
+    /// <summary>
+    /// Começa a ler as linhas de uma tabela no instante da sessão, com as regras do maior valor (as linhas que a cópia lê;
+    /// a tabela como era no instante; a segurança por linha que falha em vez de filtrar); nos dois lados. O leitor fica
+    /// ocupado até o descarte da leitura.
+    /// </summary>
+    /// <param name="pedido">A tabela, as colunas e as convertidas.</param>
+    /// <param name="cancelamento">Cancela a abertura da leitura.</param>
+    /// <returns>A leitura, que quem chama descarta.</returns>
+    /// <exception cref="ArgumentNullException">Pedido nulo.</exception>
+    /// <exception cref="ArgumentException">Convertida fora das colunas do pedido.</exception>
+    /// <exception cref="ObjectDisposedException">Sessão descartada.</exception>
+    /// <exception cref="InvalidOperationException">O leitor está em outra leitura, não é de uma sessão, ou o dialeto devolveu uma leitura inválida.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    public async Task<LeituraTabela> AbrirTabelaAsync(PedidoLeituraTabela pedido, CancellationToken cancelamento)
+    {
+        ArgumentNullException.ThrowIfNull(pedido);
+        pedido.Conferir();
+        var sessao = Volatile.Read(ref _sessao) ?? throw new InvalidOperationException("O leitor não é de uma sessão de leitura.");
+        ObjectDisposedException.ThrowIf(sessao.Descartada, sessao);
+        if (Interlocked.Exchange(ref _ocupado, 1) != 0)
+        {
+            throw new InvalidOperationException("O leitor já está numa leitura: o mesmo leitor nunca é chamado em paralelo consigo mesmo.");
+        }
+
+        LeituraTabela? leitura;
+        try
+        {
+            leitura = await AbrirTabelaAsyncCore(pedido, cancelamento).ConfigureAwait(false);
+        }
+        catch
+        {
+            LiberarDaLeitura();
+            throw;
+        }
+
+        // A leitura nula, já descartada ou ligada a outro leitor é defeito do dialeto; a de outro leitor não se descarta
+        // daqui, que liberaria aquele.
+        if (leitura is null || leitura.Descartada || !leitura.Ligar(this, sessao, pedido))
+        {
+            LiberarDaLeitura();
+            throw new InvalidOperationException("O dialeto não devolveu uma leitura nova para este leitor.");
+        }
+
+        return leitura;
+    }
+
     /// <summary>A leitura do maior valor; nunca em paralelo neste leitor.</summary>
     /// <param name="coluna">A tabela e a coluna.</param>
     /// <param name="cancelamento">Cancela a leitura.</param>
     /// <returns>O maior valor, ou nulo.</returns>
     protected abstract Task<long?> LerMaiorValorAsyncCore(ReferenciaColuna coluna, CancellationToken cancelamento);
 
+    /// <summary>A abertura da leitura das linhas; nunca em paralelo neste leitor.</summary>
+    /// <param name="pedido">O pedido, conferido.</param>
+    /// <param name="cancelamento">Cancela a abertura.</param>
+    /// <returns>Uma leitura nova, que a base liga a este leitor.</returns>
+    protected abstract Task<LeituraTabela> AbrirTabelaAsyncCore(PedidoLeituraTabela pedido, CancellationToken cancelamento);
+
     /// <summary>Se o leitor já é de uma sessão.</summary>
     internal bool Ligado => Volatile.Read(ref _sessao) is not null;
+
+    /// <summary>Libera o leitor para a próxima leitura (o descarte da leitura das linhas).</summary>
+    internal void LiberarDaLeitura() => Volatile.Write(ref _ocupado, 0);
 
     /// <summary>Liga o leitor à sessão que o fixou.</summary>
     /// <param name="sessao">A sessão.</param>

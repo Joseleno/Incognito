@@ -293,3 +293,39 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   falso; a fixture ganha operações de administrador para aumentar um valor, criar uma tabela, tentar esvaziar, anexar uma
   partição, contar e derrubar as conexões da sessão. A trava na primária tem custo (um DDL numa tabela copiada espera a
   cópia), e a documentação do guia o explica.
+- 2026-11-02: a leitura das linhas entra no contrato, no leitor da sessão (`LeitorDaSessao.AbrirTabelaAsync`, nos dois
+  lados): um `PedidoLeituraTabela` (a tabela, as colunas na ordem e as `ColunaConvertida` lidas na forma canônica de um
+  `TipoColuna`) abre uma `LeituraTabela`, que entrega lotes (`LoteLinhas`) até o fim; o leitor fica ocupado até o
+  descarte da leitura. O lote é do dialeto: as colunas não convertidas passam opacas, e só um gravador do mesmo dialeto
+  o grava (a origem e o destino são sempre do mesmo banco). As regras são da base, como na sessão: o valor lido e o
+  escrito estão na forma canônica exata (o tipo .NET da spec, a data e hora sem fuso, a com fuso no deslocamento zero, o
+  decimal com a escala da coluna, o texto sem NUL nem surrogate isolado), o binário escrito é copiado, o valor sem
+  representação na forma canônica (uma data `infinity`, um `numeric` grande demais, um texto mal formado) é apontado sem
+  lançar, uma célula se escreve uma vez e não se lê depois de escrita (o dialeto pode apagar o original), o lote de outra
+  leitura é recusado, e os lotes são numerados pela linha. O lote vale sozinho, depois da leitura seguinte e dos
+  descartes da leitura e da sessão; a leitura que falhou ou foi cancelada no meio de uma chamada fica quebrada e só se
+  descarta; o dialeto que falha ao escrever invalida o lote.
+
+  No PostgreSQL, a leitura é um `COPY (SELECT ...) TO STDOUT` em texto, num ponto de salvamento que dura a leitura,
+  depois da trava sem espera e da guarda de sempre, lido em bytes crus pela `BaseStream` do `BeginTextExport` (o
+  `BeginRawBinaryCopy` recusa texto, e o `TextReader` trocaria bytes) em lotes de até mil linhas ou 256 KiB (o lote
+  fecha antes de o buffer crescer; só uma linha maior que ele cresce, sozinha), num pool só da sessão, com o trecho usado
+  limpo a cada devolução (o pool solta sujo o que passa do maior tamanho dele). O token do chamador nunca vai ao fluxo do
+  `COPY` (deixaria a conexão inutilizável): o cancelamento pede ao servidor que pare e, sem resposta em 10 s, desiste da
+  conexão; o descarte no meio drena o que ainda vem e volta ao ponto de salvamento sob o mesmo prazo, ou fecha a conexão,
+  e o leitor passa a falhar com o código próprio. Os parâmetros que mudam o texto do `COPY` (data ISO, estilo do
+  intervalo, fuso UTC também pelo parâmetro de início próprio, que vence o `PGTZ`, dígitos do `float`, `bytea` em
+  hexadecimal, NULL de array reconhecido, `xml` como fragmento) vão no pacote de início, nos dois lados, e são conferidos
+  na abertura e antes e depois de cada leitura, com o caminho de busca e o papel; o destino passa a abrir transações de
+  escrita por padrão. A conversão para a forma canônica é sempre por `TryParse` sobre os bytes, e o `decimal` só vale
+  quando a ida e volta reproduz o texto (ele arredonda acima de 28 dígitos sem falhar). A leitura das linhas pelo `COPY`
+  entra na regra de arquitetura das consultas sobre tabela do usuário, que passa a pegar também `COPY` e `TABLE`. Erros
+  novos do dialeto: `INC3132` (parâmetro trocado por código do banco no meio da transação), `INC3133` (a leitura das
+  linhas falhou, sem a mensagem do servidor), `INC3134` (a tabela pedida não existe) e `INC3135` (a conexão do leitor
+  caiu, ou foi fechada por uma leitura interrompida sem resposta). Na suíte, fatos para o instante, as linhas que a cópia
+  lê (a particionada com as partições, a mãe sem as herdeiras), as convertidas na forma canônica (uma coluna de cada tipo,
+  com NULL e bordas) e pela posição no pedido, os valores sem forma, a leitura interrompida que volta no prazo, o lote que
+  vale depois dos descartes, duas leituras vivas alternadas, a tabela travada, a esvaziada fora das travadas, a partição
+  anexada, a sessão derrubada antes e no meio, a coluna inexistente e a segurança por linha, cada um derrubado por um
+  defeito do falso, que ganha as linhas das tabelas; a fixture ganha a tabela longa e o prazo da interrupção, e a
+  declaração do esquema de conformidade, as linhas esperadas.

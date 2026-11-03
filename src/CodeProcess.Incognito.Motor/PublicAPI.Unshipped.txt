@@ -638,3 +638,44 @@ CodeProcess.Incognito.Execucao.BloqueioDestinoException
 [INCX001]abstract CodeProcess.Incognito.Dialetos.SessaoLeitura.Obtida.get -> CodeProcess.Incognito.Dialetos.ConsistenciaObtida
 [INCX001]const CodeProcess.Incognito.Dialetos.PedidoLeitura.MaximoDeLeitores = 64 -> int
 [INCX001]override CodeProcess.Incognito.Dialetos.PedidoLeitura.ToString() -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaConvertida
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaConvertida.ColunaConvertida() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaConvertida.Indice.get -> int
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaConvertida.Indice.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaConvertida.Tipo.get -> CodeProcess.Incognito.Transformadores.TipoColuna
+[INCX001]CodeProcess.Incognito.Dialetos.ColunaConvertida.Tipo.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LeitorDaSessao.AbrirTabelaAsync(CodeProcess.Incognito.Dialetos.PedidoLeituraTabela! pedido, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.LeituraTabela!>!
+[INCX001]CodeProcess.Incognito.Dialetos.LeituraTabela
+[INCX001]CodeProcess.Incognito.Dialetos.LeituraTabela.DisposeAsync() -> System.Threading.Tasks.ValueTask
+[INCX001]CodeProcess.Incognito.Dialetos.LeituraTabela.LeituraTabela() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LeituraTabela.LerLoteAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.LoteLinhas?>!
+[INCX001]CodeProcess.Incognito.Dialetos.LeituraTabela.Linhas.get -> long
+[INCX001]CodeProcess.Incognito.Dialetos.LeituraTabela.Pedido.get -> CodeProcess.Incognito.Dialetos.PedidoLeituraTabela!
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.Dispose() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.Escrever(int linha, int coluna, object? valor) -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.EstaEscrita(int linha, int coluna) -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.LoteLinhas(CodeProcess.Incognito.Dialetos.PedidoLeituraTabela! pedido, int quantidade) -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.Manter(int linha, int coluna) -> void
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.PrimeiraLinha.get -> long
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.Quantidade.get -> int
+[INCX001]CodeProcess.Incognito.Dialetos.LoteLinhas.TentarLer(int linha, int coluna, out object? valor) -> bool
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.Colunas.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.Colunas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.Convertidas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ColunaConvertida!>!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.Convertidas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.PedidoLeituraTabela() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.Tabela.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.Tabela.init -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LeitorDaSessao.AbrirTabelaAsyncCore(CodeProcess.Incognito.Dialetos.PedidoLeituraTabela! pedido, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.LeituraTabela!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LeituraTabela.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LeituraTabela.LerLoteAsyncCore(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.LoteLinhas?>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LoteLinhas.DisposeCore() -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LoteLinhas.EscreverCore(int linha, int coluna, object? valor) -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LoteLinhas.ManterCore(int linha, int coluna) -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.LoteLinhas.TentarLerCore(int linha, int coluna, out object? valor) -> bool
+[INCX001]override CodeProcess.Incognito.Dialetos.ColunaConvertida.ToString() -> string!
+[INCX001]override sealed CodeProcess.Incognito.Dialetos.LeituraTabela.ToString() -> string!
+[INCX001]override sealed CodeProcess.Incognito.Dialetos.LoteLinhas.ToString() -> string!
+[INCX001]override CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.ToString() -> string!
