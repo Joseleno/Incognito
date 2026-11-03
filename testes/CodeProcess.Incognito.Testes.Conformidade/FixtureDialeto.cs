@@ -112,6 +112,22 @@ public abstract class FixtureDialeto
     /// <returns>O valor da linha da partição anexada.</returns>
     public abstract Task<long> AnexarParticaoAsync(ParDeBancos par, CancellationToken cancelamento);
 
+    /// <summary>
+    /// Como administrador, confirmado na hora: cria na origem do par uma tabela longa, com uma coluna inteira de 1 até o
+    /// número de linhas e linhas largas o bastante para a leitura das linhas ainda estar no meio quando o primeiro lote chega
+    /// (no PostgreSQL, megabytes ainda no servidor). O login de leitura a lê.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>A coluna inteira e o número de linhas.</returns>
+    public abstract Task<TabelaLonga> CriarTabelaLongaAsync(ParDeBancos par, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Quanto a leitura das linhas interrompida no meio (descartada ou cancelada) pode levar para voltar, com o descarte.
+    /// Padrão: 30 s.
+    /// </summary>
+    public virtual TimeSpan PrazoDaInterrupcao => TimeSpan.FromSeconds(30);
+
     /// <summary>Quanto esperar, no máximo, que as conexões fechadas saiam do servidor (a saída é assíncrona). Padrão: 10 s.</summary>
     public virtual TimeSpan PrazoDasConexoes => TimeSpan.FromSeconds(10);
 
@@ -335,3 +351,8 @@ public sealed class ParDeBancos : IAsyncDisposable
         }
     }
 }
+
+/// <summary>A tabela longa da origem (<see cref="FixtureDialeto.CriarTabelaLongaAsync"/>).</summary>
+/// <param name="Coluna">A coluna inteira, com os valores de 1 até <paramref name="Linhas"/>, um por linha.</param>
+/// <param name="Linhas">O número de linhas.</param>
+public sealed record TabelaLonga(ReferenciaColuna Coluna, long Linhas);

@@ -25,6 +25,29 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
 
     /// <summary>O nome das conexões da sessão de leitura no <c>pg_stat_activity</c>, para quem administra as achar.</summary>
     internal const string NomeDaLeitura = "Incognito leitura";
+
+    /// <summary>
+    /// Os parâmetros que mudam o texto do <c>COPY</c> (spec §8.3), pelo pacote de início: a data em ISO, o intervalo no
+    /// estilo do PostgreSQL, o fuso UTC (o <c>timestamptz</c> sai com <c>+00</c>), o <c>float</c> exato, o <c>bytea</c> em
+    /// hexadecimal, o NULL de array reconhecido (com <c>array_nulls</c> desligado, ele viraria o texto <c>NULL</c> em
+    /// silêncio) e o <c>xml</c> como fragmento.
+    /// </summary>
+    internal const string OpcoesDoTexto =
+        "-c DateStyle=ISO,YMD -c IntervalStyle=postgres -c TimeZone=UTC -c extra_float_digits=3 -c bytea_output=hex -c array_nulls=on -c xmloption=content";
+
+    /// <summary>
+    /// Uma expressão booleana: a sessão segue com o texto do <c>COPY</c> como o Incognito o impõe, e com o caminho de busca e
+    /// o papel da abertura. Código do banco (uma trigger, um <c>CHECK</c>, a função de saída de um tipo) pode trocá-los no
+    /// meio de uma transação: a leitura e a gravação a conferem de novo depois de cada <c>COPY</c>.
+    /// </summary>
+    internal const string ConferenciaDoTexto = """
+        (pg_catalog.current_setting('DateStyle') = 'ISO, YMD' AND pg_catalog.current_setting('IntervalStyle') = 'postgres'
+            AND pg_catalog.current_setting('TimeZone') = 'UTC' AND pg_catalog.current_setting('extra_float_digits') = '3'
+            AND pg_catalog.current_setting('bytea_output') = 'hex' AND pg_catalog.current_setting('array_nulls') = 'on'
+            AND pg_catalog.current_setting('xmloption') = 'content' AND pg_catalog.current_setting('lc_monetary') = 'C'
+            AND pg_catalog.current_setting('client_encoding') = 'UTF8' AND pg_catalog.current_setting('standard_conforming_strings') = 'on'
+            AND pg_catalog.current_setting('search_path') = 'pg_catalog' AND current_user = session_user)
+        """;
     private const string CaminhoDeBusca = "pg_catalog";
     private const string Utf8 = "UTF8";
 
@@ -424,7 +447,17 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
         construtor.SearchPath = CaminhoDeBusca;
         construtor.Options = $"-c search_path={CaminhoDeBusca} -c standard_conforming_strings=on"
             + " -c statement_timeout=0 -c idle_session_timeout=0 -c idle_in_transaction_session_timeout=0 -c lc_monetary=C"
-            + (origem ? " -c default_transaction_read_only=on" : "");
+            + " " + OpcoesDoTexto
+            + (origem ? " -c default_transaction_read_only=on" : " -c default_transaction_read_only=off");
+
+        // O fuso vai também como parâmetro de início próprio, que o Npgsql manda e que vence o -c (e o PGTZ do ambiente).
+        construtor.Timezone = "UTC";
+
+        // A rede presa é percebida também do lado do cliente: sem isto, uma leitura longa esperaria para sempre um servidor
+        // que sumiu (o cancelamento da leitura tem prazo próprio).
+        construtor.TcpKeepAlive = true;
+        construtor.TcpKeepAliveTime = 60;
+        construtor.TcpKeepAliveInterval = 10;
     }
 
     // A lista do usuário sem a senha em claro, ou a lista padrão; uma negação (!) ou uma lista só com a senha em claro é
@@ -502,7 +535,9 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                    pg_catalog.current_setting('default_transaction_read_only'), pg_catalog.current_setting('client_encoding'),
                    pg_catalog.current_setting('standard_conforming_strings'), current_user = session_user,
                    pg_catalog.current_setting('lc_monetary') = 'C', d.encoding = 6, pg_catalog.pg_encoding_max_length(d.encoding),
-                   pg_catalog.current_setting('max_identifier_length')::integer
+                   pg_catalog.current_setting('max_identifier_length')::integer,
+            """ + ConferenciaDoTexto + """
+
             FROM pg_catalog.pg_database d
             WHERE d.datname = pg_catalog.current_database()
             """,
@@ -524,12 +559,12 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 $"O servidor PostgreSQL está na versão {versao / 10000}; o Incognito exige a {VersaoMinima / 10000} ou mais nova.");
         }
 
-        if (leitor.GetString(1) != CaminhoDeBusca || (origem && leitor.GetString(2) != "on") || leitor.GetString(3) != Utf8 || leitor.GetString(4) != "on"
-            || !leitor.GetBoolean(5) || !leitor.GetBoolean(6))
+        if (leitor.GetString(1) != CaminhoDeBusca || leitor.GetString(2) != (origem ? "on" : "off") || leitor.GetString(3) != Utf8 || leitor.GetString(4) != "on"
+            || !leitor.GetBoolean(5) || !leitor.GetBoolean(6) || !leitor.GetBoolean(10))
         {
             throw new IncognitoException(
                 CodigosPostgreSql.SessaoDivergente,
-                "A sessão do PostgreSQL não ficou com os parâmetros que o Incognito impõe (search_path, client_encoding, standard_conforming_strings, lc_monetary, o papel do login e, na origem, default_transaction_read_only).");
+                "A sessão do PostgreSQL não ficou com os parâmetros que o Incognito impõe (search_path, client_encoding, standard_conforming_strings, lc_monetary, os do texto do COPY, o papel do login e default_transaction_read_only).");
         }
 
         return (versao, new RegraDosNomes(leitor.GetBoolean(7), leitor.GetInt32(8), leitor.GetInt32(9)));

@@ -242,6 +242,29 @@ public enum Defeito
     TravadaInexistenteAceita,
     SentinelaNaRecusaDaTravada,
     SessaoSoDaRaiz,
+    LeituraForaDoInstante,
+    LeituraSoDaRaiz,
+    LeituraComHerdeiras,
+    LeituraComValorTrocado,
+    LeituraComNuloComoValor,
+    LeituraComSemFormaComoValor,
+    LeitorMortoDepoisDaInterrupcao,
+    LeituraFiltrada,
+    SentinelaNaFalhaDaLeitura,
+
+    // A leitura das linhas, mais: sem a guarda da tabela esvaziada fora das travadas, o lote que é uma janela do buffer da
+    // leitura, as leituras de um banco com o mesmo cursor, o valor sem forma que lança, as convertidas lidas pela ordem da
+    // lista, a leitura que termina em silêncio com a sessão derrubada, o descarte da interrompida que demora, a coluna
+    // inexistente lida como opaca e o decimal sem a escala.
+    LeituraSemGuarda,
+    LoteJanela,
+    LeiturasComEstadoComum,
+    SemFormaLanca,
+    ConvertidaPelaPosicao,
+    LeituraDerrubadaTermina,
+    DescarteDaLeituraDemora,
+    ColunaInexistenteLida,
+    LeituraDecimalSemEscala,
 }
 
 /// <summary>
@@ -670,7 +693,42 @@ internal static class BancoFalso
             MedeIdade = true,
             SegurancaPorLinha = completo ? Caso.Presente(Coluna("segredos", "id")) : Caso.Inexistente<ReferenciaColuna>("banco falso sem segurança por linha"),
         },
+        LeituraDasLinhas = new()
+        {
+            ValoresDaComum = [.. ValoresDaComum],
+            Particionada = completo ? Caso.Presente(new ValoresEsperados(Coluna("pedidos", "id"), [40, 88])) : Caso.Inexistente<ValoresEsperados>("banco falso sem partições"),
+            MaeDeHeranca = completo ? Caso.Presente(new ValoresEsperados(Coluna("pessoa", "id"), [12])) : Caso.Inexistente<ValoresEsperados>("banco falso sem herança"),
+            Canonica = new()
+            {
+                Tabela = Nome("tipos"),
+                Chave = "id",
+                Colunas = [.. ColunasCanonicas],
+                Linhas = [.. LinhasCanonicas],
+            },
+            SemForma = [new CelulaSemForma("dia", TipoColuna.Data, ChaveSemForma)],
+        },
     };
+
+    /// <summary>Os valores da coluna comum do maior valor (<c>loja.itens.pedido</c>).</summary>
+    internal static readonly long[] ValoresDaComum = [10, 31];
+
+    /// <summary>As colunas da tabela canônica do falso (<c>loja.tipos</c>).</summary>
+    internal static readonly ColunaCanonica[] ColunasCanonicas =
+    [
+        new("pequeno", TipoColuna.Inteiro), new("valor", TipoColuna.Decimal), new("texto", TipoColuna.Texto), new("ativo", TipoColuna.Booleano),
+        new("dia", TipoColuna.Data), new("momento", TipoColuna.DataHora), new("instante", TipoColuna.DataHoraComFuso),
+        new("identificador", TipoColuna.Uuid), new("conteudo", TipoColuna.Binario),
+    ];
+
+    /// <summary>As linhas da tabela canônica do falso; a de chave <see cref="ChaveSemForma"/> tem a data sem forma.</summary>
+    internal static readonly LinhaCanonica[] LinhasCanonicas =
+    [
+        new(3, [-7L, 1234.50m, "tab\tquebra", true, new DateOnly(2026, 10, 29), new DateTime(2026, 10, 29, 12, 34, 56), new DateTimeOffset(2026, 10, 29, 12, 34, 56, TimeSpan.Zero), new Guid("0b6f1a52-6a0d-4b6c-9a52-6a0d4b6c9a52"), new byte[] { 0, 255 }]),
+        new(4, [null, null, "", false, new DateOnly(1, 1, 1), null, null, null, Array.Empty<byte>()]),
+    ];
+
+    /// <summary>A chave da linha do falso com a data sem representação na forma canônica.</summary>
+    internal const long ChaveSemForma = 5;
 
     /// <summary>Os gatilhos de evento ligados do banco falso, em ordem ordinal.</summary>
     internal static readonly string[] TriggersDeEvento = ["et_auditoria", "et_conformidade"];
@@ -1727,6 +1785,9 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
     // As conexões do falso fecham na hora.
     public override TimeSpan PrazoDasConexoes => TimeSpan.Zero;
 
+    // A leitura do falso volta na hora; o defeito do descarte demorado passa disto.
+    public override TimeSpan PrazoDaInterrupcao => TimeSpan.FromSeconds(1);
+
     public override SegredoConexao ConexaoRecusada(string sentinela) => new(ProvedorFalso.Inaceitavel + "senha=" + sentinela);
 
     public override Task<DialetoDestino> ConectarOutroDestinoAsync(ParDeBancos par, CancellationToken cancelamento) =>
@@ -1763,6 +1824,9 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
         BancoFalso.Dados(par.BancoOrigem).Criar(criada);
         return Task.FromResult(criada);
     }
+
+    public override Task<TabelaLonga> CriarTabelaLongaAsync(ParDeBancos par, CancellationToken cancelamento) =>
+        Task.FromResult(new TabelaLonga(new ReferenciaColuna(BancoFalso.Nome("longa"), "id"), LinhasFalsas.LinhasDaLonga));
 
     public override Task<bool> TentarEsvaziarAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento) =>
         Task.FromResult(BancoFalso.Dados(par.BancoOrigem).TentarEsvaziar(tabela));

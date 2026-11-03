@@ -185,5 +185,8 @@ public sealed class SessaoLeituraTestes
 
             return Falhar ? throw new InvalidOperationException("A leitura falhou.") : 31;
         }
+
+        protected override Task<LeituraTabela> AbrirTabelaAsyncCore(PedidoLeituraTabela pedido, CancellationToken cancelamento) =>
+            throw new NotSupportedException("O leitor contado só lê o maior valor.");
     }
 }

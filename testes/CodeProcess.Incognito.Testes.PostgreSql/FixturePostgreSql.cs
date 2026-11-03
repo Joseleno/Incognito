@@ -108,6 +108,21 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     }
 
     /// <inheritdoc/>
+    // 100 mil linhas de 200 bytes de texto: cerca de 20 MB no COPY, muito além do que cabe nos buffers do socket.
+    public override async Task<TabelaLonga> CriarTabelaLongaAsync(ParDeBancos par, CancellationToken cancelamento)
+    {
+        const long linhas = 100_000;
+        var longa = Nome("longa");
+        await servidor.ExecutarAsync(
+            par.BancoOrigem,
+            $"CREATE TABLE {Citado(longa)} (id bigint NOT NULL, texto text NOT NULL); "
+            + $"INSERT INTO {Citado(longa)} SELECT g, pg_catalog.repeat('x', 200) FROM pg_catalog.generate_series(1, {linhas}) g; "
+            + $"GRANT SELECT ON {Citado(longa)} TO {ServidorPostgreSql.Leitor}",
+            cancelamento);
+        return new TabelaLonga(new ReferenciaColuna(longa, "id"), linhas);
+    }
+
+    /// <inheritdoc/>
     // TRUNCATE com CASCADE (a tabela comum é referenciada), desistindo em 1 s.
     public override async Task<bool> TentarEsvaziarAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento)
     {
@@ -427,6 +442,44 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                 Travada = ProtecaoDaTravada.Impede,
                 MedeIdade = true,
                 SegurancaPorLinha = Caso.Presente(Coluna("segredos", "id")),
+            },
+
+            // As linhas do fim do script: a loja.tipos com um valor de cada tipo canônico (a linha 103), os NULL e as bordas
+            // (a 104) e a data infinity (a 105), lidos com os parâmetros que o dialeto impõe (data ISO, fuso UTC, bytea em hexa).
+            LeituraDasLinhas = new()
+            {
+                ValoresDaComum = [1, 2, 23, 91],
+                Particionada = Caso.Presente(new ValoresEsperados(Coluna("pedidos", "id"), [40, 75])),
+                MaeDeHeranca = Caso.Presente(new ValoresEsperados(Coluna("pessoa", "id"), [12])),
+                Canonica = new()
+                {
+                    Tabela = Nome("tipos"),
+                    Chave = "id",
+                    Colunas =
+                    [
+                        new("pequeno", TipoColuna.Inteiro), new("inteiro", TipoColuna.Inteiro), new("valor", TipoColuna.Decimal),
+                        new("texto", TipoColuna.Texto), new("curto", TipoColuna.Texto), new("fixo", TipoColuna.Texto),
+                        new("ativo", TipoColuna.Booleano), new("dia", TipoColuna.Data), new("momento", TipoColuna.DataHora),
+                        new("instante", TipoColuna.DataHoraComFuso), new("identificador", TipoColuna.Uuid), new("conteudo", TipoColuna.Binario),
+                    ],
+                    Linhas =
+                    [
+                        new(103, [
+                            -7L, 2147483647L, 1234.50m, "tab\tquebra\nbarra\\ acento ção €", "curto-3", "ab ", true, new DateOnly(2026, 10, 29),
+                            new DateTime(2026, 10, 29, 12, 34, 56, 789), new DateTimeOffset(2026, 10, 29, 12, 34, 56, TimeSpan.Zero).AddTicks(10),
+                            Guid.Parse("0b6f1a52-6a0d-4b6c-9a52-6a0d4b6c9a52"), new byte[] { 0x00, 0xff, 0x5c, 0x0a },
+                        ]),
+                        new(104, [
+                            null, null, null, "", null, null, false, new DateOnly(1, 1, 1),
+                            new DateTime(9999, 12, 31, 23, 59, 59).AddTicks(9_999_990), null, null, Array.Empty<byte>(),
+                        ]),
+                    ],
+                },
+                SemForma =
+                [
+                    new("dia", TipoColuna.Data, 105), new("dia", TipoColuna.Data, 106), new("valor", TipoColuna.Decimal, 106),
+                    new("momento", TipoColuna.DataHora, 106), new("instante", TipoColuna.DataHoraComFuso, 106),
+                ],
             },
         };
     }

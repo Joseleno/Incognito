@@ -55,6 +55,13 @@ public sealed class SessaoPostgreSqlTestes(ServidorPostgreSql servidor)
     [InlineData("default_transaction_read_only", "off")]
     [InlineData("standard_conforming_strings", "off")]
     [InlineData("lc_monetary", "POSIX")]
+    [InlineData("DateStyle", "SQL, DMY")]
+    [InlineData("IntervalStyle", "sql_standard")]
+    [InlineData("TimeZone", "America/Sao_Paulo")]
+    [InlineData("extra_float_digits", "0")]
+    [InlineData("bytea_output", "escape")]
+    [InlineData("array_nulls", "off")]
+    [InlineData("xmloption", "document")]
     [InlineData("role", Papel)]
     public async Task Parametro_mudado_no_login_e_recusado(string parametro, string valor)
     {

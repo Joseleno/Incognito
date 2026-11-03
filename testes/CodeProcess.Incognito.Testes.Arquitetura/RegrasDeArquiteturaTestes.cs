@@ -81,6 +81,9 @@ public sealed class RegrasDeArquiteturaTestes
             @"\bpg_catalog\.current_setting\('(server_version_num|search_path|client_encoding|default_transaction_read_only|standard_conforming_strings|lo_compat_privileges|max_identifier_length|row_security|transaction_read_only|transaction_timeout)'\)",
             @"\bpg_catalog\.current_setting\('lc_monetary'\)\s*=\s*'C'",
 
+            // O texto do COPY (INC-038, decisão 101): os parâmetros só comparados com o valor que o dialeto impõe, nunca lidos.
+            @"\bpg_catalog\.current_setting\('(DateStyle|IntervalStyle|TimeZone|extra_float_digits|bytea_output|array_nulls|xmloption)'\)\s*=\s*'[A-Za-z0-9, ]+'",
+
             // O marcador: o comentário do banco só chega ao processo com o prefixo e o tamanho exato do formato, e só sai
             // classificado (o de quem administra o banco nunca).
             @"\(SELECT pg_catalog\.shobj_description\(d\.oid, 'pg_database'\) AS texto\)",
@@ -123,6 +126,8 @@ public sealed class RegrasDeArquiteturaTestes
         ["EsquemaBanco.TriggersDeEvento"] = "nomes de gatilho de evento do catálogo",
         ["ObjetoReservado.Nome"] = "nome de catálogo",
         ["PedidoLeitura.Travadas"] = "nomes de catálogo",
+        ["PedidoLeituraTabela.Tabela"] = "nome de catálogo",
+        ["PedidoLeituraTabela.Colunas"] = "nomes de coluna do catálogo",
         ["EntradaDiario.Tabela"] = "nome de catálogo",
         ["EntradaDiario.Nome"] = "nome de restrição do catálogo",
         ["TriggerDoDiario.Tabela"] = "nome de catálogo",
@@ -455,14 +460,18 @@ public sealed class RegrasDeArquiteturaTestes
     public void O_dialeto_PostgreSql_so_le_linhas_de_tabela_do_usuario_pelo_maior_valor_e_pela_existencia()
     {
         // As consultas do catálogo têm o FROM escrito; uma tabela do usuário só entra por um nome citado na hora (um FROM ou
-        // JOIN interpolado), e o agregado sobre ela, pelo max. Fora dos leitores de dados, nenhum dos dois; no da origem e no
-        // da sessão de leitura, só o maior valor, numa coluna e com retorno inteiro; no do destino, só a existência de linha,
-        // sem valor.
+        // JOIN interpolado, um COPY dela ou de um SELECT, um TABLE que não seja o de LOCK ou ALTER), e o agregado sobre ela,
+        // pelo max. Fora dos leitores de dados, nenhum dos dois; no da origem, só o
+        // maior valor, numa coluna e com retorno inteiro; no da sessão de leitura, o maior valor e as linhas pelo COPY da
+        // leitura das linhas (INC-038, decisão 101); no do destino, só a existência de linha, sem valor.
         const string Origem = "LeitorDadosOrigemPostgreSql.cs";
         const string Destino = "LeitorDadosDestinoPostgreSql.cs";
         const string Sessao = "LeituraPostgreSql.cs";
         const string MaiorValor = "$\"SELECT pg_catalog.max({citada})::pg_catalog.int8 FROM {tabela}\"";
-        var deTabela = new Regex(@"\b(FROM|JOIN)\s+(ONLY\s+)?\{|\bpg_catalog\.max\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        var deTabela = new Regex(
+            @"\b(FROM|JOIN)\s+(ONLY\s+)?\{|\bpg_catalog\.max\s*\(|\bCOPY\s*\(\s*SELECT\b|\bCOPY\s+(ONLY\s+)?\{|(?<!\b(LOCK|ALTER)\s+)\bTABLE\s+(ONLY\s+)?\{",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+            TimeSpan.FromSeconds(1));
         var arquivos = Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.cs");
         var fora = arquivos
             .Where(arquivo => !arquivo.EndsWith(Origem, StringComparison.Ordinal) && !arquivo.EndsWith(Destino, StringComparison.Ordinal) && !arquivo.EndsWith(Sessao, StringComparison.Ordinal))
@@ -475,8 +484,9 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.True(fora.Length == 0, $"Leitura de tabela do usuário fora dos leitores de dados: {string.Join("; ", fora)}.");
         Assert.Equal(2, deTabela.Count(daOrigem));
         Assert.Contains(MaiorValor, daOrigem, StringComparison.Ordinal);
-        Assert.Equal(2, deTabela.Count(daSessao));
+        Assert.Equal(4, deTabela.Count(daSessao));
         Assert.Contains(MaiorValor, daSessao, StringComparison.Ordinal);
+        Assert.Contains("$\"COPY (SELECT {colunas} FROM {tabela}) TO STDOUT\"", daSessao, StringComparison.Ordinal);
         Assert.Equal(1, deTabela.Count(doDestino));
         Assert.Contains("$\"SELECT EXISTS (SELECT FROM {citada})\"", doDestino, StringComparison.Ordinal);
     }

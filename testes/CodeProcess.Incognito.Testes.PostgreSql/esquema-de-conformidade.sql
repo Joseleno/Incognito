@@ -573,6 +573,16 @@ INSERT INTO loja.tipos (id, texto, curto) VALUES (1, 'zqSENTINELAqz-linha', 'zqS
 ALTER TABLE loja.tipos ADD COLUMN observacao text DEFAULT 'zqSENTINELAqz-faltante';
 ANALYZE loja.tipos;
 
+-- A leitura das linhas na forma canônica (depois da estatística, que segue só com as linhas do sentinela): uma linha com um
+-- valor de cada tipo (o texto com tabulação, quebra, barra e acentos; o char preenchido; a fração de segundo), uma com os
+-- NULL e as bordas, e duas com valores sem representação na forma canônica (as datas infinitas e o NaN).
+INSERT INTO loja.tipos (id, pequeno, inteiro, valor, texto, curto, fixo, ativo, dia, momento, instante, identificador, conteudo) VALUES
+    (103, -7, 2147483647, 1234.50, E'tab\tquebra\nbarra\\ acento ção €', 'curto-3', 'ab', true, '2026-10-29', '2026-10-29 12:34:56.789',
+     '2026-10-29 12:34:56.000001+00', '0b6f1a52-6a0d-4b6c-9a52-6a0d4b6c9a52', '\x00ff5c0a'),
+    (104, NULL, NULL, NULL, '', NULL, NULL, false, '0001-01-01', '9999-12-31 23:59:59.999999', NULL, NULL, '\x'),
+    (105, NULL, NULL, NULL, 'sem forma', NULL, NULL, NULL, 'infinity', NULL, NULL, NULL, NULL),
+    (106, NULL, NULL, 'NaN', 'sem forma', NULL, NULL, NULL, '-infinity', 'infinity', '-infinity', NULL, NULL);
+
 -- O maior valor de colunas inteiras, como a cópia lê: o de uma tabela comum, o de uma coluna só com negativos, o da raiz de
 -- uma particionada (o maior numa partição) e o da mãe de herança, com valor maior na herdeira (que não conta); a
 -- loja.cliente fica sem linhas.
