@@ -521,7 +521,7 @@ internal sealed class LeituraTabelaFalsa : LeituraTabela
             _aoInterromper();
             if (_defeito == Defeito.DescarteDaLeituraDemora)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1.5));
+                await Task.Delay(FixtureFalsa.Prazo + TimeSpan.FromSeconds(2));
             }
         }
     }

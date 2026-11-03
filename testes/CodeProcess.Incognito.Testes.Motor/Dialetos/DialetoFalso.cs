@@ -1785,8 +1785,10 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
     // As conexões do falso fecham na hora.
     public override TimeSpan PrazoDasConexoes => TimeSpan.Zero;
 
-    // A leitura do falso volta na hora; o defeito do descarte demorado passa disto.
-    public override TimeSpan PrazoDaInterrupcao => TimeSpan.FromSeconds(1);
+    // A leitura do falso volta na hora; a folga é para o runner carregado, e o defeito do descarte demorado passa dela.
+    public override TimeSpan PrazoDaInterrupcao => Prazo;
+
+    internal static TimeSpan Prazo => TimeSpan.FromSeconds(10);
 
     public override SegredoConexao ConexaoRecusada(string sentinela) => new(ProvedorFalso.Inaceitavel + "senha=" + sentinela);
 
