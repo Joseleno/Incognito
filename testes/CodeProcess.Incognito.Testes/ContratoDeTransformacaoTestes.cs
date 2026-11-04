@@ -9,7 +9,7 @@ namespace CodeProcess.Incognito.Testes;
 /// </summary>
 public sealed class ContratoDeTransformacaoTestes : IDisposable
 {
-    private const string Sentinela = "SENTINELA-123.456.789-09";
+    private const string Sentinela = "SENTINELA-zqCONTRATOqz";
 
     private readonly ChaveIncognito _chave = ChaveIncognito.Gerar();
 
