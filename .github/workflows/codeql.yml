@@ -41,7 +41,7 @@ jobs:
       # O SDK fixado no global.json, para o extrator usar o mesmo SDK do build. A restauração que o CodeQL faz
       # por conta própria não é presa aos lock files; o que vai para os pacotes passa pelo --locked-mode do CI.
       - if: matrix.linguagem == 'csharp'
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
       - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
