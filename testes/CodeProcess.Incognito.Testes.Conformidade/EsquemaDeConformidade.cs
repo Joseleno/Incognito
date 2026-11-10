@@ -121,6 +121,47 @@ public sealed class EsquemaDeConformidade
     /// coluna de cada tipo canônico e as linhas esperadas, e uma célula sem representação na forma canônica.
     /// </summary>
     public required LinhasLidasEsperadas LeituraDasLinhas { get; init; }
+
+    /// <summary>
+    /// A gravação no destino (<see cref="DialetoDestino.Gravador"/>): uma coluna de texto com unicidade na tabela canônica, uma
+    /// particionada que se esvazia e grava, a herdeira da mãe de herança da leitura das linhas, e se o banco grava cada
+    /// tabela numa transação só.
+    /// </summary>
+    public required GravacaoEsperada Gravacao { get; init; }
+}
+
+/// <summary>Os casos da gravação no destino (<see cref="EsquemaDeConformidade.Gravacao"/>).</summary>
+public sealed class GravacaoEsperada
+{
+    /// <summary>
+    /// Uma coluna de texto da <see cref="LinhasLidasEsperadas.Canonica"/>, convertida como texto, com unicidade (em duas linhas
+    /// com o mesmo valor, a gravação falha); a tabela tem ao menos duas linhas.
+    /// </summary>
+    public required string Unica { get; init; }
+
+    /// <summary>
+    /// Os valores de uma coluna inteira da raiz de uma particionada que se pode esvaziar (nenhuma chave estrangeira aponta
+    /// para ela), com linhas.
+    /// </summary>
+    public required Caso<ValoresEsperados> Particionada { get; init; }
+
+    /// <summary>
+    /// Os valores, na mesma coluna, da herdeira da mãe de herança da leitura das linhas (<see cref="LinhasLidasEsperadas.MaeDeHeranca"/>):
+    /// o esvaziamento e a gravação da mãe não a tocam.
+    /// </summary>
+    public required Caso<ValoresEsperados> HerdeiraDaMae { get; init; }
+
+    /// <summary>
+    /// Se o banco grava cada tabela numa transação só, com o esvaziamento: a gravação desfeita deixa a tabela como estava.
+    /// Sem isso, ela fica como estava, vazia ou parcial.
+    /// </summary>
+    public required bool Atomica { get; init; }
+
+    /// <summary>
+    /// As colunas que a cópia lê e grava de cada tabela que a gravação usa (a canônica, a particionada e a mãe), sem as
+    /// geradas, na ordem do catálogo.
+    /// </summary>
+    public required IReadOnlyDictionary<NomeObjeto, IReadOnlyList<string>> Colunas { get; init; }
 }
 
 /// <summary>Os casos da leitura das linhas (<see cref="EsquemaDeConformidade.LeituraDasLinhas"/>).</summary>

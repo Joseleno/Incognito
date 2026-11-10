@@ -149,6 +149,35 @@ public sealed partial class LinhasPostgreSqlTestes(ServidorPostgreSql servidor)
 
     [Fact]
     [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
+    public void O_binario_escrito_no_lote_e_zerado_no_descarte()
+    {
+        // A base copia o binário escrito; a cópia é do lote, que a zera ao descartar.
+        var pool = new PoolQueConfere();
+        var pedido = new PedidoLeituraTabela
+        {
+            Tabela = _lojas.Tabela,
+            Colunas = ["id", "conteudo"],
+            Convertidas = [new ColunaConvertida { Indice = 1, Tipo = TipoColuna.Binario }],
+        };
+        var linhas = "1\t\\\\x00ff\n"u8.ToArray();
+        var dados = pool.Rent(linhas.Length);
+        linhas.CopyTo(dados, 0);
+        var inicios = ArrayPool<int>.Shared.Rent(2);
+        (inicios[0], inicios[1]) = (0, linhas.Length);
+
+        var lote = new LoteLinhasPostgreSql(pedido, dados, inicios, 1, pool);
+        lote.Escrever(0, 1, new byte[] { 0x5a, 0x71, 0x5a });
+        Assert.True(lote.Escrito(0, 1, out var guardado));
+        var bytes = Assert.IsType<byte[]>(guardado);
+        Assert.Equal([0x5a, 0x71, 0x5a], bytes);
+
+        lote.Dispose();
+
+        Assert.All(bytes, valor => Assert.Equal(0, valor));
+    }
+
+    [Fact]
+    [Trait(CategoriaDaSuite.Nome, CategoriaDaSuite.Valor)]
     public async Task A_tabela_grande_sai_em_lotes_limitados_e_numerados_e_a_linha_larga_volta_inteira()
     {
         await NoBancoAsync(async (banco, cancelamento) =>
@@ -515,13 +544,16 @@ public sealed partial class LinhasPostgreSqlTestes(ServidorPostgreSql servidor)
         return lidos;
     }
 
-    // Nenhuma falha traz o sentinela, a senha do leitor ou um identificador de instante.
+    // Nenhuma falha traz o sentinela, as senhas ou um identificador de instante, nem leva a exceção do driver como interna.
     private void ConferirSigilo(Exception falha)
     {
         var texto = falha.ToString();
+        Assert.Null(falha.InnerException);
+        Assert.Empty(falha.Data);
         Assert.DoesNotContain(ServidorPostgreSql.Sentinela, texto, StringComparison.Ordinal);
         Assert.DoesNotContain(ServidorPostgreSql.SentinelaCurto, texto, StringComparison.Ordinal);
         Assert.DoesNotContain(servidor.SenhaLeitor, texto, StringComparison.Ordinal);
+        Assert.DoesNotContain(servidor.SenhaDono, texto, StringComparison.Ordinal);
         Assert.DoesNotMatch(Instante(), texto);
     }
 

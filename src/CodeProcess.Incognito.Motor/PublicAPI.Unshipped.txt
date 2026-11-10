@@ -679,3 +679,30 @@ CodeProcess.Incognito.Execucao.BloqueioDestinoException
 [INCX001]override sealed CodeProcess.Incognito.Dialetos.LeituraTabela.ToString() -> string!
 [INCX001]override sealed CodeProcess.Incognito.Dialetos.LoteLinhas.ToString() -> string!
 [INCX001]override CodeProcess.Incognito.Dialetos.PedidoLeituraTabela.ToString() -> string!
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela.ConcluirAsync(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<long>!
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela.DisposeAsync() -> System.Threading.Tasks.ValueTask
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela.GravacaoTabela() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela.GravarAsync(CodeProcess.Incognito.Dialetos.LoteLinhas! lote, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela.Linhas.get -> long
+[INCX001]CodeProcess.Incognito.Dialetos.GravacaoTabela.Pedido.get -> CodeProcess.Incognito.Dialetos.PedidoGravacao!
+[INCX001]CodeProcess.Incognito.Dialetos.GravadorEmLote
+[INCX001]CodeProcess.Incognito.Dialetos.GravadorEmLote.AbrirAsync(CodeProcess.Incognito.Dialetos.PedidoGravacao! pedido, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.GravacaoTabela!>!
+[INCX001]CodeProcess.Incognito.Dialetos.GravadorEmLote.EsvaziarAsync(CodeProcess.Incognito.Dialetos.NomeObjeto! tabela, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]CodeProcess.Incognito.Dialetos.GravadorEmLote.GravadorEmLote() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.Colunas.get -> System.Collections.Generic.IReadOnlyList<string!>!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.Colunas.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.PedidoGravacao() -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.Tabela.get -> CodeProcess.Incognito.Dialetos.NomeObjeto!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.Tabela.init -> void
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.Tratadas.get -> System.Collections.Generic.IReadOnlyList<CodeProcess.Incognito.Dialetos.ColunaConvertida!>!
+[INCX001]CodeProcess.Incognito.Dialetos.PedidoGravacao.Tratadas.init -> void
+[INCX001]abstract CodeProcess.Incognito.Dialetos.DialetoDestino.Gravador.get -> CodeProcess.Incognito.Dialetos.GravadorEmLote!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.GravacaoTabela.ConcluirAsyncCore(System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.GravacaoTabela.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
+[INCX001]abstract CodeProcess.Incognito.Dialetos.GravacaoTabela.GravarAsyncCore(CodeProcess.Incognito.Dialetos.LoteLinhas! lote, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.GravadorEmLote.AbrirAsyncCore(CodeProcess.Incognito.Dialetos.PedidoGravacao! pedido, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task<CodeProcess.Incognito.Dialetos.GravacaoTabela!>!
+[INCX001]abstract CodeProcess.Incognito.Dialetos.GravadorEmLote.EsvaziarAsyncCore(CodeProcess.Incognito.Dialetos.NomeObjeto! tabela, System.Threading.CancellationToken cancelamento) -> System.Threading.Tasks.Task!
+[INCX001]override CodeProcess.Incognito.Dialetos.PedidoGravacao.ToString() -> string!
+[INCX001]override sealed CodeProcess.Incognito.Dialetos.GravacaoTabela.ToString() -> string!

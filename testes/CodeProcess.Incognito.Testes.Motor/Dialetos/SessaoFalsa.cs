@@ -14,8 +14,10 @@ internal sealed class DadosDoBancoFalso
     private readonly HashSet<NomeObjeto> _esvaziadas = [];
     private readonly List<NomeObjeto> _criadas = [];
     private readonly Dictionary<NomeObjeto, int> _travas = [];
+    private readonly Dictionary<NomeObjeto, IReadOnlyList<IReadOnlyDictionary<string, object?>>> _gravadas = [];
     private long? _anexado;
     private int _conexoes;
+    private int _conexoesDeGravacao;
     private int _cursor;
     private int _geracao;
 
@@ -26,7 +28,22 @@ internal sealed class DadosDoBancoFalso
     internal const long ValorAnexado = 999;
 
     /// <summary>Os dados num momento: o instante de uma sessão.</summary>
-    internal sealed record Retrato(IReadOnlyDictionary<ReferenciaColuna, long?> Maiores, IReadOnlySet<NomeObjeto> Esvaziadas, long? Anexado);
+    internal sealed record Retrato(
+        IReadOnlyDictionary<ReferenciaColuna, long?> Maiores,
+        IReadOnlySet<NomeObjeto> Esvaziadas,
+        long? Anexado,
+        IReadOnlyDictionary<NomeObjeto, IReadOnlyList<IReadOnlyDictionary<string, object?>>> Gravadas);
+
+    internal int ConexoesDeGravacao
+    {
+        get
+        {
+            lock (_trava)
+            {
+                return _conexoesDeGravacao;
+            }
+        }
+    }
 
     internal int Conexoes
     {
@@ -85,7 +102,11 @@ internal sealed class DadosDoBancoFalso
     {
         lock (_trava)
         {
-            return new Retrato(new Dictionary<ReferenciaColuna, long?>(_maiores), new HashSet<NomeObjeto>(_esvaziadas), _anexado);
+            return new Retrato(
+                new Dictionary<ReferenciaColuna, long?>(_maiores),
+                new HashSet<NomeObjeto>(_esvaziadas),
+                _anexado,
+                new Dictionary<NomeObjeto, IReadOnlyList<IReadOnlyDictionary<string, object?>>>(_gravadas));
         }
     }
 
@@ -141,6 +162,33 @@ internal sealed class DadosDoBancoFalso
 
             _esvaziadas.Add(tabela);
             return true;
+        }
+    }
+
+    /// <summary>Se alguma sessão trava a tabela.</summary>
+    internal bool Travada(NomeObjeto tabela)
+    {
+        lock (_trava)
+        {
+            return _travas.GetValueOrDefault(tabela) > 0;
+        }
+    }
+
+    /// <summary>O conteúdo gravado de uma tabela, que a leitura passa a ver (no lugar das linhas de partida).</summary>
+    internal void Gravar(NomeObjeto tabela, IReadOnlyList<IReadOnlyDictionary<string, object?>> linhas)
+    {
+        lock (_trava)
+        {
+            _gravadas[tabela] = linhas;
+            _esvaziadas.Remove(tabela);
+        }
+    }
+
+    internal void ContarGravacao(int conexoes)
+    {
+        lock (_trava)
+        {
+            _conexoesDeGravacao += conexoes;
         }
     }
 
@@ -402,8 +450,20 @@ internal static class LinhasFalsas
         _ => ["id"],
     };
 
+    /// <summary>As linhas em texto, numa ordem fixa: cada valor com o tipo, e as linhas em ordem ordinal.</summary>
+    internal static IReadOnlyList<string> Texto(IReadOnlyList<IReadOnlyDictionary<string, object?>> linhas) =>
+        [.. linhas.Select(linha => string.Join(
+            "|",
+            linha.OrderBy(celula => celula.Key, StringComparer.Ordinal).Select(celula => celula.Key + "=" + Texto(celula.Value))))
+            .Order(StringComparer.Ordinal)];
+
     internal static IReadOnlyList<IReadOnlyDictionary<string, object?>> De(NomeObjeto tabela, DadosDoBancoFalso.Retrato retrato, Defeito defeito)
     {
+        if (retrato.Gravadas.TryGetValue(tabela, out var gravadas))
+        {
+            return gravadas;
+        }
+
         if (retrato.Esvaziadas.Contains(tabela))
         {
             return [];
@@ -414,6 +474,7 @@ internal static class LinhasFalsas
             "itens" => Inteiros("pedido", [.. BancoFalso.ValoresDaComum, .. retrato.Maiores.TryGetValue(new ReferenciaColuna(tabela, "pedido"), out var aumentado) && aumentado is { } novo ? [novo] : Array.Empty<long>()]),
             "pedidos" => defeito == Defeito.LeituraSoDaRaiz ? [] : Inteiros("id", [40, 88, .. retrato.Anexado is { } anexado ? [anexado] : Array.Empty<long>()]),
             "pessoa" => Inteiros("id", defeito == Defeito.LeituraComHerdeiras ? [12, 60] : [12]),
+            "funcionario" => Inteiros("id", [60]),
             "longa" => Inteiros("id", [.. Enumerable.Range(1, (int)LinhasDaLonga).Select(valor => (long)valor)]),
             "tipos" =>
             [
@@ -423,6 +484,15 @@ internal static class LinhasFalsas
             _ => throw new DialetoRecusouException("INC3399", "A tabela não existe, ou não é uma tabela comum ou particionada."),
         };
     }
+
+    private static string Texto(object? valor) => valor switch
+    {
+        null => "NULL",
+        byte[] bytes => "bytes:" + Convert.ToHexString(bytes),
+        _ when ReferenceEquals(valor, SemForma) => "sem forma",
+        IFormattable formatavel => valor.GetType().Name + ":" + formatavel.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+        _ => valor.GetType().Name + ":" + valor,
+    };
 
     private static IReadOnlyList<IReadOnlyDictionary<string, object?>> Inteiros(string coluna, long[] valores) =>
         [.. valores.Select(valor => (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(StringComparer.Ordinal) { [coluna] = valor })];
@@ -534,6 +604,12 @@ internal sealed class LoteLinhasFalso(PedidoLeituraTabela pedido, IReadOnlyDicti
 
     /// <summary>O que foi escrito em cada célula.</summary>
     internal IReadOnlyDictionary<(int Linha, int Coluna), object?> Escritos => _escritos;
+
+    /// <summary>As posições das convertidas, na ordem da lista do pedido.</summary>
+    internal List<int> Indices => [.. Pedido.Convertidas.Select(convertida => convertida.Indice)];
+
+    /// <summary>O valor de partida de uma célula, como veio da leitura (a coluna que a linha não tem sai opaca).</summary>
+    internal object? Original(int linha, int coluna) => linhas[linha].GetValueOrDefault(Pedido.Colunas[coluna], LinhasFalsas.Opaco);
 
     protected override bool TentarLerCore(int linha, int coluna, out object? valor)
     {

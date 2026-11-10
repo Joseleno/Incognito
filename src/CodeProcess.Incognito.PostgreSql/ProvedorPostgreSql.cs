@@ -87,12 +87,20 @@ internal sealed class DestinoPostgreSql : DialetoDestino
         Dados = new LeitorDadosDestinoPostgreSql(conexao, LancarSeDescartado);
         Diario = new DiarioPostgreSql(conexao, _bloqueio, LancarSeDescartado);
         Sessoes = new SessoesVivas(conexao);
+        _gravador = new GravadorPostgreSql(conexao, LancarSeDescartado);
     }
 
     /// <summary>As sessões de leitura vivas (e o gancho dos testes).</summary>
     internal SessoesVivas Sessoes { get; }
 
+    /// <summary>O gravador, com as gravações vivas (e o gancho dos testes).</summary>
+    internal GravadorPostgreSql Gravacoes => _gravador;
+
+    /// <summary>A conexão de controle (para os testes do dialeto).</summary>
+    internal ConexaoPostgreSql Controle => _conexao;
+
     private readonly BloqueioPostgreSql _bloqueio;
+    private readonly GravadorPostgreSql _gravador;
 
     public override LeitorEsquema Esquema { get; }
 
@@ -108,13 +116,17 @@ internal sealed class DestinoPostgreSql : DialetoDestino
 
     public override DiarioExecucao Diario { get; }
 
+    public override GravadorEmLote Gravador => _gravador;
+
     protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => Sessoes.AbrirAsync(pedido, cancelamento);
 
-    // A concessão viva e as sessões de leitura vivas são fechadas antes da fonte de que as conexões delas saíram.
+    // As gravações vivas, as sessões de leitura vivas e a concessão viva são fechadas antes da fonte de que as conexões
+    // delas saíram.
     protected override async ValueTask DisposeAsyncCore()
     {
         try
         {
+            await _gravador.FecharAsync().ConfigureAwait(false);
             await Sessoes.FecharAsync().ConfigureAwait(false);
             await _bloqueio.LiberarAsync().ConfigureAwait(false);
         }

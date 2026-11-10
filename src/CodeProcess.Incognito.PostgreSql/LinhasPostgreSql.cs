@@ -411,6 +411,7 @@ internal sealed class LoteLinhasPostgreSql : LoteLinhas
     private int[]? _campos;
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private object?[]? _escritos;
+    private bool[]? _foiEscrita;
 
     /// <summary>Monta o lote sobre as linhas já separadas; o lote passa a ser o dono dos buffers.</summary>
     /// <param name="pedido">O pedido da leitura.</param>
@@ -445,6 +446,38 @@ internal sealed class LoteLinhasPostgreSql : LoteLinhas
     /// <param name="linha">A linha.</param>
     /// <returns>Os bytes.</returns>
     internal ReadOnlySpan<byte> Linha(int linha) => _dados.AsSpan(_inicios[linha], _inicios[linha + 1] - _inicios[linha] - 1);
+
+    /// <summary>Quantas colunas cada linha tem.</summary>
+    internal int Colunas => _colunas;
+
+    /// <summary>Se alguma célula da linha foi escrita (a mantida não conta: vai como veio).</summary>
+    /// <param name="linha">A linha.</param>
+    /// <returns>Se há célula escrita.</returns>
+    internal bool TemEscrita(int linha) => _foiEscrita is { } escritas && escritas.AsSpan(linha * _convertidas, _convertidas).Contains(true);
+
+    /// <summary>O valor escrito numa célula, quando foi escrita.</summary>
+    /// <param name="linha">A linha.</param>
+    /// <param name="coluna">A coluna; a não convertida nunca é escrita.</param>
+    /// <param name="valor">O valor escrito, na forma canônica, ou nulo.</param>
+    /// <returns>Se a célula foi escrita.</returns>
+    internal bool Escrito(int linha, int coluna, out object? valor)
+    {
+        var convertida = _convertida[coluna];
+        if (convertida < 0 || _foiEscrita is not { } escritas || !escritas[(linha * _convertidas) + convertida])
+        {
+            valor = null;
+            return false;
+        }
+
+        valor = _escritos![(linha * _convertidas) + convertida];
+        return true;
+    }
+
+    /// <summary>Os bytes de um campo como vieram do <c>COPY</c> (só num lote com convertidas, que divide as linhas).</summary>
+    /// <param name="linha">A linha.</param>
+    /// <param name="coluna">A coluna.</param>
+    /// <returns>Os bytes.</returns>
+    internal ReadOnlySpan<byte> CampoBruto(int linha, int coluna) => Campo(linha, coluna);
 
     protected override bool TentarLerCore(int linha, int coluna, out object? valor)
     {
@@ -482,7 +515,9 @@ internal sealed class LoteLinhasPostgreSql : LoteLinhas
     protected override void EscreverCore(int linha, int coluna, object? valor)
     {
         _escritos ??= new object?[Quantidade * _convertidas];
+        _foiEscrita ??= new bool[Quantidade * _convertidas];
         _escritos[(linha * _convertidas) + _convertida[coluna]] = valor;
+        _foiEscrita[(linha * _convertidas) + _convertida[coluna]] = true;
 
         // O original da célula escrita não é mais lido nem gravado: some do buffer.
         _dados.AsSpan(Inicio(linha, coluna), Campo(linha, coluna).Length).Clear();
@@ -504,6 +539,15 @@ internal sealed class LoteLinhasPostgreSql : LoteLinhas
 
         if (_escritos is not null)
         {
+            // O binário escrito é a cópia que a base fez: zerado aqui; o texto não se zera (INC-044).
+            foreach (var escrito in _escritos)
+            {
+                if (escrito is byte[] bytes)
+                {
+                    Array.Clear(bytes);
+                }
+            }
+
             Array.Clear(_escritos);
         }
 
@@ -511,6 +555,7 @@ internal sealed class LoteLinhasPostgreSql : LoteLinhas
         _inicios = [];
         _campos = null;
         _escritos = null;
+        _foiEscrita = null;
     }
 
     // As posições dos campos de cada linha: o início de cada um e, por último, o fim da linha mais um (como se houvesse um

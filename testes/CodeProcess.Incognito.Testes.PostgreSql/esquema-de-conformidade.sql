@@ -592,6 +592,9 @@ INSERT INTO loja.pedidos (loja, id) VALUES (1, 40), (2, 75);
 INSERT INTO loja.pessoa (id) VALUES (12);
 INSERT INTO loja.funcionario (id, matricula) VALUES (60, 1);
 
+-- A gravação no destino: a particionada em dois níveis, que nenhuma chave estrangeira referencia, com uma linha.
+INSERT INTO loja.vendas (ano, mes) VALUES (2026, 1);
+
 -- A existência de linhas no destino, como a cópia lê: a mãe de herança múltipla (loja.contato) só tem a linha da herdeira.
 INSERT INTO loja.ficha (canal) VALUES ('ficha');
 
