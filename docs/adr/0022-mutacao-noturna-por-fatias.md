@@ -41,7 +41,8 @@ caiba em 30 a 45 min.
 1. **Ferramenta.** Stryker.NET na versão fixada no manifesto `.config/dotnet-tools.json` (hoje 5.0.0, sem
    roll-forward), só no projeto do núcleo, com a configuração versionada em
    `testes/CodeProcess.Incognito.Testes/stryker-config.json`: runner `mtp`, `coverage-analysis: perTest`,
-   `concurrency` 4, `break-on-initial-test-failure`, `timeout-ratio` 2, `additional-timeout` 10.000 ms,
+   `concurrency` 4, `break-on-initial-test-failure`, `timeout-ratio` 2, `additional-timeout` 10.000 ms (25.000 ms
+   na fatia `particionada-chave`, ver "Atualizações"),
    `ignore-methods` `*Exception.ctor` (os textos passados a construtores de exceção) e limites `high` 90, `low` 80 e
    `break` 80.
 2. **Gatilhos.** O workflow `noturno` roda todo dia às 06:17 UTC (03:17 em Brasília, fora do começo da hora), por
@@ -156,3 +157,15 @@ caiba em 30 a 45 min.
 - Uma fatia passar do teto de 25% de Timeout, do limite de tempo ou de 45 min de forma recorrente.
 - Uma versão maior do Stryker.NET, o runner do MTP sair da prévia ou passar a dar o tempo de cada teste.
 - Um arquivo novo no inventário de exclusões de `MutacaoTestes`.
+
+## Atualizações
+
+- 2026-11-10: a fatia `particionada-chave` passou a usar `additional-timeout` de 25.000 ms (campo `folga` da matriz), e
+  as outras continuam com 10.000 ms. O Stryker não aceita esse valor na linha de comando, então o passo da mutação gera,
+  só para essa fatia, uma cópia do `stryker-config.json` com o valor trocado e a passa em `-f`. O Stryker usa um prazo
+  único por rodada, de 2 vezes a rodada inicial mais a folga, e ele variava entre 28,7 s e 32,0 s conforme o runner.
+  Dezessete mutantes da `ChaveIncognito` quebram a derivação da chave, rodam cerca de 950 testes e levam perto de 30 s.
+  Com o prazo de 32,0 s, eles morriam pelos testes dos vetores fixos; com o de 28,7 s, viravam Timeout. Nas noturnas de
+  05 a 10/11/2026, a fatia teve de 39 a 44 Timeouts em 223, e duas rodadas do pull request 72 tiveram 57 e 56, acima do
+  teto de 25% (no máximo 55), sem mudança no código que ela testa. Na fatia `feistel`, os Timeouts são reais, como
+  registra o contexto, e ela continua com 10.000 ms.
