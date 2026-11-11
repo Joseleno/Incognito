@@ -115,7 +115,8 @@ public abstract class FixtureDialeto
     /// <summary>
     /// Como administrador, confirmado na hora: cria na origem do par uma tabela longa, com uma coluna inteira de 1 até o
     /// número de linhas e linhas largas o bastante para a leitura das linhas ainda estar no meio quando o primeiro lote chega
-    /// (no PostgreSQL, megabytes ainda no servidor). O login de leitura a lê.
+    /// (no PostgreSQL, megabytes ainda no servidor). O login de leitura a lê; o destino tem a mesma tabela, com as mesmas
+    /// linhas, que o login do destino grava (as colunas dela estão em <see cref="GravacaoEsperada.Colunas"/>).
     /// </summary>
     /// <param name="par">O par do teste.</param>
     /// <param name="cancelamento">Cancela a operação.</param>
@@ -130,6 +131,30 @@ public abstract class FixtureDialeto
 
     /// <summary>Quanto esperar, no máximo, que as conexões fechadas saiam do servidor (a saída é assíncrona). Padrão: 10 s.</summary>
     public virtual TimeSpan PrazoDasConexoes => TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// O conteúdo de uma tabela de um banco do par como texto, lido pelo administrador, uma linha por linha da tabela, numa
+    /// ordem fixa (a mesma nos dois bancos para o mesmo conteúdo): para conferir que a gravação trouxe as colunas como vieram.
+    /// </summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="destino">Se é o banco do destino; senão, o da origem.</param>
+    /// <param name="tabela">A tabela (numa particionada, a raiz, com as partições).</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>As linhas, em texto.</returns>
+    public abstract Task<IReadOnlyList<string>> LerTextoAsync(ParDeBancos par, bool destino, NomeObjeto tabela, CancellationToken cancelamento);
+
+    /// <summary>Segura uma tabela do destino do par em outra sessão, sem deixar ninguém mais tocá-la, até o descarte.</summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="tabela">A tabela.</param>
+    /// <param name="cancelamento">Cancela a operação.</param>
+    /// <returns>O que solta a tabela.</returns>
+    public abstract Task<IAsyncDisposable> SegurarNoDestinoAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento);
+
+    /// <summary>Quantas conexões da gravação estão abertas no destino do par, lido como administrador.</summary>
+    /// <param name="par">O par do teste.</param>
+    /// <param name="cancelamento">Cancela a leitura.</param>
+    /// <returns>O número de conexões.</returns>
+    public abstract Task<int> ContarConexoesDeGravacaoAsync(ParDeBancos par, CancellationToken cancelamento);
 
     /// <summary>Quantas conexões das sessões de leitura estão abertas num banco do par, lido como administrador.</summary>
     /// <param name="par">O par do teste.</param>

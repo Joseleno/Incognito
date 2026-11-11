@@ -5,14 +5,14 @@ using CodeProcess.Incognito.Transformadores;
 
 namespace CodeProcess.Incognito.Dialetos;
 
-/// <summary>Uma coluna lida na forma canônica: a posição dela no pedido e o tipo.</summary>
+/// <summary>Uma coluna na forma canônica: a posição dela nas colunas do pedido (de leitura ou de gravação) e o tipo.</summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public sealed class ColunaConvertida
 {
     private readonly int _indice;
     private readonly TipoColuna _tipo;
 
-    /// <summary>A posição da coluna em <see cref="PedidoLeituraTabela.Colunas"/>, a partir de zero.</summary>
+    /// <summary>A posição da coluna nas colunas do pedido, a partir de zero.</summary>
     public required int Indice
     {
         get => _indice;
@@ -301,6 +301,7 @@ public abstract class LoteLinhas : IDisposable
     private long _primeira;
     private int _invalido;
     private int _descartado;
+    private int _tomado;
 
     /// <summary>Fixa o pedido e o número de linhas do lote.</summary>
     /// <param name="pedido">O pedido da leitura que produziu o lote.</param>
@@ -337,6 +338,9 @@ public abstract class LoteLinhas : IDisposable
 
     /// <summary>Se o lote já foi descartado.</summary>
     internal bool Descartado => Volatile.Read(ref _descartado) != 0;
+
+    /// <summary>Se o lote ficou inválido (o dialeto falhou ao escrever ou manter uma célula).</summary>
+    internal bool Invalido => Volatile.Read(ref _invalido) != 0;
 
     /// <summary>Lê, na forma canônica, o valor original de uma coluna convertida.</summary>
     /// <param name="linha">A linha no lote, a partir de zero.</param>
@@ -489,6 +493,10 @@ public abstract class LoteLinhas : IDisposable
     /// <param name="primeira">O número da primeira linha.</param>
     /// <returns>Falso quando o lote já foi numerado ou descartado.</returns>
     internal bool Numerar(long primeira) => !Descartado && Interlocked.CompareExchange(ref _primeira, primeira, 0) == 0;
+
+    /// <summary>Passa o lote a uma gravação, uma vez só.</summary>
+    /// <returns>Falso quando o lote já foi passado a uma gravação.</returns>
+    internal bool Tomar() => Interlocked.Exchange(ref _tomado, 1) == 0;
 
     // A célula de uma linha e de uma coluna convertida, conferidas.
     private int Celula(int linha, int coluna, out TipoColuna tipo)

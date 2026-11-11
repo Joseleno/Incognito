@@ -238,6 +238,8 @@ internal sealed class DestinoDoPlanejar(ProvedorDoPlanejar provedor) : DialetoDe
 
     public override DiarioExecucao Diario => provedor.Obter(Operacao.ObterDiario, true, _diario);
 
+    public override GravadorEmLote Gravador => throw new NotSupportedException();
+
     // O planejar não lê em sessão.
     protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => throw new NotSupportedException();
 

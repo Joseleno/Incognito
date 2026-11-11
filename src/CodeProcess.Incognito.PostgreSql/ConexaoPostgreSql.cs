@@ -26,6 +26,9 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     /// <summary>O nome das conexões da sessão de leitura no <c>pg_stat_activity</c>, para quem administra as achar.</summary>
     internal const string NomeDaLeitura = "Incognito leitura";
 
+    /// <summary>O nome das conexões da gravação no <c>pg_stat_activity</c> (só ASCII: o servidor troca o resto por <c>?</c>).</summary>
+    internal const string NomeDaGravacao = "Incognito gravacao";
+
     /// <summary>
     /// Os parâmetros que mudam o texto do <c>COPY</c> (spec §8.3), pelo pacote de início: a data em ISO, o intervalo no
     /// estilo do PostgreSQL, o fuso UTC (o <c>timestamptz</c> sai com <c>+00</c>), o <c>float</c> exato, o <c>bytea</c> em
@@ -67,10 +70,16 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     private readonly string _servidor;
     private readonly bool _origem;
 
-    private ConexaoPostgreSql(NpgsqlDataSource fonte, NpgsqlConnection conexao, bool origem, int versao, RegraDosNomes nomes, SslMode modo, string servidor)
+    // O banco da conexão de controle, lido uma vez na abertura: as conexões próprias se comparam com ele sem usar a de
+    // controle, que outras partes podem estar usando (a gravação é segura entre threads).
+    private readonly (string Impressao, bool Primaria) _impressao;
+
+    private ConexaoPostgreSql(
+        NpgsqlDataSource fonte, NpgsqlConnection conexao, bool origem, int versao, RegraDosNomes nomes, SslMode modo, string servidor, (string Impressao, bool Primaria) impressao)
     {
         _fonte = fonte;
         _conexao = conexao;
+        _impressao = impressao;
         _origem = origem;
         Versao = versao;
         Nomes = nomes;
@@ -121,7 +130,8 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 await VerificarClienteAsync(conexao, cancelamento).ConfigureAwait(false);
             }
 
-            return new ConexaoPostgreSql(fonte, conexao, origem, versao, nomes, construtor.SslMode, construtor.Host!);
+            var impressao = await ImpressaoAsync(conexao, cancelamento).ConfigureAwait(false);
+            return new ConexaoPostgreSql(fonte, conexao, origem, versao, nomes, construtor.SslMode, construtor.Host!, impressao);
         }
         catch
         {
@@ -214,7 +224,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 await VerificarClienteAsync(outra, cancelamento).ConfigureAwait(false);
             }
 
-            var (desta, primaria) = await ImpressaoAsync(_conexao, cancelamento).ConfigureAwait(false);
+            var (desta, primaria) = _impressao;
             var (daOutra, outraPrimaria) = await ImpressaoAsync(outra, cancelamento).ConfigureAwait(false);
             if (desta != daOutra || !primaria || !outraPrimaria)
             {
@@ -243,7 +253,30 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
     /// <param name="cancelamento">Cancela a abertura.</param>
     /// <returns>A conexão aberta.</returns>
     /// <exception cref="IncognitoException">Sessão divergente, outro banco ou servidor, ou réplica no destino.</exception>
-    internal async Task<NpgsqlConnection> AbrirParaLeituraAsync(CancellationToken cancelamento)
+    internal Task<NpgsqlConnection> AbrirParaLeituraAsync(CancellationToken cancelamento) => AbrirAjustadaAsync(
+        NomeDaLeitura,
+        () => new IncognitoException(
+            CodigosPostgreSql.LeituraEmOutroBanco,
+            "Uma conexão da sessão de leitura não chegou ao mesmo banco da conexão de controle (ou, no destino, o banco é uma réplica)."),
+        cancelamento);
+
+    /// <summary>
+    /// Abre uma conexão da gravação do destino pela mesma fonte, como as da sessão de leitura (<see cref="AbrirParaLeituraAsync"/>):
+    /// conferida, no mesmo banco da de controle e numa primária, com os keepalives e sem <c>transaction_timeout</c>, com o
+    /// nome <see cref="NomeDaGravacao"/>. O chamador a descarta.
+    /// </summary>
+    /// <param name="cancelamento">Cancela a abertura.</param>
+    /// <returns>A conexão aberta.</returns>
+    /// <exception cref="IncognitoException">Sessão divergente, outro banco ou servidor, ou réplica.</exception>
+    internal Task<NpgsqlConnection> AbrirParaGravacaoAsync(CancellationToken cancelamento) => AbrirAjustadaAsync(
+        NomeDaGravacao,
+        () => new IncognitoException(
+            CodigosPostgreSql.GravacaoEmOutroBanco,
+            "Uma conexão da gravação não chegou ao mesmo banco da conexão de controle do destino, ou o banco é uma réplica."),
+        cancelamento);
+
+    // A conexão própria da sessão de leitura e da gravação: conferências e ajustes antes de qualquer transação.
+    private async Task<NpgsqlConnection> AbrirAjustadaAsync(string nome, Func<IncognitoException> outroBanco, CancellationToken cancelamento)
     {
         var outra = await _fonte.OpenConnectionAsync(cancelamento).ConfigureAwait(false);
         try
@@ -254,17 +287,15 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 await VerificarClienteAsync(outra, cancelamento).ConfigureAwait(false);
             }
 
-            var (desta, primaria) = await ImpressaoAsync(_conexao, cancelamento).ConfigureAwait(false);
+            var (desta, primaria) = _impressao;
             var (daOutra, outraPrimaria) = await ImpressaoAsync(outra, cancelamento).ConfigureAwait(false);
             if (desta != daOutra || (!_origem && (!primaria || !outraPrimaria)))
             {
-                throw new IncognitoException(
-                    CodigosPostgreSql.LeituraEmOutroBanco,
-                    "Uma conexão da sessão de leitura não chegou ao mesmo banco da conexão de controle (ou, no destino, o banco é uma réplica).");
+                throw outroBanco();
             }
 
             await using (var ajustar = new NpgsqlCommand(
-                $"SET application_name = '{NomeDaLeitura}'; SET tcp_keepalives_idle = 60; SET tcp_keepalives_interval = 10; SET tcp_keepalives_count = 6"
+                $"SET application_name = '{nome}'; SET tcp_keepalives_idle = 60; SET tcp_keepalives_interval = 10; SET tcp_keepalives_count = 6"
                     + (Versao >= 170000 ? "; SET transaction_timeout = 0" : ""),
                 outra))
             {
@@ -278,7 +309,7 @@ internal sealed class ConexaoPostgreSql : IAsyncDisposable
                 {
                     throw new IncognitoException(
                         CodigosPostgreSql.SessaoDivergente,
-                        "A sessão de leitura do PostgreSQL não ficou sem o transaction_timeout, que a derrubaria no meio da cópia.");
+                        "Uma conexão própria do PostgreSQL (da leitura ou da gravação) não ficou sem o transaction_timeout, que a derrubaria no meio da cópia.");
                 }
             }
 

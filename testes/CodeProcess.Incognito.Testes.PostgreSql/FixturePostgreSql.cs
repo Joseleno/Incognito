@@ -108,17 +108,16 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
     }
 
     /// <inheritdoc/>
-    // 100 mil linhas de 200 bytes de texto: cerca de 20 MB no COPY, muito além do que cabe nos buffers do socket.
+    // 100 mil linhas de 200 bytes de texto: cerca de 20 MB no COPY, muito além do que cabe nos buffers do socket. Nos dois
+    // bancos: na origem, lida pelo leitor; no destino, do dono.
     public override async Task<TabelaLonga> CriarTabelaLongaAsync(ParDeBancos par, CancellationToken cancelamento)
     {
         const long linhas = 100_000;
         var longa = Nome("longa");
-        await servidor.ExecutarAsync(
-            par.BancoOrigem,
-            $"CREATE TABLE {Citado(longa)} (id bigint NOT NULL, texto text NOT NULL); "
-            + $"INSERT INTO {Citado(longa)} SELECT g, pg_catalog.repeat('x', 200) FROM pg_catalog.generate_series(1, {linhas}) g; "
-            + $"GRANT SELECT ON {Citado(longa)} TO {ServidorPostgreSql.Leitor}",
-            cancelamento);
+        var criar = $"CREATE TABLE {Citado(longa)} (id bigint NOT NULL, texto text NOT NULL); "
+            + $"INSERT INTO {Citado(longa)} SELECT g, pg_catalog.repeat('x', 200) FROM pg_catalog.generate_series(1, {linhas}) g; ";
+        await servidor.ExecutarAsync(par.BancoOrigem, criar + $"GRANT SELECT ON {Citado(longa)} TO {ServidorPostgreSql.Leitor}", cancelamento);
+        await servidor.ExecutarAsync(par.BancoDestino, criar + $"ALTER TABLE {Citado(longa)} OWNER TO {ServidorPostgreSql.Dono}", cancelamento);
         return new TabelaLonga(new ReferenciaColuna(longa, "id"), linhas);
     }
 
@@ -153,6 +152,54 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
             cancelamento);
         return 9999;
     }
+
+    /// <inheritdoc/>
+    // Cada linha inteira em texto, pelo administrador, com as configurações da conexão dele (as mesmas nos dois bancos).
+    public override async Task<IReadOnlyList<string>> LerTextoAsync(ParDeBancos par, bool destino, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        await using var conexao = await servidor.AbrirComoAdministradorAsync(destino ? par.BancoDestino : par.BancoOrigem, cancelamento);
+        await using var comando = new NpgsqlCommand($"SELECT x::text FROM {Citado(tabela)} x ORDER BY 1", conexao);
+        await using var leitor = await comando.ExecuteReaderAsync(cancelamento);
+        var linhas = new List<string>();
+        while (await leitor.ReadAsync(cancelamento))
+        {
+            linhas.Add(leitor.GetString(0));
+        }
+
+        return linhas;
+    }
+
+    /// <inheritdoc/>
+    public override async Task<IAsyncDisposable> SegurarNoDestinoAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        var conexao = await servidor.AbrirComoAdministradorAsync(par.BancoDestino, cancelamento);
+        try
+        {
+            var transacao = await conexao.BeginTransactionAsync(cancelamento);
+            await using (var travar = new NpgsqlCommand($"LOCK TABLE {Citado(tabela)} IN ACCESS EXCLUSIVE MODE", conexao, transacao))
+            {
+                await travar.ExecuteNonQueryAsync(cancelamento);
+            }
+
+            return new AoDescartar(async () =>
+            {
+                await transacao.DisposeAsync();
+                await conexao.DisposeAsync();
+            });
+        }
+        catch
+        {
+            await conexao.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async Task<int> ContarConexoesDeGravacaoAsync(ParDeBancos par, CancellationToken cancelamento) =>
+        (int)(long)(await servidor.ConsultarAsync(
+            par.BancoDestino,
+            $"SELECT pg_catalog.count(*) FROM pg_catalog.pg_stat_activity a WHERE a.datname = pg_catalog.current_database() AND a.application_name = '{ConexaoPostgreSql.NomeDaGravacao}'",
+            cancelamento))!;
 
     /// <inheritdoc/>
     public override async Task<int> ContarConexoesDeLeituraAsync(ParDeBancos par, bool destino, CancellationToken cancelamento) =>
@@ -480,6 +527,29 @@ public sealed class FixturePostgreSql(ServidorPostgreSql servidor) : FixtureDial
                     new("dia", TipoColuna.Data, 105), new("dia", TipoColuna.Data, 106), new("valor", TipoColuna.Decimal, 106),
                     new("momento", TipoColuna.DataHora, 106), new("instante", TipoColuna.DataHoraComFuso, 106),
                 ],
+            },
+
+            // A gravação: a unicidade parcial de curto (a linha com o sentinela exato fica de fora; com o sufixo, não), a
+            // particionada em dois níveis que nada referencia (a loja.pedidos é referenciada pela loja.itens e não se
+            // esvazia), a herdeira da mãe e as colunas que a cópia lê.
+            Gravacao = new()
+            {
+                Unica = "curto",
+                Particionada = Caso.Presente(new ValoresEsperados(Coluna("vendas", "mes"), [1])),
+                HerdeiraDaMae = Caso.Presente(new ValoresEsperados(Coluna("funcionario", "id"), [60])),
+                Atomica = true,
+                Colunas = new Dictionary<NomeObjeto, IReadOnlyList<string>>
+                {
+                    [Nome("tipos")] =
+                    [
+                        "id", "pequeno", "inteiro", "valor", "texto", "curto", "fixo", "ativo", "dia", "momento", "instante", "identificador",
+                        "conteudo", "hora", "hora_com_fuso", "duracao", "email", "emails", "dados", "documento", "marcacao", "preco", "situacao",
+                        "codigo", "faixa", "lista", "real", "dupla", "endereco", "anexo", "referencia", "observacao",
+                    ],
+                    [Nome("vendas")] = ["ano", "mes"],
+                    [Nome("pessoa")] = ["id", "apelido"],
+                    [Nome("longa")] = ["id", "texto"],
+                },
             },
         };
     }

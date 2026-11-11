@@ -12,7 +12,8 @@ namespace CodeProcess.Incognito.Dialetos;
 /// (<see cref="DialetoOrigem.Dados"/>), a gravação do marcador e a leitura de existência do destino
 /// (<see cref="DialetoDestino.Marcador"/>, <see cref="DialetoDestino.Dados"/>) e o diário (<see cref="DialetoDestino.Diario"/>)
 /// usam a conexão de controle e não são chamadas em paralelo; o bloqueio de execução (<see cref="DialetoDestino.Bloqueio"/>) vive numa conexão dedicada; a
-/// sessão de leitura (<see cref="AbrirLeituraAsync"/>) abre as próprias conexões, e a gravação, quando entrar no contrato, também.
+/// sessão de leitura (<see cref="AbrirLeituraAsync"/>) abre as próprias conexões, e a gravação (<see cref="DialetoDestino.Gravador"/>)
+/// também, uma por chamada.
 /// </para>
 /// <para>
 /// O motor traduz toda exceção do dialeto: uma <see cref="DialetoRecusouException"/> vira erro do plano (saída 2); uma
@@ -106,8 +107,8 @@ public abstract class DialetoOrigem : DialetoBanco
 
 /// <summary>
 /// O destino: esvaziado e gravado. Além das partes comuns, o bloqueio de execução, a gravação do marcador, a leitura de
-/// existência de linhas e o diário (com as restrições e as triggers); a gravação entra no contrato com o INC que a
-/// implementa.
+/// existência de linhas, o diário (com as restrições e as triggers) e a gravação das tabelas. Descartar o dialeto fecha as
+/// gravações vivas.
 /// </summary>
 [Experimental(ContratoExperimental.Diagnostico)]
 public abstract class DialetoDestino : DialetoBanco
@@ -123,4 +124,7 @@ public abstract class DialetoDestino : DialetoBanco
 
     /// <summary>O diário de execução, por onde passa toda alteração do esquema do destino.</summary>
     public abstract DiarioExecucao Diario { get; }
+
+    /// <summary>O esvaziamento e a gravação das tabelas, cada chamada numa conexão própria.</summary>
+    public abstract GravadorEmLote Gravador { get; }
 }

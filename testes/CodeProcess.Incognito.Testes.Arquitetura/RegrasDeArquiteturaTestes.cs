@@ -128,6 +128,8 @@ public sealed class RegrasDeArquiteturaTestes
         ["PedidoLeitura.Travadas"] = "nomes de catálogo",
         ["PedidoLeituraTabela.Tabela"] = "nome de catálogo",
         ["PedidoLeituraTabela.Colunas"] = "nomes de coluna do catálogo",
+        ["PedidoGravacao.Tabela"] = "nome de catálogo",
+        ["PedidoGravacao.Colunas"] = "nomes de coluna do catálogo",
         ["EntradaDiario.Tabela"] = "nome de catálogo",
         ["EntradaDiario.Nome"] = "nome de restrição do catálogo",
         ["TriggerDoDiario.Tabela"] = "nome de catálogo",
@@ -463,10 +465,12 @@ public sealed class RegrasDeArquiteturaTestes
         // JOIN interpolado, um COPY dela ou de um SELECT, um TABLE que não seja o de LOCK ou ALTER), e o agregado sobre ela,
         // pelo max. Fora dos leitores de dados, nenhum dos dois; no da origem, só o
         // maior valor, numa coluna e com retorno inteiro; no da sessão de leitura, o maior valor e as linhas pelo COPY da
-        // leitura das linhas (INC-038, decisão 101); no do destino, só a existência de linha, sem valor.
+        // leitura das linhas (INC-038, decisão 101); no do destino, só a existência de linha, sem valor. A gravação só escreve:
+        // um COPY FROM STDIN, que não devolve linha.
         const string Origem = "LeitorDadosOrigemPostgreSql.cs";
         const string Destino = "LeitorDadosDestinoPostgreSql.cs";
         const string Sessao = "LeituraPostgreSql.cs";
+        const string Gravacao = "GravacaoPostgreSql.cs";
         const string MaiorValor = "$\"SELECT pg_catalog.max({citada})::pg_catalog.int8 FROM {tabela}\"";
         var deTabela = new Regex(
             @"\b(FROM|JOIN)\s+(ONLY\s+)?\{|\bpg_catalog\.max\s*\(|\bCOPY\s*\(\s*SELECT\b|\bCOPY\s+(ONLY\s+)?\{|(?<!\b(LOCK|ALTER)\s+)\bTABLE\s+(ONLY\s+)?\{",
@@ -474,12 +478,14 @@ public sealed class RegrasDeArquiteturaTestes
             TimeSpan.FromSeconds(1));
         var arquivos = Repositorio.Versionados("src/CodeProcess.Incognito.PostgreSql/*.cs");
         var fora = arquivos
-            .Where(arquivo => !arquivo.EndsWith(Origem, StringComparison.Ordinal) && !arquivo.EndsWith(Destino, StringComparison.Ordinal) && !arquivo.EndsWith(Sessao, StringComparison.Ordinal))
+            .Where(arquivo => !arquivo.EndsWith(Origem, StringComparison.Ordinal) && !arquivo.EndsWith(Destino, StringComparison.Ordinal) && !arquivo.EndsWith(Sessao, StringComparison.Ordinal)
+                && !arquivo.EndsWith(Gravacao, StringComparison.Ordinal))
             .SelectMany(arquivo => deTabela.Matches(File.ReadAllText(Path.Combine(Repositorio.Raiz(), arquivo))).Select(achado => $"{arquivo}: {achado.Value}"))
             .ToArray();
         var daOrigem = File.ReadAllText(Path.Combine(Repositorio.Raiz(), Assert.Single(arquivos, arquivo => arquivo.EndsWith(Origem, StringComparison.Ordinal))));
         var doDestino = File.ReadAllText(Path.Combine(Repositorio.Raiz(), Assert.Single(arquivos, arquivo => arquivo.EndsWith(Destino, StringComparison.Ordinal))));
         var daSessao = File.ReadAllText(Path.Combine(Repositorio.Raiz(), Assert.Single(arquivos, arquivo => arquivo.EndsWith(Sessao, StringComparison.Ordinal))));
+        var daGravacao = File.ReadAllText(Path.Combine(Repositorio.Raiz(), Assert.Single(arquivos, arquivo => arquivo.EndsWith(Gravacao, StringComparison.Ordinal))));
 
         Assert.True(fora.Length == 0, $"Leitura de tabela do usuário fora dos leitores de dados: {string.Join("; ", fora)}.");
         Assert.Equal(2, deTabela.Count(daOrigem));
@@ -488,6 +494,8 @@ public sealed class RegrasDeArquiteturaTestes
         Assert.Contains(MaiorValor, daSessao, StringComparison.Ordinal);
         Assert.Contains("$\"COPY (SELECT {colunas} FROM {tabela}) TO STDOUT\"", daSessao, StringComparison.Ordinal);
         Assert.Equal(1, deTabela.Count(doDestino));
+        Assert.Equal(1, deTabela.Count(daGravacao));
+        Assert.Contains("$\"COPY {CitacaoPostgreSql.Citar(pedido.Tabela)} ({colunas}) FROM STDIN\"", daGravacao, StringComparison.Ordinal);
         Assert.Contains("$\"SELECT EXISTS (SELECT FROM {citada})\"", doDestino, StringComparison.Ordinal);
     }
 

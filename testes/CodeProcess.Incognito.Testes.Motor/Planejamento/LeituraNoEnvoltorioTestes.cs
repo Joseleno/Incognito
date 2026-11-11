@@ -261,6 +261,8 @@ public sealed class LeituraNoEnvoltorioTestes
 
         public override DiarioExecucao Diario => throw new NotSupportedException();
 
+        public override GravadorEmLote Gravador => throw new NotSupportedException();
+
         protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => SessaoDeLeitura.AbrirAsync(comportamento, pedido);
     }
 

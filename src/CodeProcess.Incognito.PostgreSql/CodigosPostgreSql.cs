@@ -131,4 +131,34 @@ internal static class CodigosPostgreSql
     /// parar a tempo: o leitor não lê mais.
     /// </summary>
     internal const string LeitorSemConexao = "INC3135";
+
+    /// <summary>Uma conexão da gravação chegou a outro servidor ou banco que a de controle do destino, ou a uma réplica.</summary>
+    internal const string GravacaoEmOutroBanco = "INC3136";
+
+    /// <summary>
+    /// A tabela do destino estava em uso por outra sessão (ou pelo autovacuum contra o wraparound) e não foi liberada a tempo
+    /// para o esvaziamento: nada foi gravado.
+    /// </summary>
+    internal const string DestinoEmUso = "INC3137";
+
+    /// <summary>Uma linha gravada violou uma restrição do destino (unicidade, NOT NULL, <c>CHECK</c>, tamanho, tipo).</summary>
+    internal const string ValorRecusado = "INC3138";
+
+    /// <summary>O login do destino não pode esvaziar ou gravar a tabela.</summary>
+    internal const string GravacaoRecusada = "INC3139";
+
+    /// <summary>
+    /// Uma função do destino chamada na gravação (num <c>CHECK</c>, <c>DEFAULT</c>, índice, domínio ou trigger) depende do
+    /// caminho de busca, que o Incognito fixa em <c>pg_catalog</c>.
+    /// </summary>
+    internal const string FuncaoSemCaminho = "INC3140";
+
+    /// <summary>A gravação das linhas de uma tabela falhou no servidor, ou a conexão caiu no meio dela.</summary>
+    internal const string LinhasNaoGravadas = "INC3141";
+
+    /// <summary>
+    /// A tabela do destino não aceita o esvaziamento e a gravação: referenciada por uma chave estrangeira, com uma partição
+    /// estrangeira (o esvaziamento e a gravação chegariam a outro banco), ou com uma coluna gerada na lista.
+    /// </summary>
+    internal const string TabelaNaoAceitaGravacao = "INC3142";
 }

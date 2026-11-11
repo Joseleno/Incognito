@@ -329,3 +329,57 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   anexada, a sessão derrubada antes e no meio, a coluna inexistente e a segurança por linha, cada um derrubado por um
   defeito do falso, que ganha as linhas das tabelas; a fixture ganha a tabela longa e o prazo da interrupção, e a
   declaração do esquema de conformidade, as linhas esperadas.
+- 2026-11-03: a gravação entra no contrato, numa parte nova do destino (`DialetoDestino.Gravador`, um `GravadorEmLote`
+  seguro entre threads): `EsvaziarAsync` esvazia uma tabela e `AbrirAsync(PedidoGravacao)` (a tabela, as colunas do
+  destino na ordem das lidas e as tratadas, cada uma com o tipo em que foi lida) abre uma `GravacaoTabela`, que grava
+  lotes lidos da origem e conclui; cada chamada usa uma conexão própria, fechada no fim, e o descarte do dialeto fecha as
+  gravações vivas (o descarte espera as chamadas em curso: quem chama cancela antes). O conteúdo anterior sai da tabela
+  (não do disco nem das cópias do banco; numa particionada, com as partições; nas outras, sem as herdeiras), e a tabela
+  que outra sessão segura falha em tempo limitado. As regras são da base: o lote passado pela primeira vez é da gravação,
+  que o descarta sempre, também quando o recusa ou falha, e o já passado a uma gravação é recusado sem ser descartado (a
+  outra chamada ainda o lê); antes do dialeto, a base confere a forma do lote (vivo e válido, as mesmas colunas do pedido
+  da gravação, pelos nomes e na mesma ordem, cada tratada convertida com o mesmo tipo e escrita ou mantida em toda linha),
+  e o lote fora dela é recusado sem gravar nada, sem quebrar a gravação; as tratadas são obrigatórias no pedido (a tabela
+  sem tratada passa uma lista vazia); uma chamada por vez; a gravação que falhou depois de começar uma chamada fica
+  quebrada e só se descarta; a concluída recusa outra chamada; o descarte é único, nunca lança, espera a chamada em curso
+  e, sem a conclusão, desfaz o que o banco deixa desfazer. Ao dialeto, fica recusar o lote de outro dialeto (com
+  `InvalidOperationException`, o que quebra a gravação) e gravar as células sem escrita como vieram.
+
+  No PostgreSQL, a gravação esvazia e grava numa transação só: `TRUNCATE` (com `ONLY` fora da particionada) e
+  `COPY ... FROM STDIN` em texto, com `FREEZE` fora da particionada, escrito em bytes crus pela `BaseStream` do
+  `BeginTextImport`, numa conexão própria pela mesma fonte da de controle, conferida e numa primária, com o tempo da
+  trava de 5 s. A linha sem célula escrita vai em bytes, como veio da leitura; na que tem, as escritas são formatadas com
+  os parâmetros impostos (NULL como `\N`, a barra, a tabulação e as quebras escapadas, o `bytea` em hexadecimal, a data
+  e hora com os microssegundos) e o resto vai como veio, num buffer de um pool só do destino, limpo a cada envio e na
+  devolução. A conclusão fecha o `COPY`, antecipa as restrições adiadas, confere de novo os parâmetros do texto, o caminho
+  de busca e o papel (código do banco pode trocá-los no meio da gravação, e a troca desfaz a tabela) e confirma; ela
+  responde ao cancelamento: o `COMMIT` recebe o token (o servidor confirma o que já recebeu; a dúvida, com a conexão
+  caída, fica com o diário), e o fechamento do `COPY`, que o driver não deixa cancelar, é abandonado sem confirmar nada
+  se o servidor não responder 10 s depois do cancelamento (a conexão só fecha quando ele terminar). O descarte sem a
+  conclusão põe o prazo de 10 s nas leituras e escritas do fluxo (com o tempo-limite de comando desligado, um servidor que
+  para de responder prenderia o cancelamento e o fechamento da conexão para sempre), cancela o `COPY`, desfaz e fecha a
+  conexão. O token do chamador nunca vai ao fluxo do `COPY`. A segurança por linha que vale para o login é recusada antes
+  do esvaziamento (o `COPY FROM` não a aceita), e a partição estrangeira na árvore da particionada, depois dele e antes da
+  gravação (o esvaziamento e a gravação chegariam a outro banco); nada é confirmado. A abertura das conexões próprias
+  compara o banco com o da conexão de controle, lido uma vez na abertura do dialeto: gravações em paralelo nunca usam a
+  conexão de controle juntas. Os erros saem pelo SQLSTATE, com texto fixo e só nomes, também na abertura da conexão
+  (`INC3126` para o servidor que recusa mais conexões): `INC3136` (a conexão da gravação chegou a
+  outro banco ou a uma réplica), `INC3137` (a tabela em uso por outra sessão, ou pelo autovacuum contra o wraparound),
+  `INC3138` (uma linha recusada por uma restrição do destino, com a restrição e a coluna que o servidor dá em campos
+  próprios, nunca o texto, o detalhe ou o contexto, que trazem o valor), `INC3139` (o login não esvazia ou não grava),
+  `INC3140` (uma função do destino chamada na gravação depende do caminho de busca, que o Incognito fixa em
+  `pg_catalog`), `INC3141` (a gravação falhou no servidor, ou a conexão caiu) e `INC3142` (a tabela não aceita o
+  esvaziamento e a gravação: referenciada por uma chave estrangeira, com uma partição estrangeira, ou com uma coluna
+  gerada na lista). A escala de um `numeric` menor no destino arredonda o valor escrito, e a fração abaixo do microssegundo
+  se perde: o motor confere o valor pelo contexto da coluna. A gravação só escreve: a regra das
+  consultas sobre tabela do usuário passa a aceitar, no arquivo dela, só o `COPY ... FROM STDIN`. Na suíte, fatos para o
+  conteúdo substituído, as colunas não escritas e as mantidas que chegam como vieram (comparadas em texto pelo
+  administrador, depois de esvaziar), o valor lido escrito de volta que devolve a tabela igual (as convertidas espalhadas
+  entre colunas opacas), os valores escritos na forma canônica, a gravação desfeita e a cancelada no meio que voltam no
+  prazo e deixam a tabela como estava (num banco que não grava a tabela numa transação só, contida no que estava e no que
+  foi gravado), o lote de outro dialeto recusado, a conexão própria fechada no fim, duas gravações em paralelo, a
+  particionada com as partições e a mãe sem as herdeiras, a tabela segurada que falha no prazo e a violação de uma
+  restrição sem o valor (nem nas internas nem nos dados da falha), cada um derrubado por um defeito do falso, que passa a
+  guardar as linhas gravadas e tem uma variante não atômica; a fixture ganha a leitura de uma tabela em texto, a tabela
+  segurada no destino, a contagem das conexões da gravação e a tabela longa também no destino, e a declaração, os casos da
+  gravação.

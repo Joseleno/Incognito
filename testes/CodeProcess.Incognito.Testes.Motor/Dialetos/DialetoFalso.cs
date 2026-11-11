@@ -265,6 +265,41 @@ public enum Defeito
     DescarteDaLeituraDemora,
     ColunaInexistenteLida,
     LeituraDecimalSemEscala,
+
+    // A gravação: a que não esvazia antes, a que troca uma coluna opaca, a que grava o original no lugar do escrito, o
+    // descarte que confirma, o descarte que demora, o lote de outro dialeto aceito, a conexão que fica aberta, a particionada
+    // gravada só na raiz, a mãe esvaziada com as herdeiras, a tabela segurada ignorada e o valor na violação.
+    GravacaoNaoEsvazia,
+    GravacaoTrocaOpaco,
+    GravacaoIgnoraEscrita,
+    DescarteDaGravacaoConfirma,
+    DescarteDaGravacaoDemora,
+    LoteDeForaAceito,
+    ConexaoDaGravacaoAberta,
+    GravacaoSoDaRaiz,
+    GravacaoComHerdeiras,
+    TabelaSeguradaIgnorada,
+    SentinelaNaViolacao,
+
+    // A gravação, mais: a escrita gravada na coluna pela ordem da lista, a coluna opaca trocada numa linha com escrita, o
+    // esvaziamento que não esvazia, a gravação sem conexão própria, o esvaziamento e o descarte do destino que deixam conexão,
+    // a tabela segurada que demora ou falha sem código, o valor nos dados da falha, as gravações com estado comum, o lote de
+    // outro dialeto recusado com outra exceção, o cancelamento ignorado no meio, e o banco que não grava a tabela numa
+    // transação só (certo, e o que inventa uma linha no descarte).
+    EscritaPelaPosicao,
+    TrocaOpacoNaLinhaEscrita,
+    EsvaziamentoNaoEsvazia,
+    GravacaoSemConexaoPropria,
+    EsvaziamentoDeixaConexao,
+    DescarteDoDestinoDeixaGravacao,
+    TabelaSeguradaDemora,
+    TabelaSeguradaSemCodigo,
+    ViolacaoComValorNoData,
+    GravacoesComEstadoComum,
+    LoteDeForaComOutraExcecao,
+    GravacaoIgnoraCancelamento,
+    GravacaoNaoAtomica,
+    GravacaoNaoAtomicaInventa,
 }
 
 /// <summary>
@@ -707,6 +742,20 @@ internal static class BancoFalso
             },
             SemForma = [new CelulaSemForma("dia", TipoColuna.Data, ChaveSemForma)],
         },
+        Gravacao = new()
+        {
+            Unica = "texto",
+            Particionada = completo ? Caso.Presente(new ValoresEsperados(Coluna("pedidos", "id"), [40, 88])) : Caso.Inexistente<ValoresEsperados>("banco falso sem partições"),
+            HerdeiraDaMae = completo ? Caso.Presente(new ValoresEsperados(Coluna("funcionario", "id"), [60])) : Caso.Inexistente<ValoresEsperados>("banco falso sem herança"),
+            Atomica = defeito is not (Defeito.GravacaoNaoAtomica or Defeito.GravacaoNaoAtomicaInventa),
+            Colunas = new Dictionary<NomeObjeto, IReadOnlyList<string>>
+            {
+                [Nome("tipos")] = LinhasFalsas.Colunas(Nome("tipos")),
+                [Nome("pedidos")] = LinhasFalsas.Colunas(Nome("pedidos")),
+                [Nome("pessoa")] = LinhasFalsas.Colunas(Nome("pessoa")),
+                [Nome("longa")] = LinhasFalsas.Colunas(Nome("longa")),
+            },
+        },
     };
 
     /// <summary>Os valores da coluna comum do maior valor (<c>loja.itens.pedido</c>).</summary>
@@ -1068,13 +1117,21 @@ internal sealed class DestinoFalso(string banco, LeitorEsquema? leitor, bool com
 
     public override DiarioExecucao Diario => _diario ??= new DiarioFalso(BancoFalso.Diario(banco), _bloqueio, defeito);
 
+    public override GravadorEmLote Gravador => _gravador;
+
     private readonly SessoesFalsas _sessoes = new(defeito);
+    private readonly GravadorFalso _gravador = new(BancoFalso.Dados(banco), defeito);
 
     protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) =>
         SessaoFalsa.AbrirAsync(BancoFalso.Dados(banco), pedido, completo, defeito, Esquema, _sessoes.Abriu, _sessoes.Fechou, cancelamento);
 
     protected override async ValueTask DisposeAsyncCore()
     {
+        if (defeito != Defeito.DescarteDoDestinoDeixaGravacao)
+        {
+            await _gravador.FecharAsync();
+        }
+
         await _sessoes.FecharAsync();
         if (defeito != Defeito.DescarteNaoLibera)
         {
@@ -1841,6 +1898,19 @@ internal sealed class FixtureFalsa(bool completo, Defeito defeito, Func<EsquemaB
 
     public override Task<int> ContarConexoesDeLeituraAsync(ParDeBancos par, bool destino, CancellationToken cancelamento) =>
         Task.FromResult(BancoFalso.Dados(destino ? par.BancoDestino : par.BancoOrigem).Conexoes);
+
+    public override Task<IReadOnlyList<string>> LerTextoAsync(ParDeBancos par, bool destino, NomeObjeto tabela, CancellationToken cancelamento) =>
+        Task.FromResult(LinhasFalsas.Texto(LinhasFalsas.De(tabela, BancoFalso.Dados(destino ? par.BancoDestino : par.BancoOrigem).Agora(), Defeito.Nenhum)));
+
+    public override Task<IAsyncDisposable> SegurarNoDestinoAsync(ParDeBancos par, NomeObjeto tabela, CancellationToken cancelamento)
+    {
+        var dados = BancoFalso.Dados(par.BancoDestino);
+        dados.Travar([tabela], 1);
+        return Task.FromResult<IAsyncDisposable>(new AoDescartar(() => dados.Travar([tabela], -1)));
+    }
+
+    public override Task<int> ContarConexoesDeGravacaoAsync(ParDeBancos par, CancellationToken cancelamento) =>
+        Task.FromResult(BancoFalso.Dados(par.BancoDestino).ConexoesDeGravacao);
 
     public override Task DerrubarSessoesAsync(ParDeBancos par, bool destino, CancellationToken cancelamento)
     {
