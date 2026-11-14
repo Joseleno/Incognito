@@ -118,48 +118,66 @@ internal sealed record ConfiguracaoDaExecucao(
     public override string ToString() => nameof(ConfiguracaoDaExecucao);
 }
 
-/// <summary>Uma unidade de cópia: como ler e gravar a tabela, e o que tratar nela.</summary>
-/// <param name="Nome">O nome no catálogo.</param>
+/// <summary>Uma unidade de cópia: de onde ler e onde gravar a tabela, e o que tratar nela.</summary>
+/// <param name="Nome">O nome no catálogo da origem (ou do destino, na unidade que só existe nele).</param>
 /// <param name="Acao">A ação efetiva.</param>
-/// <param name="SoAPropria">
-/// Se a leitura e o esvaziamento precisam se limitar às linhas da própria tabela (<c>ONLY</c> no PostgreSQL): mãe ou
-/// herdeira de herança clássica, cujas leituras alcançariam as linhas das herdeiras.
+/// <param name="NoDestino">O nome da tabela no catálogo do destino; nulo quando ela não existe no destino.</param>
+/// <param name="ColunasLidas">
+/// As colunas lidas da origem, na ordem do catálogo dela, sem as geradas de um lado ou do outro (o banco as recalcula); só
+/// na unidade copiada.
 /// </param>
-/// <param name="AdmiteFreeze">Se a gravação pode marcar as linhas como congeladas: não admite a particionada.</param>
-/// <param name="ColunasLidas">As colunas lidas e gravadas, na ordem do catálogo, sem as geradas (o banco as recalcula).</param>
-/// <param name="Tratadas">As colunas com transformador, na ordem do catálogo.</param>
+/// <param name="ColunasNoDestino">O nome no catálogo do destino de cada coluna lida, na mesma ordem.</param>
+/// <param name="Tratadas">As colunas com transformador, na ordem do catálogo da origem; cada uma, e a referência dela, lidas.</param>
+/// <remarks>
+/// Se a leitura e o esvaziamento se limitam à própria tabela e se a gravação pode congelar as linhas, o dialeto decide pelo
+/// catálogo dele: a carga não guarda uma segunda fonte disso.
+/// </remarks>
 internal sealed record UnidadeDeCopia(
     NomeTabela Nome,
     AcaoTabela Acao,
-    bool SoAPropria,
-    bool AdmiteFreeze,
+    NomeTabela? NoDestino,
     IReadOnlyList<string> ColunasLidas,
+    IReadOnlyList<string> ColunasNoDestino,
     IReadOnlyList<ColunaTratada> Tratadas)
 {
     /// <summary>As colunas lidas, copiadas.</summary>
-    public IReadOnlyList<string> ColunasLidas { get; } = [.. ColunasLidas];
+    public IReadOnlyList<string> ColunasLidas { get; } = Lidas(Acao, NoDestino, ColunasLidas, ColunasNoDestino, Tratadas);
+
+    /// <summary>As colunas no destino, copiadas.</summary>
+    public IReadOnlyList<string> ColunasNoDestino { get; } = [.. ColunasNoDestino];
 
     /// <summary>As colunas tratadas, copiadas.</summary>
     public IReadOnlyList<ColunaTratada> Tratadas { get; } = [.. Tratadas];
 
-    /// <summary>A forma de leitura e gravação de uma tabela da origem.</summary>
-    /// <param name="tabela">A tabela.</param>
-    /// <param name="esquema">O esquema da origem, de onde saem as herdeiras.</param>
-    /// <returns>Se só a própria tabela, se admite congelar e as colunas lidas.</returns>
-    internal static (bool SoAPropria, bool AdmiteFreeze, IReadOnlyList<string> ColunasLidas) Forma(TabelaEsquema tabela, EsquemaBanco esquema)
-    {
-        ArgumentNullException.ThrowIfNull(tabela);
-        ArgumentNullException.ThrowIfNull(esquema);
-        var temHerdeira = esquema.Tabelas.Any(outra =>
-            outra.Tipo == TipoTabela.Herdeira && (tabela.Nome.Equals(outra.Pai) || outra.OutrosPais.Contains(tabela.Nome)));
-        return (
-            tabela.Tipo == TipoTabela.Herdeira || temHerdeira,
-            tabela.Tipo != TipoTabela.Particionada,
-            [.. tabela.Colunas.Where(coluna => coluna.Geracao == GeracaoColuna.Nenhuma).Select(coluna => coluna.Nome)]);
-    }
-
     /// <inheritdoc/>
     public override string ToString() => $"{nameof(UnidadeDeCopia)} ({ColunasLidas.Count} colunas, {Tratadas.Count} tratadas)";
+
+    // Uma tratada fora das lidas, ou com a referência fora delas, ficaria sem valor no pipeline; a copiada ou esvaziada sem a
+    // tabela no destino não teria onde gravar; a não copiada não lê nem trata: tudo isso é defeito do motor.
+    private static string[] Lidas(AcaoTabela acao, NomeTabela? tabelaNoDestino, IReadOnlyList<string> lidas, IReadOnlyList<string> noDestino, IReadOnlyList<ColunaTratada> tratadas)
+    {
+        ArgumentNullException.ThrowIfNull(lidas);
+        ArgumentNullException.ThrowIfNull(noDestino);
+        ArgumentNullException.ThrowIfNull(tratadas);
+        if (!Enum.IsDefined(acao)
+            || (acao is AcaoTabela.Copiar or AcaoTabela.Esvaziar && tabelaNoDestino is null)
+            || (acao != AcaoTabela.Copiar && (lidas.Count > 0 || tratadas.Count > 0))
+            || tratadas.Any(tratada => tratada is null)
+            || tratadas.Select(tratada => tratada.Coluna).Distinct(StringComparer.Ordinal).Count() != tratadas.Count)
+        {
+            throw new InvalidOperationException("A unidade de cópia se contradiz: ação, tabela no destino ou colunas tratadas.");
+        }
+
+        var copia = lidas.ToArray();
+        var conjunto = copia.ToHashSet(StringComparer.Ordinal);
+        if (copia.Length != noDestino.Count || conjunto.Count != copia.Length
+            || tratadas.Any(tratada => !conjunto.Contains(tratada.Coluna) || (tratada.Referencia is { } referencia && !conjunto.Contains(referencia))))
+        {
+            throw new InvalidOperationException("A unidade de cópia se contradiz: colunas lidas sem par, repetidas, ou tratada sem a coluna lida.");
+        }
+
+        return copia;
+    }
 }
 
 /// <summary>
@@ -171,8 +189,30 @@ internal sealed record UnidadeDeCopia(
 /// <param name="Regra">A regra conferida pela fábrica.</param>
 /// <param name="Normalizados">Os parâmetros normalizados pela fábrica, por nome (comparação ordinal).</param>
 /// <param name="Contexto">O contexto de criação, montado pela coluna do destino, com que o planejar criou o transformador.</param>
-internal sealed record ColunaTratada(string Coluna, FabricaRegistrada Fabrica, RegraTransformacao Regra, IReadOnlyDictionary<string, string> Normalizados, ContextoDaColuna Contexto)
+/// <param name="Referencia">O nome no catálogo da origem da coluna de <c>derivarDe</c>; nulo sem ele.</param>
+/// <param name="InjetividadeEfetiva">
+/// A injetividade que o plano publica para a coluna, nunca acima da registrada pela fábrica (a colação do destino pode
+/// rebaixá-la).
+/// </param>
+internal sealed record ColunaTratada(
+    string Coluna,
+    FabricaRegistrada Fabrica,
+    RegraTransformacao Regra,
+    IReadOnlyDictionary<string, string> Normalizados,
+    ContextoDaColuna Contexto,
+    string? Referencia,
+    Injetividade InjetividadeEfetiva)
 {
+    /// <summary>A injetividade efetiva, conferida contra a registrada: acima dela, o plano prometeria o que a fábrica não dá.</summary>
+    public Injetividade InjetividadeEfetiva { get; } = Enum.IsDefined(InjetividadeEfetiva) && InjetividadeEfetiva <= Fabrica.Injetividade
+        ? InjetividadeEfetiva
+        : throw new InvalidOperationException("A injetividade efetiva passa da registrada pela fábrica.");
+
+    /// <summary>A coluna de <c>derivarDe</c>, sempre junto com o tipo dela no contexto (um sem o outro é defeito).</summary>
+    public string? Referencia { get; } = (Referencia is null) == (Contexto?.TipoReferencia is null)
+        ? Referencia
+        : throw new InvalidOperationException("A referência de 'derivarDe' e o tipo dela no contexto não andam juntos.");
+
     /// <summary>Os parâmetros normalizados, copiados.</summary>
     public IReadOnlyDictionary<string, string> Normalizados { get; } = new Dictionary<string, string>(Normalizados, StringComparer.Ordinal);
 

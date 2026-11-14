@@ -597,5 +597,5 @@ public sealed class DialetoProtegidoTestes
         }
     }
 
-    private static SegredoConexao Conexao() => new("Host=servidor;Password=" + Sentinela);
+    internal static SegredoConexao Conexao() => new("Host=servidor;Password=" + Sentinela);
 }

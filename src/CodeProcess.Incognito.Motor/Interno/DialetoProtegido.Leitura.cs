@@ -151,7 +151,7 @@ internal sealed partial class DialetoProtegido
     /// sai só com o código ou o tipo, e a recusa é falha (saída 1), porque a sessão só existe na execução, depois do plano. O
     /// mesmo leitor nunca é chamado em paralelo consigo mesmo: o motor que o fizesse tem defeito.
     /// </summary>
-    internal sealed class LeitorProtegido
+    internal sealed partial class LeitorProtegido
     {
         private readonly LeitorDaSessao _leitor;
         private readonly string _provedor;

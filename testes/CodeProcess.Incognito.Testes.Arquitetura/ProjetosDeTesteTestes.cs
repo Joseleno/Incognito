@@ -46,6 +46,9 @@ public sealed class ProjetosDeTesteTestes
     private static readonly Regex _integracao = new(@"\bintegracao\b", RegexOptions.IgnoreCase);
     private static readonly Regex _lento = new(@"\blento\b", RegexOptions.IgnoreCase);
 
+    // Noturno: os 10 milhões do PostgreSQL, que só o noturno.yml roda. Com caixa: "noturno" em minúsculas é o nome do workflow.
+    private static readonly Regex _noturno = new(@"\bNoturno\b");
+
     // O atributo que marca um tipo público de dialeto como parte do contrato experimental, aceito só no código dos
     // dialetos: dentro do tipo marcado, o uso do contrato não avisa, então em outro lugar ele valeria como supressão.
     private const string AtributoExperimental = "[Experimental(\"INCX001\")]";
@@ -151,6 +154,27 @@ public sealed class ProjetosDeTesteTestes
         var achados = Ocorrencias(_lento, projeto => projeto == Nucleo || _dialetos.Contains(projeto));
 
         Assert.True(achados.Count == 0, $"\"Lento\" fora dos projetos de testes do núcleo e dos dialetos (só eles têm job para os lentos): {string.Join(", ", achados)}.");
+    }
+
+    [Fact]
+    public void Categoria_Noturno_so_no_PostgreSql_e_filtrada_no_ci_e_no_release()
+    {
+        var achados = Ocorrencias(_noturno, projeto => projeto == "CodeProcess.Incognito.Testes.PostgreSql");
+        Assert.True(achados.Count == 0, $"\"Noturno\" fora do projeto de testes do PostgreSQL (só ele tem o job noturno): {string.Join(", ", achados)}.");
+
+        // Todo dotnet test do PostgreSQL no ci.yml e no release.yml tira os 10 milhões (o dos lentos só roda os lentos).
+        var raiz = Repositorio.Raiz();
+        foreach (var workflow in new[] { ".github/workflows/ci.yml", ".github/workflows/release.yml" })
+        {
+            var semFiltro = File.ReadAllLines(Path.Combine(raiz, workflow))
+                .Where(linha => linha.Contains("dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql", StringComparison.Ordinal)
+                    && !linha.Contains("--filter-trait \"Categoria=Lento\"", StringComparison.Ordinal)
+                    && !linha.Contains("--filter-not-trait \"Categoria=Noturno\"", StringComparison.Ordinal))
+                .ToArray();
+            Assert.True(semFiltro.Length == 0, $"{workflow} roda os testes do PostgreSQL sem tirar a categoria Noturno.");
+        }
+
+        Assert.Contains("--filter-trait \"Categoria=Noturno\"", File.ReadAllText(Path.Combine(raiz, ".github/workflows/noturno.yml")), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -150,3 +150,17 @@ carregá-los de um lado para o outro.
   com construtor público e `init`, como os outros. A exceção nova do motor, `BloqueioDestinoException` (saída 1: o
   `INC3004` de outra execução com o bloqueio, e o `INC4001` do bloqueio perdido), é selada e sem construtor público,
   como as outras.
+- 2026-11-12: o transformador de cada coluna passa a ser criado três vezes, sempre pela mesma criação protegida (a única
+  que chama a fábrica, guarda de IL em `GuardasDaExecucaoTestes`): no `planejar` e no replanejamento da execução, que
+  montam o plano pelo mesmo caminho, numa sessão descartável com chave aleatória, e na execução, com a chave real, para
+  copiar. Na execução, cada transformador é conferido contra o registro (nome, versão, injetividade, e a efetiva nunca
+  acima da registrada), compartilhado entre as threads da tabela (o contrato do `Transformador` já o exige), e descartado
+  uma vez, deduplicado por referência, só depois de todas as tarefas terminarem, também no cancelamento; a falha no
+  descarte de um de fora vira aviso só com o tipo (`INC4008`). O item 8 vale agora para o `Transformar`: a exceção de um
+  transformador de fora sai só com o tipo (e o código, se for `INC` seguido de quatro dígitos), a `IncognitoException` de
+  uma embutida com o código e a mensagem dela, ambas dentro da `FalhaTransformacaoException` (`INC4007`), selada e sem
+  construtor público, como as outras, com a tabela, a coluna e a linha e sem a exceção original; fora dela, o cancelamento
+  (só quando o motor o pediu: o de um transformador de fora sem pedido é falha) e a falta de memória de um de fora (nova,
+  sem a mensagem). O resultado é conferido antes de gravar (`INC4005`).
+  Verificado por `TransformadoresDaExecucaoTestes`, `CopiaDaTabelaTestes`, `ExecucaoSobFalhaTestes` (o sentinela da
+  coluna tratada e a chave canário em todos os desfechos) e `ExecutorInternoTestes`.
