@@ -42,7 +42,7 @@ caiba em 30 a 45 min.
    roll-forward), só no projeto do núcleo, com a configuração versionada em
    `testes/CodeProcess.Incognito.Testes/stryker-config.json`: runner `mtp`, `coverage-analysis: perTest`,
    `concurrency` 4, `break-on-initial-test-failure`, `timeout-ratio` 2, `additional-timeout` 10.000 ms (25.000 ms
-   na fatia `particionada-chave`, ver "Atualizações"),
+   nas fatias `feistel` e `particionada-chave`, ver "Atualizações"),
    `ignore-methods` `*Exception.ctor` (os textos passados a construtores de exceção) e limites `high` 90, `low` 80 e
    `break` 80.
 2. **Gatilhos.** O workflow `noturno` roda todo dia às 06:17 UTC (03:17 em Brasília, fora do começo da hora), por
@@ -169,3 +169,12 @@ caiba em 30 a 45 min.
   05 a 10/11/2026, a fatia teve de 39 a 44 Timeouts em 223, e duas rodadas do pull request 72 tiveram 57 e 56, acima do
   teto de 25% (no máximo 55), sem mudança no código que ela testa. Na fatia `feistel`, os Timeouts são reais, como
   registra o contexto, e ela continua com 10.000 ms.
+- 2026-11-14: a fatia `feistel` também passou a usar `additional-timeout` de 25.000 ms. Nas noturnas de 10 a 13/11/2026,
+  ela teve de 44 a 52 Timeouts em 221; na rodada do pull request 76 e na noturna de 14/11, 57 e 58, acima do teto de 25%
+  (no máximo 55), sem mudança no código que ela testa. O log do Stryker mostra que o prazo não é único na rodada: cada
+  mutante recebe 2 vezes o tempo que os testes que o cobrem levaram na rodada inicial, mais a folga. Na noturna de 14/11,
+  a rodada inicial foi mais rápida, e os prazos encolheram cerca de 25% em relação à de 13/11 (os de 20,9 s passaram a
+  16,8 s, e os de 31,9 s, a 23,8 s). Os mutantes cobertos por 800 a 1.200 testes, quase todos da `Subchaves` e alguns
+  da `PermutacaoFeistel`, quebram a derivação e não encolhem junto: entre os Timeouts, os cobertos por 800 testes ou
+  mais passaram de 15 para 24. A maior parte dos Timeouts da fatia continua real (49 deram Timeout nas duas rodadas), e
+  a folga maior custa cerca de 15 s a cada um deles, uns 6 min a mais no job, dentro do limite de 75 min do passo.
