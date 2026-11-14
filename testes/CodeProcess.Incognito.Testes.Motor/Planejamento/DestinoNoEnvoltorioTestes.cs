@@ -167,6 +167,32 @@ public sealed class DestinoNoEnvoltorioTestes
     }
 
     [Fact]
+    public async Task Os_batimentos_simultaneos_chegam_ao_dialeto_um_por_vez()
+    {
+        // Os P trabalhadores da cópia conferem o bloqueio ao mesmo tempo; a concessão do dialeto não precisa aceitar isso.
+        var cancelamento = TestContext.Current.CancellationToken;
+        var dentro = 0;
+        var maximo = 0;
+        var provedor = new ProvedorDoPlanejar
+        {
+            NoBatimento = async token =>
+            {
+                var agora = Interlocked.Increment(ref dentro);
+                InterlockedMaximo(ref maximo, agora);
+                await Task.Delay(10, token);
+                Interlocked.Decrement(ref dentro);
+            },
+        };
+        await using var banco = await Conectar(provedor, destino: true);
+        await using var concessao = Assert.IsType<DialetoProtegido.ConcessaoProtegida>(await banco.TentarAdquirirBloqueioAsync(cancelamento));
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => concessao.ConferirAsync(cancelamento), cancelamento)));
+
+        Assert.Equal(1, maximo);
+        Assert.Equal(8, provedor.Chamadas.Count(chamada => chamada == "ConferirBloqueio:destino"));
+    }
+
+    [Fact]
     public async Task A_perda_do_bloqueio_sai_como_INC4001_com_saida_1_e_nunca_como_cancelamento()
     {
         var cancelamento = TestContext.Current.CancellationToken;
@@ -260,4 +286,15 @@ public sealed class DestinoNoEnvoltorioTestes
     private static Task<DialetoProtegido> Conectar(ProvedorDoPlanejar provedor, bool destino) =>
         DialetoProtegido.ConectarAsync(
             provedor, "postgresql", destino ? LadoBanco.Destino : LadoBanco.Origem, new SegredoConexao("Host=servidor;Password=" + Sentinela), TestContext.Current.CancellationToken);
+
+    private static void InterlockedMaximo(ref int alvo, int valor)
+    {
+        for (var atual = Volatile.Read(ref alvo); valor > atual; atual = Volatile.Read(ref alvo))
+        {
+            if (Interlocked.CompareExchange(ref alvo, valor, atual) == atual)
+            {
+                return;
+            }
+        }
+    }
 }

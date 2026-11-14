@@ -244,6 +244,28 @@ public sealed class PropagacaoNoPlanoTestes
     }
 
     [Fact]
+    public async Task Coluna_de_derivarDe_gerada_na_origem_ou_no_destino_da_INC3038_e_a_comum_vai_para_a_carga()
+    {
+        var gerada = (nameof(ColunaEsquema.Geracao), (object?)GeracaoColuna.Armazenada);
+        var comum = Esquema(Tabela("clientes", [Texto("cep", 10), Texto("cidade", 50)]));
+        var geradaNaOrigem = Esquema(Tabela("clientes", [Texto("cep", 10), BancoFalso.Clonar(Texto("cidade", 50), gerada)]));
+        var geradaNoDestino = Esquema(Tabela("clientes", [Texto("cep", 10), BancoFalso.Clonar(Texto("cidade", 50), gerada)]));
+        const string Yaml = "tabelas:\n  loja.clientes:\n    colunas:\n      cep: { transformador: br.cep@1, derivarDe: cidade }\n";
+
+        // A gerada não é lida: o transformador ficaria sem o valor da referência (decisão 101, D11).
+        var daOrigem = Assert.Single(await RecusaAsync(Yaml, geradaNaOrigem, comum));
+        var doDestino = Assert.Single(await RecusaAsync(Yaml, comum, geradaNoDestino));
+        var unidade = (await PlanejarAsync(Yaml, comum)).Execucao.Unidades.Single();
+
+        Assert.Equal(("INC3038", "clientes", "cep"), (daOrigem.Codigo, daOrigem.Tabela!.Tabela, daOrigem.Coluna));
+        Assert.Contains("A coluna cidade de 'derivarDe' é gerada na origem", daOrigem.Mensagem, StringComparison.Ordinal);
+        Assert.Equal(("INC3038", "cep"), (doDestino.Codigo, doDestino.Coluna));
+        Assert.Contains("é gerada no destino", doDestino.Mensagem, StringComparison.Ordinal);
+        Assert.Equal(("cep", "cidade"), (unidade.Tratadas.Single().Coluna, unidade.Tratadas.Single().Referencia));
+        Assert.Equal(["cep", "cidade"], unidade.ColunasLidas);
+    }
+
+    [Fact]
     public async Task Gerada_ligada_por_chave_a_uma_tratada_da_INC3037_dos_dois_lados_da_chave()
     {
         var gerada = (nameof(ColunaEsquema.Geracao), (object?)GeracaoColuna.Armazenada);

@@ -94,9 +94,27 @@ internal static class DiarioDoDestino
     /// <exception cref="BloqueioDestinoException">O bloqueio se perdeu (<c>INC4001</c>).</exception>
     /// <exception cref="FalhaDialetoException">O dialeto falhou ao ler o diário.</exception>
     /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
-    internal static async Task<ResultadoDaRestauracao> RecriarEValidarAsync(
+    internal static Task<ResultadoDaRestauracao> RecriarEValidarAsync(
         DialetoProtegido destino, DialetoProtegido.ConcessaoProtegida concessao, Guid execucao, CancellationToken cancelamento) =>
-        await RestauracaoDoDiario.RecriarEValidarAsync(destino, concessao, await DaExecucaoAsync(destino, concessao, execucao, cancelamento).ConfigureAwait(false), validar: true, cancelamento).ConfigureAwait(false);
+        RecriarAsync(destino, concessao, execucao, validar: true, cancelamento);
+
+    /// <summary>
+    /// A segunda fase da volta com a validação escolhida: na falha e no Ctrl+C, sem validar (a cópia parcial teria órfãos, e o
+    /// <c>VALIDATE</c> varreria a tabela e poria a chave órfã no log do servidor; decisão 101, D9), deixando a chave
+    /// <c>SemValidacao</c> para a próxima execução ou o <c>reparar</c>.
+    /// </summary>
+    /// <param name="destino">O destino.</param>
+    /// <param name="concessao">A concessão viva do bloqueio.</param>
+    /// <param name="execucao">A execução.</param>
+    /// <param name="validar">Se valida cada chave recriada.</param>
+    /// <param name="cancelamento">Cancela a restauração.</param>
+    /// <returns>As chaves que continuam no diário e as falhas.</returns>
+    /// <exception cref="BloqueioDestinoException">O bloqueio se perdeu (<c>INC4001</c>).</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou ao ler o diário.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    internal static async Task<ResultadoDaRestauracao> RecriarAsync(
+        DialetoProtegido destino, DialetoProtegido.ConcessaoProtegida concessao, Guid execucao, bool validar, CancellationToken cancelamento) =>
+        await RestauracaoDoDiario.RecriarEValidarAsync(destino, concessao, await DaExecucaoAsync(destino, concessao, execucao, cancelamento).ConfigureAwait(false), validar, cancelamento).ConfigureAwait(false);
 
     /// <summary>Grava a situação final da execução.</summary>
     /// <param name="destino">O destino.</param>

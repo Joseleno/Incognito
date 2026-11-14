@@ -754,6 +754,17 @@ internal sealed partial class MontagemDoPlano
             return;
         }
 
+        // A gerada não é lida (o banco a recalcula), e o transformador ficaria sem a referência (decisão 101, D11).
+        if (derivada is { } gerada
+            && (gerada.Geracao != GeracaoColuna.Nenhuma || _pares[unidade].Any(par => ReferenceEquals(par.Origem, gerada) && par.Destino.Geracao != GeracaoColuna.Nenhuma)))
+        {
+            Erro(
+                CodigosPlanejar.DerivarDeEmGerada,
+                $"A coluna {NomeTabela.Parte(gerada.Nome)} de 'derivarDe' é gerada {(gerada.Geracao != GeracaoColuna.Nenhuma ? "na origem" : "no destino")}: a cópia não a lê, e o transformador ficaria sem o valor dela. Aponte o 'derivarDe' para uma coluna que não é gerada.",
+                null);
+            return;
+        }
+
         if (Contexto(derivada, destino, tipo, Erro) is not { } contexto)
         {
             return;
@@ -969,23 +980,31 @@ internal sealed partial class MontagemDoPlano
             }).ToArray() ?? [];
             tabelas.Add(new MapaTabela(unidade.NomeTabela, acao, escrita, colunas, entrada is null ? null : NoYaml(entrada.Posicao, entrada.Local)));
 
-            var daOrigem = tabela is null ? default((bool SoAPropria, bool AdmiteFreeze, IReadOnlyList<string> ColunasLidas)?) : UnidadeDeCopia.Forma(tabela, _origem.Esquema);
-            var doDestino = unidade.Destino is null ? default((bool SoAPropria, bool AdmiteFreeze, IReadOnlyList<string> ColunasLidas)?) : UnidadeDeCopia.Forma(unidade.Destino, _destino.Esquema);
-            var soAPropria = daOrigem?.SoAPropria == true || doDestino?.SoAPropria == true;
-            var admiteFreeze = (doDestino ?? daOrigem)!.Value.AdmiteFreeze;
+            // As lidas: os pares da unidade copiada sem gerada de um lado ou do outro, com o nome no destino ao lado.
+            var lidas = _pares.TryGetValue(unidade, out var pares)
+                ? pares.Where(par => par.Origem.Geracao == GeracaoColuna.Nenhuma && par.Destino.Geracao == GeracaoColuna.Nenhuma).ToArray()
+                : [];
             var tratadas = tabela?.Colunas
                 .Where(coluna => _efetivas.ContainsKey(new No(unidade, coluna.Nome)))
                 .Select(coluna =>
                 {
                     var no = new No(unidade, coluna.Nome);
-                    var resolvida = _efetivas[no].Resolvida;
+                    var efetiva = _efetivas[no];
+                    var resolvida = efetiva.Resolvida;
 
                     // Sem o contexto, o executor não recriaria o transformador como o planejar o conferiu: é defeito.
                     var contexto = _contextos.TryGetValue(no, out var criado) ? criado : throw new InvalidOperationException("Coluna tratada sem o contexto de criação.");
-                    return new ColunaTratada(coluna.Nome, resolvida.Fabrica, resolvida.Regra, resolvida.Normalizados, contexto);
+                    return new ColunaTratada(
+                        coluna.Nome, resolvida.Fabrica, resolvida.Regra, resolvida.Normalizados, contexto, Derivada(no, efetiva)?.Nome, _injetividades.GetValueOrDefault(no, resolvida.Fabrica.Injetividade));
                 })
                 .ToArray() ?? [];
-            unidades.Add(new UnidadeDeCopia(unidade.NomeTabela, acao, soAPropria, admiteFreeze, daOrigem?.ColunasLidas ?? [], tratadas));
+            unidades.Add(new UnidadeDeCopia(
+                unidade.NomeTabela,
+                acao,
+                unidade.Destino is { } destino ? new NomeTabela(destino.Nome.Esquema, destino.Nome.Nome) : null,
+                [.. lidas.Select(par => par.Origem.Nome)],
+                [.. lidas.Select(par => par.Destino.Nome)],
+                tratadas));
         }
 
         var chaves = _chavesDoDiario

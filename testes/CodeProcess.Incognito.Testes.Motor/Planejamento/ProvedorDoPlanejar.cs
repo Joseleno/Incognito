@@ -132,6 +132,24 @@ internal sealed class ProvedorDoPlanejar(EsquemaBanco? origem = null, EsquemaBan
     /// <summary>O que o diário faz antes de cada operação, com o token que recebeu (esperar, perder o bloqueio).</summary>
     internal Func<Operacao, CancellationToken, Task>? NoDiario { get; init; }
 
+    /// <summary>O gravador do destino, para os testes da cópia; sem ele, a gravação não existe.</summary>
+    internal GravadorEmLote? Gravador { get; init; }
+
+    /// <summary>A sessão de leitura da origem, para os testes do executor; sem ela, a leitura não existe.</summary>
+    internal Func<PedidoLeitura, SessaoLeitura>? Sessao { get; init; }
+
+    /// <summary>O que o batimento do bloqueio faz antes de chamar o dialeto, com o token que recebeu.</summary>
+    internal Func<CancellationToken, Task>? NoBatimento { get; init; }
+
+    /// <summary>A situação com que a última execução foi encerrada.</summary>
+    internal SituacaoExecucao? EncerradaComo { get; set; }
+
+    /// <summary>A última execução iniciada no diário.</summary>
+    internal Guid? Execucao { get; set; }
+
+    /// <summary>O diário lido depois de iniciada uma execução, pela execução; sem ele, o <see cref="EstadoDoDiario"/>.</summary>
+    internal Func<Guid, EstadoDiario>? DiarioDaExecucao { get; init; }
+
     public override Task<DialetoOrigem> ConectarOrigemAsync(SegredoConexao conexao, CancellationToken cancelamento) =>
         Executar(Operacao.Conectar, destino: false, () => (DialetoOrigem)new OrigemDoPlanejar(this), cancelamento);
 
@@ -192,8 +210,9 @@ internal sealed class OrigemDoPlanejar(ProvedorDoPlanejar provedor) : DialetoOri
 
     public override LeitorDadosOrigem Dados => provedor.Obter(Operacao.ObterDados, false, _dados);
 
-    // O planejar não lê em sessão.
-    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => throw new NotSupportedException();
+    // O planejar não lê em sessão; o executor, pela sessão dada.
+    protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) =>
+        provedor.Sessao is { } sessao ? Task.FromResult(sessao(pedido)) : throw new NotSupportedException();
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
@@ -238,7 +257,7 @@ internal sealed class DestinoDoPlanejar(ProvedorDoPlanejar provedor) : DialetoDe
 
     public override DiarioExecucao Diario => provedor.Obter(Operacao.ObterDiario, true, _diario);
 
-    public override GravadorEmLote Gravador => throw new NotSupportedException();
+    public override GravadorEmLote Gravador => provedor.Gravador ?? throw new NotSupportedException();
 
     // O planejar não lê em sessão.
     protected override Task<SessaoLeitura> AbrirLeituraAsyncCore(PedidoLeitura pedido, CancellationToken cancelamento) => throw new NotSupportedException();
@@ -338,7 +357,15 @@ internal sealed class ConcessaoDoPlanejar(ProvedorDoPlanejar provedor) : Concess
 
     public override int GetHashCode() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 
-    protected override Task ConferirAsyncCore(CancellationToken cancelamento) => provedor.Executar(Operacao.ConferirBloqueio, destino: true, () => true, cancelamento);
+    protected override async Task ConferirAsyncCore(CancellationToken cancelamento)
+    {
+        if (provedor.NoBatimento is { } antes)
+        {
+            await antes(cancelamento);
+        }
+
+        await provedor.Executar(Operacao.ConferirBloqueio, destino: true, () => true, cancelamento);
+    }
 
     protected override async ValueTask LiberarAsyncCore()
     {
@@ -476,9 +503,15 @@ internal sealed class DiarioDoPlanejar(ProvedorDoPlanejar provedor) : DiarioExec
     public override Task CriarAsync(CancellationToken cancelamento) => Fazer(Operacao.CriarDiario, () => provedor.DiarioCriado = true, cancelamento);
 
     public override Task<EstadoDiario> LerAsync(CancellationToken cancelamento) =>
-        Fazer(Operacao.LerDiario, () => provedor.DiarioCriado && !provedor.EstadoDoDiario.Existe ? new EstadoDiario { Existe = true } : provedor.EstadoDoDiario, cancelamento);
+        Fazer(
+            Operacao.LerDiario,
+            () => provedor.DiarioDaExecucao is { } daExecucao && provedor.Execucao is { } execucao ? daExecucao(execucao)
+                : provedor.DiarioCriado && !provedor.EstadoDoDiario.Existe ? new EstadoDiario { Existe = true }
+                : provedor.EstadoDoDiario,
+            cancelamento);
 
-    public override Task IniciarAsync(Guid execucao, Guid marcador, DateTimeOffset iniciadaEm, CancellationToken cancelamento) => Fazer(Operacao.IniciarExecucao, () => true, cancelamento);
+    public override Task IniciarAsync(Guid execucao, Guid marcador, DateTimeOffset iniciadaEm, CancellationToken cancelamento) =>
+        Fazer(Operacao.IniciarExecucao, () => provedor.Execucao = execucao, cancelamento);
 
     public override Task RemoverChaveAsync(Guid execucao, NomeObjeto tabela, string chave, CancellationToken cancelamento) => Fazer(Operacao.RemoverChave, () => true, cancelamento);
 
@@ -492,7 +525,7 @@ internal sealed class DiarioDoPlanejar(ProvedorDoPlanejar provedor) : DiarioExec
 
     public override Task DescartarAsync(EntradaDiario entrada, CancellationToken cancelamento) => Fazer(Operacao.DescartarEntrada, () => true, cancelamento);
 
-    public override Task EncerrarAsync(Guid execucao, SituacaoExecucao situacao, DateTimeOffset encerradaEm, CancellationToken cancelamento) => Fazer(Operacao.EncerrarExecucao, () => true, cancelamento);
+    public override Task EncerrarAsync(Guid execucao, SituacaoExecucao situacao, DateTimeOffset encerradaEm, CancellationToken cancelamento) => Fazer(Operacao.EncerrarExecucao, () => provedor.EncerradaComo = situacao, cancelamento);
 
     public override string ToString() => throw new InvalidOperationException(ProvedorDoPlanejar.Sentinela);
 

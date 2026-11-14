@@ -15,12 +15,13 @@ public sealed class Plano
 
     private static readonly SearchValues<char> _hexMinusculo = SearchValues.Create("0123456789abcdef");
 
-    internal Plano(IEnumerable<MapaTabela> tabelas, IEnumerable<Aviso> avisos, string hashConfiguracao, DadosDeExecucao execucao)
+    internal Plano(IEnumerable<MapaTabela> tabelas, IEnumerable<Aviso> avisos, string hashConfiguracao, DadosDeExecucao execucao, ConfiguracaoIncognito fonte)
     {
         ArgumentNullException.ThrowIfNull(tabelas);
         ArgumentNullException.ThrowIfNull(avisos);
         ArgumentNullException.ThrowIfNull(hashConfiguracao);
         ArgumentNullException.ThrowIfNull(execucao);
+        ArgumentNullException.ThrowIfNull(fonte);
         if (!HashValido(hashConfiguracao))
         {
             throw new ArgumentException("O hash da configuração é \"sha256:\" seguido de 64 dígitos hexadecimais minúsculos.", nameof(hashConfiguracao));
@@ -31,6 +32,12 @@ public sealed class Plano
         Avisos = [.. avisos];
         HashConfiguracao = hashConfiguracao;
         Execucao = execucao;
+        FonteDoPlano = fonte;
+        if (ConfiguracaoDaExecucao.De(fonte) != execucao.Configuracao)
+        {
+            throw new ArgumentException("A configuração não é a da carga.", nameof(fonte));
+        }
+
         foreach (var tabela in Tabelas)
         {
             ArgumentNullException.ThrowIfNull(tabela, nameof(tabelas));
@@ -73,6 +80,13 @@ public sealed class Plano
 
     /// <summary>O que a execução lê e o plano não publica.</summary>
     internal DadosDeExecucao Execucao { get; }
+
+    /// <summary>
+    /// A configuração de que o plano saiu, só para o replanejamento da execução (<see cref="Replanejador"/>, guarda de
+    /// arquitetura): nenhum outro consumidor lê a regra escrita no lugar da efetiva, e depois de replanejar o executor lê só
+    /// a carga refeita. Imutável, e só com referências de segredo, nunca o valor.
+    /// </summary>
+    internal ConfiguracaoIncognito FonteDoPlano { get; }
 
     /// <summary>No formato <c>Plano sha256:… (n tabelas, m avisos)</c>.</summary>
     public override string ToString() =>

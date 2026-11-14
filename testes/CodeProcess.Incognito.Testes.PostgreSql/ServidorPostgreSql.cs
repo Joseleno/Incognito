@@ -129,6 +129,18 @@ public sealed class ServidorPostgreSql : IAsyncLifetime
     /// <remarks>O clone não herda o dono do modelo: o dono vem no CREATE DATABASE.</remarks>
     public Task<string> CriarDestinoAsync(CancellationToken cancelamento) => ClonarAsync("destino", _modeloDestino, $" OWNER {Dono}", cancelamento);
 
+    /// <summary>Cria um banco vazio, para um teste com esquema próprio (o de conformidade não passa no <c>planejar</c>).</summary>
+    /// <param name="papel">O papel do banco, no nome.</param>
+    /// <param name="dono">O dono do banco; nulo, o administrador.</param>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>O nome do banco.</returns>
+    public async Task<string> CriarVazioAsync(string papel, string? dono, CancellationToken cancelamento)
+    {
+        var banco = NovoNome(papel);
+        await ExecutarAsync(Administrador, $"CREATE DATABASE {banco}{(dono is null ? "" : " OWNER " + dono)}", cancelamento);
+        return banco;
+    }
+
     /// <summary>
     /// Clona o banco-modelo do diário num banco novo do administrador, em que o dono pode conectar e criar esquema (o
     /// clone não leva os direitos do banco).
