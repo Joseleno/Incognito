@@ -43,7 +43,7 @@
   <ItemGroup>
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
     <PackageVersion Include="Corvus.Json.Validator" Version="5.8.4" />
-    <PackageVersion Include="CsCheck" Version="4.9.1" />
+    <PackageVersion Include="CsCheck" Version="5.0.1" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="xunit.v3" Version="$(VersaoXunit)" />
     <PackageVersion Include="xunit.v3.assert" Version="$(VersaoXunit)" />
