@@ -110,6 +110,10 @@ jobs:
             # Na criptografia, 2 execuções em paralelo: com 4 nas 4 vCPU do runner, mutantes que morrem devagar passam a
             # esgotar o tempo (27% das fatias, contra 17% medidos sem disputa) e estouram o teto da conferência.
             concorrencia: 2
+            # Folga de 25 s, como na particionada-chave: mutantes da Subchaves e da PermutacaoFeistel rodam de 800 a 1.200
+            # testes, e o prazo (2 vezes a rodada inicial dos testes que cobrem o mutante mais a folga) encolhe quando o
+            # runner faz a rodada inicial mais depressa; com 10 s, eles viravam Timeout e a fatia passava do teto de 25%.
+            folga: 25000
             padroes: |
               **/Criptografia/PermutacaoFeistel.cs
               **/Criptografia/HmacDeSemente.cs
