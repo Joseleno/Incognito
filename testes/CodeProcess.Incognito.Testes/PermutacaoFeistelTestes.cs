@@ -186,7 +186,7 @@ public sealed class PermutacaoFeistelTestes
         // (é ela que aparece na falha, com a semente do CsCheck para repetir).
         var lados = Gen.Int[2, 36].SelectMany(radix => Gen.OneOf(Gen.ULong[2, 10_000], Gen.ULong[2, uint.MaxValue]).SelectMany(a =>
             Gen.ULong[Math.Max(2, (a + (ulong)radix - 1) / (ulong)radix), Math.Min(uint.MaxValue, a * (ulong)radix)].Select(b => (radix, a, b))));
-        var casos = Gen.Select(lados, Gen.OneOfConst(10, 12, 24), Gen.Byte.Array[0, 300], Gen.Int[0, 2], Gen.ULong, Gen.ULong, Gen.Bool);
+        var casos = Gen.Select(lados, Gen.OneOf(10, 12, 24), Gen.Byte.Array[0, 300], Gen.Int[0, 2], Gen.ULong, Gen.ULong, Gen.Bool);
 
         casos.Sample((dominio, rodadas, ajuste, exclusao, sementeDaChave, sorteio, comAdicional) =>
         {
