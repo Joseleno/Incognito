@@ -38,11 +38,11 @@
     executável), o xunit.v3.extensibility.core e o xunit.v3.assert, que ele também traz.
   -->
   <PropertyGroup>
-    <VersaoXunit>4.0.2</VersaoXunit>
+    <VersaoXunit>4.0.3</VersaoXunit>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
-    <PackageVersion Include="Corvus.Json.Validator" Version="5.8.4" />
+    <PackageVersion Include="Corvus.Json.Validator" Version="5.8.8" />
     <PackageVersion Include="CsCheck" Version="5.0.1" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="xunit.v3" Version="$(VersaoXunit)" />
