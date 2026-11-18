@@ -51,6 +51,23 @@ internal static class ClassificadorDeSaida
             : Sucesso;
     }
 
+    /// <summary>
+    /// A saída de uma execução que passou do preparo do diário (ou teve a confirmação negada): 130 quando o usuário
+    /// interrompeu, depois 1 (falha da cópia ou da restauração), depois 4 (chave pendente), e 0.
+    /// </summary>
+    /// <param name="resultado">O resultado.</param>
+    /// <returns>O código de saída.</returns>
+    internal static int De(ResultadoDaExecucao resultado)
+    {
+        ArgumentNullException.ThrowIfNull(resultado);
+        if (resultado.Falha is { } falha)
+        {
+            return falha is OperationCanceledException ? Cancelado : Execucao;
+        }
+
+        return resultado.Restauracao is { } restauracao ? De(restauracao) : Sucesso;
+    }
+
     /// <summary>O código de saída de um reparo que terminou.</summary>
     /// <param name="resultado">O que o reparo fez.</param>
     /// <returns>O código de saída.</returns>

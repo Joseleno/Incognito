@@ -52,10 +52,8 @@ internal sealed record ContextoDaColuna(
 
 /// <summary>
 /// A criação de validação do <c>planejar</c>: uma sessão descartável, com chave aleatória e a tabela de domínios, em que
-/// cada coluna tratada tem o transformador criado, lido e descartado. O executor recria tudo com a chave real. O que uma
-/// fábrica de fora lança vira erro do plano só com o tipo; a recusa (<see cref="RegraInvalidaException"/>) sai com a
-/// mensagem escapada; o cancelamento pedido e a falta de memória sobem novos, sem a mensagem nem a interna de fora; e a
-/// exceção de uma embutida é defeito e sobe.
+/// cada coluna tratada tem o transformador criado (pela <see cref="CriacaoProtegida"/>), lido e descartado. O executor
+/// recria tudo com a chave real, pela mesma criação protegida.
 /// </summary>
 internal sealed class CriacaoNoPlano : IDisposable
 {
@@ -93,50 +91,10 @@ internal sealed class CriacaoNoPlano : IDisposable
     /// <exception cref="OutOfMemoryException">Falta de memória numa fábrica de fora, sem a mensagem dela.</exception>
     internal (string Codigo, string Mensagem)? Criar(FabricaRegistrada fabrica, RegraTransformacao regra, ContextoDaColuna contexto)
     {
-        _cancelamento.ThrowIfCancellationRequested();
-        var deFora = !fabrica.Embutida;
-        var novo = contexto.Novo(regra, _sessao);
-        Transformador criado;
-        try
-        {
-            criado = fabrica.Criar(novo);
-        }
-        catch (RegraInvalidaException recusa)
-        {
-            return (CodigosPlanejar.CriacaoRecusada, $"O transformador {fabrica.Nome}@{fabrica.Versao} recusou a coluna: {TextoSeguro.Mensagem(recusa.Message)}");
-        }
-        catch (OperationCanceledException) when (_cancelamento.IsCancellationRequested)
-        {
-            throw new OperationCanceledException(_cancelamento);
-        }
-        catch (OutOfMemoryException) when (deFora)
-        {
-            throw SemMensagem();
-        }
-        catch (Exception excecao) when (deFora)
-        {
-            return Falha(fabrica, "criar", excecao);
-        }
+        var (criado, erro) = CriacaoProtegida.Criar(fabrica, regra, contexto, _sessao, _cancelamento);
 
         // Descartado uma vez, aqui: o planejar só precisa saber que a criação vinga.
-        try
-        {
-            (criado as IDisposable)?.Dispose();
-        }
-        catch (OperationCanceledException) when (_cancelamento.IsCancellationRequested)
-        {
-            throw new OperationCanceledException(_cancelamento);
-        }
-        catch (OutOfMemoryException) when (deFora)
-        {
-            throw SemMensagem();
-        }
-        catch (Exception excecao) when (deFora)
-        {
-            return Falha(fabrica, "descartar", excecao);
-        }
-
-        return null;
+        return erro ?? CriacaoProtegida.Descartar(fabrica, criado!, _cancelamento);
     }
 
     /// <summary>Descarta a sessão e depois a chave, que é zerada.</summary>
@@ -150,6 +108,85 @@ internal sealed class CriacaoNoPlano : IDisposable
         {
             _chave.Dispose();
         }
+    }
+}
+
+/// <summary>
+/// A criação protegida de um transformador, a única que chama <see cref="FabricaRegistrada.Criar"/> (guarda de
+/// arquitetura), no <c>planejar</c> e na execução: o que uma fábrica de fora lança vira erro do plano só com o tipo; a
+/// recusa (<see cref="RegraInvalidaException"/>) sai com a mensagem escapada; o cancelamento pedido e a falta de memória
+/// sobem novos, sem a mensagem nem a interna de fora; e a exceção de uma embutida é defeito e sobe.
+/// </summary>
+internal static class CriacaoProtegida
+{
+    /// <summary>Cria o transformador de uma coluna, conferido contra o que a fábrica registrou.</summary>
+    /// <param name="fabrica">A fábrica registrada.</param>
+    /// <param name="regra">A regra conferida.</param>
+    /// <param name="contexto">O contexto da coluna.</param>
+    /// <param name="sessao">A sessão da criação.</param>
+    /// <param name="cancelamento">Cancela a criação.</param>
+    /// <returns>O transformador criado, ou o código e a mensagem do erro.</returns>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    /// <exception cref="OutOfMemoryException">Falta de memória numa fábrica de fora, sem a mensagem dela.</exception>
+    internal static (Transformador? Criado, (string Codigo, string Mensagem)? Erro) Criar(
+        FabricaRegistrada fabrica, RegraTransformacao regra, ContextoDaColuna contexto, SessaoTransformacao sessao, CancellationToken cancelamento)
+    {
+        ArgumentNullException.ThrowIfNull(fabrica);
+        ArgumentNullException.ThrowIfNull(contexto);
+        cancelamento.ThrowIfCancellationRequested();
+        var deFora = !fabrica.Embutida;
+        var novo = contexto.Novo(regra, sessao);
+        try
+        {
+            return (fabrica.Criar(novo), null);
+        }
+        catch (RegraInvalidaException recusa)
+        {
+            return (null, (CodigosPlanejar.CriacaoRecusada, $"O transformador {fabrica.Nome}@{fabrica.Versao} recusou a coluna: {TextoSeguro.Mensagem(recusa.Message)}"));
+        }
+        catch (OperationCanceledException) when (cancelamento.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancelamento);
+        }
+        catch (OutOfMemoryException) when (deFora)
+        {
+            throw SemMensagem();
+        }
+        catch (Exception excecao) when (deFora)
+        {
+            return (null, Falha(fabrica, "criar", excecao));
+        }
+    }
+
+    /// <summary>Descarta um transformador criado (o que não é <see cref="IDisposable"/> não tem o que descartar).</summary>
+    /// <param name="fabrica">A fábrica que o criou.</param>
+    /// <param name="criado">O transformador.</param>
+    /// <param name="cancelamento">O cancelamento do chamador, para reconhecer o pedido.</param>
+    /// <returns>O código e a mensagem do erro de uma fábrica de fora; nulo quando descartou.</returns>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    /// <exception cref="OutOfMemoryException">Falta de memória numa fábrica de fora, sem a mensagem dela.</exception>
+    internal static (string Codigo, string Mensagem)? Descartar(FabricaRegistrada fabrica, Transformador criado, CancellationToken cancelamento)
+    {
+        ArgumentNullException.ThrowIfNull(fabrica);
+        var deFora = !fabrica.Embutida;
+        try
+        {
+            (criado as IDisposable)?.Dispose();
+        }
+        catch (OperationCanceledException) when (cancelamento.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancelamento);
+        }
+        catch (OutOfMemoryException) when (deFora)
+        {
+            throw SemMensagem();
+        }
+        catch (Exception excecao) when (deFora)
+        {
+            return Falha(fabrica, "descartar", excecao);
+        }
+
+        return null;
     }
 
     private static (string Codigo, string Mensagem) Falha(FabricaRegistrada fabrica, string operacao, Exception excecao) =>

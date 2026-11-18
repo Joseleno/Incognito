@@ -26,6 +26,12 @@ internal static class CodigosPlanejar
     /// <summary>Outra execução tem o bloqueio do destino (saída 1, <c>BloqueioDestinoException</c>).</summary>
     internal const string DestinoOcupado = "INC3004";
 
+    /// <summary>
+    /// O banco mudou desde o <c>planejar</c>: o replanejamento da execução não deu a mesma carga (saída 2, antes de qualquer
+    /// escrita da cópia). A mensagem diz só qual tabela, coluna ou domínio divergiu.
+    /// </summary>
+    internal const string BancoMudou = "INC3005";
+
     /// <summary>Tabela escrita na configuração que não existe em nenhum dos bancos (saída 2).</summary>
     internal const string TabelaInexistente = "INC3010";
 
@@ -76,6 +82,9 @@ internal static class CodigosPlanejar
 
     /// <summary>A coluna de <c>derivarDe</c> não tem forma canônica na origem (saída 2).</summary>
     internal const string DerivarDeSemFormaCanonica = "INC3034";
+
+    /// <summary>A coluna de <c>derivarDe</c> é gerada na origem ou no destino: a cópia não a lê (saída 2).</summary>
+    internal const string DerivarDeEmGerada = "INC3038";
 
     /// <summary>Chave estrangeira do destino de uma tabela copiada para uma esvaziada: as linhas ficariam órfãs (saída 2).</summary>
     internal const string CopiadaParaEsvaziada = "INC3035";

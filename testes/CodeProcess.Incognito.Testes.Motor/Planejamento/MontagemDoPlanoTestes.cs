@@ -447,10 +447,10 @@ public sealed class MontagemDoPlanoTestes
     }
 
     [Fact]
-    public async Task A_forma_da_unidade_olha_os_dois_lados()
+    public async Task A_unidade_leva_o_nome_no_destino_e_so_a_copiada_tem_colunas_lidas()
     {
-        // O esvaziamento é no destino: a herdeira que só existe lá (ignorada por escrito) exige o ONLY na mãe; e a gravação
-        // numa particionada do destino não admite congelar, mesmo com a origem comum.
+        // Se a leitura se limita à própria tabela e se a gravação congela, o dialeto decide pelo catálogo dele: a carga só
+        // diz onde gravar, e o que ler na unidade copiada.
         var origem = ComTabelas(Clientes(), Pedidos(), Simples("pessoa"), Simples("vendas"));
         var herdeira = new TabelaEsquema { Nome = Nome("funcionario"), Tipo = TipoTabela.Herdeira, Pai = Nome("pessoa"), Colunas = [Inteiro("id")] };
         var destino = ComTabelas(Clientes(), Pedidos(), Simples("pessoa"), herdeira, BancoFalso.Clonar(Vendas(), (nameof(TabelaEsquema.Colunas), new[] { Inteiro("id") })),
@@ -459,9 +459,13 @@ public sealed class MontagemDoPlanoTestes
         var plano = await PlanejarAsync("tabelas:\n  loja.funcionario: { acao: ignorar }\n", origem, destino);
 
         var unidades = plano.Execucao.Unidades.ToDictionary(unidade => unidade.Nome.Tabela);
-        Assert.Equal((true, true), (unidades["pessoa"].SoAPropria, unidades["pessoa"].AdmiteFreeze));
-        Assert.Equal((false, false), (unidades["vendas"].SoAPropria, unidades["vendas"].AdmiteFreeze));
-        Assert.Equal((false, true), (unidades["clientes"].SoAPropria, unidades["clientes"].AdmiteFreeze));
+        Assert.Equal("pessoa", unidades["pessoa"].NoDestino!.Tabela);
+        Assert.Equal(["id"], unidades["pessoa"].ColunasNoDestino);
+        Assert.Equal(unidades["pessoa"].ColunasLidas, unidades["pessoa"].ColunasNoDestino);
+        Assert.Equal("vendas", unidades["vendas"].NoDestino!.Tabela);
+        Assert.Equal(["id", "cpf", "nome"], unidades["clientes"].ColunasLidas);
+        Assert.Equal((AcaoTabela.Ignorar, "funcionario"), (unidades["funcionario"].Acao, unidades["funcionario"].NoDestino!.Tabela));
+        Assert.Empty(unidades["funcionario"].ColunasLidas);
     }
 
     [Fact]

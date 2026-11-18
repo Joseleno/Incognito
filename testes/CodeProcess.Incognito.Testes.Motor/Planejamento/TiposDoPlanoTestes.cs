@@ -174,7 +174,7 @@ public sealed class TiposDoPlanoTestes
         var colunas = new List<MapaColuna> { new("cpf", TipoColuna.Texto, null, new Classificacao(sensivel: true, identificador: false)) };
         var tabela = new MapaTabela(new NomeTabela("loja", "cliente"), AcaoTabela.Copiar, acaoEscrita: false, colunas, posicao: null);
         var tabelas = new List<MapaTabela> { tabela };
-        var plano = new Plano(tabelas, [], Hash, CargaSintetica.Para(Yaml.Minimo, tabela));
+        var plano = new Plano(tabelas, [], Hash, CargaSintetica.Para(Yaml.Minimo, tabela), Yaml.Ler(Yaml.Minimo));
         colunas.Clear();
         tabelas.Clear();
 
@@ -186,7 +186,7 @@ public sealed class TiposDoPlanoTestes
         Assert.True(((ICollection<MapaColuna>)tabela.Colunas).IsReadOnly);
         Assert.True(((ICollection<Aviso>)plano.Avisos).IsReadOnly);
         Assert.Equal($"Plano {Hash} (1 tabela, 0 avisos)", plano.ToString());
-        Assert.Equal($"Plano {Hash} (0 tabelas, 1 aviso)", new Plano([], [new Aviso("INC3530", "Mensagem.")], Hash, CargaSintetica.Para(Yaml.Minimo)).ToString());
+        Assert.Equal($"Plano {Hash} (0 tabelas, 1 aviso)", new Plano([], [new Aviso("INC3530", "Mensagem.")], Hash, CargaSintetica.Para(Yaml.Minimo), Yaml.Ler(Yaml.Minimo)).ToString());
     }
 
     [Theory]
@@ -199,13 +199,13 @@ public sealed class TiposDoPlanoTestes
     [InlineData("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg")]
     [InlineData("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef1234567")]
     public void O_plano_recusa_hash_fora_do_formato(string hash) =>
-        Assert.Throws<ArgumentException>(() => new Plano([], [], hash, CargaSintetica.Para(Yaml.Minimo)));
+        Assert.Throws<ArgumentException>(() => new Plano([], [], hash, CargaSintetica.Para(Yaml.Minimo), Yaml.Ler(Yaml.Minimo)));
 
     [Fact]
     public void Item_nulo_nas_listas_e_recusado()
     {
-        Assert.Throws<ArgumentNullException>(() => new Plano([null!], [], Hash, CargaSintetica.Para(Yaml.Minimo)));
-        Assert.Throws<ArgumentNullException>(() => new Plano([], [null!], Hash, CargaSintetica.Para(Yaml.Minimo)));
+        Assert.Throws<ArgumentNullException>(() => new Plano([null!], [], Hash, CargaSintetica.Para(Yaml.Minimo), Yaml.Ler(Yaml.Minimo)));
+        Assert.Throws<ArgumentNullException>(() => new Plano([], [null!], Hash, CargaSintetica.Para(Yaml.Minimo), Yaml.Ler(Yaml.Minimo)));
         Assert.Throws<ArgumentNullException>(() => new MapaTabela(new NomeTabela("loja", "cliente"), AcaoTabela.Copiar, false, [null!], null));
         Assert.Throws<ArgumentNullException>(() => new MapaColuna("cpf", null, null, null!));
         Assert.Throws<ArgumentException>(() => new MapaColuna("", null, null, new Classificacao(false, false)));

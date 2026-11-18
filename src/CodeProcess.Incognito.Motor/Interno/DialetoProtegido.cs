@@ -741,6 +741,9 @@ internal sealed partial class DialetoProtegido : IAsyncDisposable
         private readonly CancellationToken _doDialeto;
         private readonly CancellationTokenSource _perdido = new();
         private readonly CancellationTokenRegistration _registro;
+
+        // Os trabalhadores da cópia conferem em paralelo: um batimento por vez no dialeto.
+        private readonly SemaphoreSlim _batimento = new(1, 1);
         private int _liberada;
 
         internal ConcessaoProtegida(ConcessaoBloqueio concessao, CancellationToken doDialeto)
@@ -752,6 +755,12 @@ internal sealed partial class DialetoProtegido : IAsyncDisposable
 
         /// <summary>Cancelado quando o bloqueio se perde, numa thread do motor.</summary>
         internal CancellationToken Perdido => _perdido.Token;
+
+        /// <summary>
+        /// Se o bloqueio se perdeu, lido na hora: o <see cref="Perdido"/> é cancelado fora da thread do dialeto, e pode chegar
+        /// depois de quem pergunta.
+        /// </summary>
+        internal bool EstaPerdida => _doDialeto.IsCancellationRequested || _perdido.IsCancellationRequested;
 
         /// <summary>O batimento antes de um passo crítico.</summary>
         /// <param name="cancelamento">O token do chamador (o cancelamento dele não é perda).</param>
@@ -767,6 +776,7 @@ internal sealed partial class DialetoProtegido : IAsyncDisposable
                 throw Perda();
             }
 
+            await _batimento.WaitAsync(cancelamento).ConfigureAwait(false);
             try
             {
                 await _concessao.ConferirAsync(cancelamento).ConfigureAwait(false);
@@ -779,6 +789,10 @@ internal sealed partial class DialetoProtegido : IAsyncDisposable
             {
                 Cancelar(_perdido);
                 throw Perda();
+            }
+            finally
+            {
+                _batimento.Release();
             }
         }
 
@@ -812,6 +826,9 @@ internal sealed partial class DialetoProtegido : IAsyncDisposable
             catch
             {
             }
+
+            // Liberada só depois de toda tarefa aguardada: nenhum batimento corre aqui.
+            _batimento.Dispose();
         }
 
         private static BloqueioDestinoException Perda() => new(

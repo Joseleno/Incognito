@@ -7,6 +7,9 @@ name: noturno
 # runner do Stryker para o Microsoft Testing Platform ainda é preview. Um teste novo pesado não dispara: aparece como
 # falha do noturno seguinte (ver Mutacao.cs). O relatório de cada fatia fica como artefato.
 #
+# O job execucao-postgresql copia 10 milhões de linhas pelo executor no PostgreSQL 18 (categoria Noturno, que o ci.yml e o
+# release.yml filtram): a memória estável numa tabela grande. Só no agendamento e quando pedido, nunca no pull request.
+#
 # O núcleo inteiro num job só passaria de 2 h no runner: são 8 fatias em paralelo, de ~210 a ~310 mutantes testados
 # (as da criptografia menores, porque cada mutante custa mais), e a última é o complemento das outras sete, para um
 # arquivo novo do núcleo sempre cair em alguma. O job fatias confere que o complemento acompanha as outras.
@@ -252,3 +255,25 @@ jobs:
             testes/CodeProcess.Incognito.Testes/StrykerOutput/console.log
           if-no-files-found: warn
           retention-days: 30
+
+  execucao-postgresql:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      INCOGNITO_POSTGRES: '18'
+      # Sem o Ryuk do Testcontainers, como no ci.yml; o runner é descartado no fim.
+      TESTCONTAINERS_RYUK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: testes/CodeProcess.Incognito.Testes.PostgreSql/packages.lock.json
+      - run: dotnet restore testes/CodeProcess.Incognito.Testes.PostgreSql --locked-mode
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --filter-trait "Categoria=Noturno" --minimum-expected-tests 1

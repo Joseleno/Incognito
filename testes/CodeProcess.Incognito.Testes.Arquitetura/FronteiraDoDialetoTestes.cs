@@ -20,7 +20,8 @@ public sealed class FronteiraDoDialetoTestes
         typeof(ProvedorDialeto), typeof(DialetoBanco), typeof(DialetoOrigem), typeof(DialetoDestino),
         typeof(LeitorEsquema), typeof(IdentidadeBanco), typeof(DialetoSql), typeof(LeitorDadosOrigem),
         typeof(LeitorDadosDestino), typeof(MarcadorDestino), typeof(BloqueioExecucao), typeof(ConcessaoBloqueio),
-        typeof(DiarioExecucao), typeof(SessaoLeitura), typeof(LeitorDaSessao),
+        typeof(DiarioExecucao), typeof(SessaoLeitura), typeof(LeitorDaSessao), typeof(LeituraTabela), typeof(LoteLinhas),
+        typeof(GravadorEmLote), typeof(GravacaoTabela),
     ];
 
     // As partes que só existem depois do conectar, que só o envoltório chama: ninguém mais as guarda.
@@ -28,7 +29,8 @@ public sealed class FronteiraDoDialetoTestes
     [
         typeof(DialetoBanco), typeof(LeitorEsquema), typeof(IdentidadeBanco), typeof(DialetoSql), typeof(LeitorDadosOrigem),
         typeof(LeitorDadosDestino), typeof(MarcadorDestino), typeof(BloqueioExecucao), typeof(ConcessaoBloqueio),
-        typeof(DiarioExecucao), typeof(SessaoLeitura), typeof(LeitorDaSessao),
+        typeof(DiarioExecucao), typeof(SessaoLeitura), typeof(LeitorDaSessao), typeof(LeituraTabela), typeof(LoteLinhas),
+        typeof(GravadorEmLote), typeof(GravacaoTabela),
     ];
 
     [Fact]

@@ -151,8 +151,9 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet restore testes/CodeProcess.Incognito.Testes.PostgreSql --locked-mode
-      # O projeto ignora o código 8 (no job sem banco ele roda zero testes); aqui, zero testes sai com 9.
-      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --minimum-expected-tests 1
+      # O projeto ignora o código 8 (no job sem banco ele roda zero testes); aqui, zero testes sai com 9. Os 10 milhões
+      # (Noturno) ficam com o noturno.yml, que os roda todo dia.
+      - run: dotnet test --project testes/CodeProcess.Incognito.Testes.PostgreSql -c Release --no-restore --filter-not-trait "Categoria=Noturno" --minimum-expected-tests 1
 
   atestar:
     needs: [preparar, pacotes]

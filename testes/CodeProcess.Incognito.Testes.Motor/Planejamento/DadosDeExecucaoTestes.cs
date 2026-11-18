@@ -3,6 +3,7 @@ using CodeProcess.Incognito.Dialetos;
 using CodeProcess.Incognito.Execucao;
 using CodeProcess.Incognito.Interno;
 using CodeProcess.Incognito.Testes.Motor.Configuracao;
+using CodeProcess.Incognito.Testes.Motor.Dialetos;
 
 namespace CodeProcess.Incognito.Testes.Motor.Planejamento;
 
@@ -51,40 +52,62 @@ public sealed class DadosDeExecucaoTestes
     }
 
     [Fact]
-    public void A_tabela_comum_le_tudo_menos_as_geradas_e_admite_congelar()
+    public void A_unidade_pareia_as_lidas_com_o_destino_e_recusa_tratada_sem_a_coluna_lida()
     {
-        var tabela = Tabela("comum", TipoTabela.Comum);
-        var comGeradas = new TabelaEsquema
-        {
-            Nome = EsquemaSintetico.Nome("comum"),
-            Colunas = [EsquemaSintetico.Inteiro("id"), Gerada("armazenada", GeracaoColuna.Armazenada), EsquemaSintetico.Texto("nome", 10), Gerada("virtual", GeracaoColuna.Virtual)],
-        };
+        var nome = new NomeTabela("loja", "clientes");
+        var tratada = Tratada("cpf", referencia: "nome");
 
-        Assert.Equal((false, true), Forma(tabela, tabela));
-        Assert.Equal(["id", "nome"], UnidadeDeCopia.Forma(comGeradas, EsquemaSintetico.ComTabelas(comGeradas)).ColunasLidas);
+        var unidade = new UnidadeDeCopia(nome, AcaoTabela.Copiar, new NomeTabela("loja", "Clientes"), ["id", "cpf", "nome"], ["id", "CPF", "nome"], [tratada]);
+
+        Assert.Equal(["id", "cpf", "nome"], unidade.ColunasLidas);
+        Assert.Equal(["id", "CPF", "nome"], unidade.ColunasNoDestino);
+        Assert.Equal("Clientes", unidade.NoDestino!.Tabela);
+
+        // Lida sem par, repetida, tratada sem a coluna lida ou com a referência fora das lidas: defeito do motor.
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, nome, ["id", "cpf"], ["id"], []));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, nome, ["id", "id"], ["id", "id"], []));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, nome, ["id", "nome"], ["id", "nome"], [tratada]));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, nome, ["id", "cpf"], ["id", "cpf"], [tratada]));
+
+        // Copiada ou esvaziada sem a tabela no destino, ação fora do enum, não copiada com lidas ou tratadas, tratada repetida
+        // ou nula.
+        var outra = Tratada("cpf");
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, null, ["id"], ["id"], []));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Esvaziar, null, [], [], []));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, (AcaoTabela)99, nome, [], [], []));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Esvaziar, nome, ["id"], ["id"], []));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Ignorar, null, ["cpf"], ["cpf"], [outra]));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, nome, ["id", "cpf"], ["id", "cpf"], [outra, outra]));
+        Assert.Throws<InvalidOperationException>(() => new UnidadeDeCopia(nome, AcaoTabela.Copiar, nome, ["id", "cpf"], ["id", "cpf"], [null!]));
+        Assert.Null(new UnidadeDeCopia(nome, AcaoTabela.Ignorar, null, [], [], []).NoDestino);
     }
 
     [Fact]
-    public void A_particionada_nao_admite_congelar_e_le_as_particoes_por_ela()
+    public void A_tratada_recusa_a_referencia_sem_o_tipo_dela_e_o_tipo_sem_a_referencia()
     {
-        var particionada = Tabela("vendas", TipoTabela.Particionada);
-        var particao = Tabela("vendas_2026", TipoTabela.Particao, pai: "vendas");
-
-        Assert.Equal((false, false), Forma(particionada, particionada, particao));
+        Assert.Throws<InvalidOperationException>(() => Tratada("cpf", referencia: "nome", tipoDaReferencia: false));
+        Assert.Throws<InvalidOperationException>(() => Tratada("cpf", referencia: null, tipoDaReferencia: true));
+        Assert.Equal("nome", Tratada("cpf", referencia: "nome").Referencia);
     }
 
     [Fact]
-    public void Mae_e_herdeira_de_heranca_classica_leem_so_a_propria()
+    public async Task A_carga_publicada_tem_as_lidas_sem_as_geradas_e_o_nome_no_destino()
     {
-        var mae = Tabela("pessoa", TipoTabela.Comum);
-        var outraMae = Tabela("contato", TipoTabela.Comum);
-        var herdeira = Tabela("funcionario", TipoTabela.Herdeira, pai: "pessoa", outrosPais: ["contato"]);
-        var avulsa = Tabela("avulsa", TipoTabela.Comum);
+        var gerada = (nameof(ColunaEsquema.Geracao), (object?)GeracaoColuna.Armazenada);
+        var origem = EsquemaSintetico.Trocar(
+            EsquemaSintetico.Coerente(), "clientes", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Colunas), tabela.Colunas.Append(BancoFalso.Clonar(EsquemaSintetico.Inteiro("calculada"), gerada)).Append(EsquemaSintetico.Inteiro("so_no_destino_gerada")).ToArray())));
+        var destino = EsquemaSintetico.Trocar(
+            EsquemaSintetico.Coerente(), "clientes", tabela => BancoFalso.Clonar(tabela, (nameof(TabelaEsquema.Colunas), tabela.Colunas.Append(BancoFalso.Clonar(EsquemaSintetico.Inteiro("calculada"), gerada)).Append(BancoFalso.Clonar(EsquemaSintetico.Inteiro("so_no_destino_gerada"), gerada)).ToArray())));
 
-        Assert.Equal((true, true), Forma(mae, mae, outraMae, herdeira, avulsa));
-        Assert.Equal((true, true), Forma(outraMae, mae, outraMae, herdeira, avulsa));
-        Assert.Equal((true, true), Forma(herdeira, mae, outraMae, herdeira, avulsa));
-        Assert.Equal((false, true), Forma(avulsa, mae, outraMae, herdeira, avulsa));
+        var plano = await DialetoProtegidoTestes.PlanejarAsync(new ProvedorDoPlanejar(origem, destino), yaml: Yaml.Minimo + "tabelas:\n  loja.clientes:\n    colunas:\n      cpf: { transformador: br.cpf@1 }\n");
+        var clientes = plano.Execucao.Unidades.Single(unidade => unidade.Nome.Tabela == "clientes");
+
+        Assert.Equal(["id", "cpf", "nome"], clientes.ColunasLidas);
+        Assert.Equal(clientes.ColunasLidas, clientes.ColunasNoDestino);
+        Assert.Equal(new NomeTabela("loja", "clientes"), clientes.NoDestino);
+        Assert.Null(Assert.Single(clientes.Tratadas).Referencia);
+        Assert.Same(plano.FonteDoPlano, plano.FonteDoPlano);
+        Assert.Equal(ConfiguracaoDaExecucao.De(plano.FonteDoPlano), plano.Execucao.Configuracao);
     }
 
     [Fact]
@@ -93,44 +116,31 @@ public sealed class DadosDeExecucaoTestes
         var clientes = Mapa("clientes");
         var pedidos = Mapa("pedidos");
 
-        Assert.Equal(ModoTratamento.Reproduzivel, new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, clientes)).Modo);
-        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo)));
-        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, clientes, pedidos)));
-        Assert.Throws<ArgumentException>(() => new Plano([clientes, pedidos], [], Hash, CargaSintetica.Para(Yaml.Minimo, pedidos, clientes)));
-        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, Mapa("clientes", AcaoTabela.Esvaziar))));
-        Assert.Throws<ArgumentNullException>(() => new Plano([clientes], [], Hash, null!));
+        Assert.Equal(ModoTratamento.Reproduzivel, new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, clientes), Yaml.Ler(Yaml.Minimo)).Modo);
+        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo), Yaml.Ler(Yaml.Minimo)));
+        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, clientes, pedidos), Yaml.Ler(Yaml.Minimo)));
+        Assert.Throws<ArgumentException>(() => new Plano([clientes, pedidos], [], Hash, CargaSintetica.Para(Yaml.Minimo, pedidos, clientes), Yaml.Ler(Yaml.Minimo)));
+        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, Mapa("clientes", AcaoTabela.Esvaziar)), Yaml.Ler(Yaml.Minimo)));
+        Assert.Throws<ArgumentNullException>(() => new Plano([clientes], [], Hash, null!, Yaml.Ler(Yaml.Minimo)));
+        Assert.Throws<ArgumentNullException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, clientes), null!));
+        Assert.Throws<ArgumentException>(() => new Plano([clientes], [], Hash, CargaSintetica.Para(Yaml.Minimo, clientes), Yaml.Ler(Yaml.Com("politica:\n  paralelismo: 2\n"))));
 
         // A coluna publicada como transformada precisa estar entre as tratadas da carga: senão sairia em claro.
         var regra = new RegraColuna(TipoRegra.Transformar, "nulo", 1, null, Transformadores.Injetividade.Nenhuma, null, null, null, OrigemRegra.Configuracao, null, null, null);
         var comRegra = new MapaTabela(new NomeTabela("loja", "clientes"), AcaoTabela.Copiar, false, [new MapaColuna("cpf", null, regra, new Classificacao(false, false))], null);
-        Assert.Throws<ArgumentException>(() => new Plano([comRegra], [], Hash, CargaSintetica.Para(Yaml.Minimo, comRegra)));
+        Assert.Throws<ArgumentException>(() => new Plano([comRegra], [], Hash, CargaSintetica.Para(Yaml.Minimo, comRegra), Yaml.Ler(Yaml.Minimo)));
     }
 
     private static MapaTabela Mapa(string tabela, AcaoTabela acao = AcaoTabela.Copiar) =>
         new(new NomeTabela("loja", tabela), acao, acaoEscrita: false, [], posicao: null);
 
-    private static (bool SoAPropria, bool AdmiteFreeze) Forma(TabelaEsquema tabela, params TabelaEsquema[] todas)
+    private static ColunaTratada Tratada(string coluna, string? referencia = null, bool? tipoDaReferencia = null)
     {
-        var (soAPropria, admiteFreeze, _) = UnidadeDeCopia.Forma(tabela, EsquemaSintetico.ComTabelas(todas));
-        return (soAPropria, admiteFreeze);
+        var registro = new RegistroTransformadores();
+        Assert.True(registro.TentarObter("br.cpf", 1, out var fabrica));
+        var regra = new Transformadores.RegraTransformacao(new Transformadores.DominioPseudonimo("br.cpf", 1));
+        return new ColunaTratada(coluna, fabrica, regra, new Dictionary<string, string>(), new ContextoDaColuna(Transformadores.TipoColuna.Texto, 11, null, null, null, null, null, (tipoDaReferencia ?? referencia is not null) ? Transformadores.TipoColuna.Texto : null), referencia, Transformadores.Injetividade.Garantida);
     }
-
-    private static TabelaEsquema Tabela(string nome, TipoTabela tipo, string? pai = null, string[]? outrosPais = null) => new()
-    {
-        Nome = EsquemaSintetico.Nome(nome),
-        Tipo = tipo,
-        Pai = pai is null ? null : EsquemaSintetico.Nome(pai),
-        OutrosPais = [.. (outrosPais ?? []).Select(EsquemaSintetico.Nome)],
-        Colunas = [EsquemaSintetico.Inteiro("id")],
-    };
-
-    private static ColunaEsquema Gerada(string nome, GeracaoColuna geracao) => new()
-    {
-        Nome = nome,
-        TipoNativo = "bigint",
-        Situacao = SituacaoTipo.Suportado,
-        Geracao = geracao,
-    };
 }
 
 /// <summary>Uma carga mínima para montar um plano nos testes: as unidades das tabelas dadas, sem colunas tratadas.</summary>
@@ -140,7 +150,7 @@ internal static class CargaSintetica
         ConfiguracaoDaExecucao.De(Yaml.Ler(yaml)),
         new LeituraDoBanco(EsquemaSintetico.Coerente(), EsquemaSintetico.Identidade("loja")),
         new LeituraDoBanco(EsquemaSintetico.Coerente(), EsquemaSintetico.Identidade("loja_homolog")),
-        [.. tabelas.Select(tabela => new UnidadeDeCopia(tabela.Nome, tabela.Acao, SoAPropria: false, AdmiteFreeze: true, [], []))],
+        [.. tabelas.Select(tabela => new UnidadeDeCopia(tabela.Nome, tabela.Acao, tabela.Nome, [], [], []))],
         [],
         [],
         []);

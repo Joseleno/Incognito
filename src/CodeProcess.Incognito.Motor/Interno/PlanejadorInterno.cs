@@ -81,21 +81,11 @@ internal static class PlanejadorInterno
             destino = await ConectarAsync(dialetoDoDestino!, configuracao.Destino, LadoBanco.Destino, resolverConexao, cancelamento).ConfigureAwait(false);
             var leituraDoDestino = await LerAsync(destino, LadoBanco.Destino, cancelamento).ConfigureAwait(false);
 
-            // P2: a coerência das duas leituras.
-            Conferir(leituraDaOrigem.Esquema, configuracao.Origem, LadoBanco.Origem);
-            Conferir(leituraDoDestino.Esquema, configuracao.Destino, LadoBanco.Destino);
-
-            // P3 a P6b: os nomes pelo dialeto de cada lado, com as conexões abertas, e as colunas do id.permutar a ler.
-            var montagem = MontagemDoPlano.Preparar(configuracao, regras, registro, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino);
-
-            // O maior valor de cada uma, em série, pelo envoltório da origem: fica na montagem, que só publica o N.
-            foreach (var coluna in montagem.Leituras)
-            {
-                montagem.Anotar(coluna, await origem.LerMaiorValorAsync(coluna, cancelamento).ConfigureAwait(false));
-            }
-
-            // P7 a P9: a criação dos transformadores, as restrições, o acesso e a publicação.
-            montado = montagem.Concluir(gerarChave ?? ChaveIncognito.Gerar, cancelamento);
+            // P2 a P9: a montagem, pelo caminho que o replanejamento da execução também usa; o maior valor de cada coluna do
+            // id.permutar, em série, pelo envoltório da origem.
+            montado = await MontarAsync(
+                configuracao, regras, registro, origem.CompararNome, destino.CompararNome, leituraDaOrigem, leituraDoDestino, origem.LerMaiorValorAsync, gerarChave ?? ChaveIncognito.Gerar, cancelamento)
+                .ConfigureAwait(false);
         }
         catch
         {
@@ -109,11 +99,64 @@ internal static class PlanejadorInterno
             throw aoFechar;
         }
 
-        return new Plano(montado.Tabelas, montado.Avisos, hash, montado.Execucao);
+        return new Plano(montado.Tabelas, montado.Avisos, hash, montado.Execucao, configuracao);
+    }
+
+    /// <summary>
+    /// A montagem do plano a partir das duas leituras, o caminho único do <c>planejar</c> e do replanejamento da execução:
+    /// a coerência de cada leitura, os nomes, a propagação, o maior valor de cada coluna do <c>id.permutar</c> (lido em série
+    /// por quem chama), a criação dos transformadores numa sessão descartável, as restrições, o acesso e a publicação.
+    /// </summary>
+    /// <param name="configuracao">A configuração.</param>
+    /// <param name="regras">As regras resolvidas.</param>
+    /// <param name="registro">O registro de transformadores.</param>
+    /// <param name="daOrigem">A comparação de nomes do banco da origem, com a conexão aberta.</param>
+    /// <param name="doDestino">A comparação de nomes do banco do destino, com a conexão aberta.</param>
+    /// <param name="origem">A leitura da origem.</param>
+    /// <param name="destino">A leitura do destino.</param>
+    /// <param name="lerMaiorValor">
+    /// Lê o maior valor de uma coluna da origem: no <c>planejar</c>, pela conexão de controle; na execução, por um leitor da
+    /// sessão, no instante dela.
+    /// </param>
+    /// <param name="gerarChave">O gerador da chave aleatória da sessão descartável.</param>
+    /// <param name="cancelamento">Cancela a montagem.</param>
+    /// <returns>O plano montado.</returns>
+    /// <exception cref="PlanoRecusadoException">A configuração e o esquema não permitem copiar.</exception>
+    /// <exception cref="FalhaDialetoException">O dialeto falhou, ou leu um esquema que se contradiz.</exception>
+    /// <exception cref="OperationCanceledException">Cancelado pelo chamador.</exception>
+    internal static async Task<PlanoMontado> MontarAsync(
+        ConfiguracaoIncognito configuracao,
+        ResolucaoDeRegras regras,
+        RegistroTransformadores registro,
+        ComparadorDeNomes daOrigem,
+        ComparadorDeNomes doDestino,
+        LeituraDoBanco origem,
+        LeituraDoBanco destino,
+        Func<ReferenciaColuna, CancellationToken, Task<long?>> lerMaiorValor,
+        Func<ChaveIncognito> gerarChave,
+        CancellationToken cancelamento)
+    {
+        ArgumentNullException.ThrowIfNull(configuracao);
+        ArgumentNullException.ThrowIfNull(origem);
+        ArgumentNullException.ThrowIfNull(destino);
+        ArgumentNullException.ThrowIfNull(lerMaiorValor);
+        Conferir(origem.Esquema, configuracao.Origem, LadoBanco.Origem);
+        Conferir(destino.Esquema, configuracao.Destino, LadoBanco.Destino);
+
+        // P3 a P6b: os nomes pelo dialeto de cada lado e as colunas do id.permutar a ler; o maior valor fica na montagem,
+        // que só publica o N.
+        var montagem = MontagemDoPlano.Preparar(configuracao, regras, registro, daOrigem, doDestino, origem, destino);
+        foreach (var coluna in montagem.Leituras)
+        {
+            montagem.Anotar(coluna, await lerMaiorValor(coluna, cancelamento).ConfigureAwait(false));
+        }
+
+        // P7 a P9: a criação dos transformadores, as restrições, o acesso e a publicação.
+        return montagem.Concluir(gerarChave, cancelamento);
     }
 
     // P11: fecha em ordem inversa, cada um mesmo que o anterior falhe, e devolve a primeira falha.
-    private static async Task<FalhaDialetoException?> FecharAsync(params DialetoProtegido?[] bancos)
+    internal static async Task<FalhaDialetoException?> FecharAsync(params DialetoProtegido?[] bancos)
     {
         FalhaDialetoException? primeira = null;
         foreach (var banco in bancos.OfType<DialetoProtegido>())
@@ -131,7 +174,7 @@ internal static class PlanejadorInterno
         return primeira;
     }
 
-    private static ProvedorDialeto? Dialeto(IReadOnlyDictionary<ProvedorBanco, ProvedorDialeto> dialetos, ConexaoBanco conexao, LadoBanco lado, List<ErroPlano> erros)
+    internal static ProvedorDialeto? Dialeto(IReadOnlyDictionary<ProvedorBanco, ProvedorDialeto> dialetos, ConexaoBanco conexao, LadoBanco lado, List<ErroPlano> erros)
     {
         var provedor = ValidadorConfiguracao.Nome(conexao.Provedor);
         if (!dialetos.TryGetValue(conexao.Provedor, out var dialeto) || dialeto is null)
@@ -149,7 +192,7 @@ internal static class PlanejadorInterno
         return dialeto;
     }
 
-    private static Task<DialetoProtegido> ConectarAsync(
+    internal static Task<DialetoProtegido> ConectarAsync(
         ProvedorDialeto dialeto, ConexaoBanco conexao, LadoBanco lado, Func<ConexaoBanco, SegredoConexao> resolverConexao, CancellationToken cancelamento)
     {
         var segredo = resolverConexao(conexao) ?? throw new InvalidOperationException("O resolvedor de conexões não devolveu a conexão.");

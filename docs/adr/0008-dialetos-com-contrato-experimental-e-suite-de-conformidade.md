@@ -383,3 +383,14 @@ suíte que pulasse o que um banco não tem esconderia justamente o leitor que in
   guardar as linhas gravadas e tem uma variante não atômica; a fixture ganha a leitura de uma tabela em texto, a tabela
   segurada no destino, a contagem das conexões da gravação e a tabela longa também no destino, e a declaração, os casos da
   gravação.
+- 2026-11-12: o motor consome a leitura das linhas e a gravação pelo envoltório (`DialetoProtegido`), inclusive as
+  chamadas por célula do lote e os descartes, com a tradução sem mensagem; a guarda de fronteira passa a vigiar
+  `LeituraTabela`, `LoteLinhas`, `GravadorEmLote` e `GravacaoTabela`. O batimento do bloqueio é serializado no envoltório
+  e conferido antes de abrir ou esvaziar cada tabela e logo antes de concluí-la, nunca por lote; a perda cancela a cópia,
+  nenhuma tabela conclui depois de a perda ser percebida, e a restauração não roda. O executor cancela o token da cópia antes de descartar o destino (o descarte do dialeto espera as
+  chamadas em curso). Na ponta a ponta, num esquema próprio e pequeno (o de conformidade não passa no `planejar`), o
+  PostgreSQL 15 e o 18 provam os opacos byte a byte pelo `COPY TO` dos dois lados, a mudança na origem durante a cópia
+  que não chega ao destino, a trigger `AFTER TRUNCATE` que não dispara, a segunda execução simultânea que sai com 1 sem
+  tocar o destino, os erros do destino na carga (restrição, função que lança, parâmetro trocado no meio do `COPY`) sem
+  nenhum valor, e a memória estável com 200 mil linhas largas (`ExecucaoPostgreSqlTestes`,
+  `MemoriaDaExecucaoPostgreSqlTestes`).

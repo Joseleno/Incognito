@@ -36,6 +36,10 @@ CodeProcess.Incognito.Execucao.ErroPlano.Objeto.get -> string?
 CodeProcess.Incognito.Execucao.ErroPlano.Posicao.get -> CodeProcess.Incognito.Execucao.PosicaoConfiguracao?
 CodeProcess.Incognito.Execucao.ErroPlano.Tabela.get -> CodeProcess.Incognito.Execucao.NomeTabela?
 CodeProcess.Incognito.Execucao.FalhaDialetoException
+CodeProcess.Incognito.Execucao.FalhaTransformacaoException
+CodeProcess.Incognito.Execucao.FalhaTransformacaoException.Coluna.get -> string!
+CodeProcess.Incognito.Execucao.FalhaTransformacaoException.Linha.get -> long
+CodeProcess.Incognito.Execucao.FalhaTransformacaoException.Tabela.get -> CodeProcess.Incognito.Execucao.NomeTabela!
 CodeProcess.Incognito.Execucao.MapaColuna
 CodeProcess.Incognito.Execucao.MapaColuna.Classificacao.get -> CodeProcess.Incognito.Execucao.Classificacao!
 CodeProcess.Incognito.Execucao.MapaColuna.Nome.get -> string!
