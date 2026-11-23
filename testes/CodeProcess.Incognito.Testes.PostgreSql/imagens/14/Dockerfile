@@ -1,2 +1,2 @@
 # Só para provar a recusa de versão abaixo do mínimo; nunca construída, o FROM é lido pelos testes.
-FROM postgres:14.24-trixie@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed
+FROM postgres:14.25-trixie@sha256:c0e9c0e9bac7e4c1834b698217a03ee5c708de30d313c84a506972de0e24b059
